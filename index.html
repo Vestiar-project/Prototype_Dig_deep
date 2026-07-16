@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="ГЛУБИНА: НУЛЬ — короткие подземные забеги, автоматическая добыча и большая мета-прокачка."
+    />
+    <meta name="theme-color" content="#071b26" />
+    <title>ГЛУБИНА: НУЛЬ</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#gameCanvas">К игровому полю</a>
+
+    <main id="gameShell" aria-label="Игра ГЛУБИНА: НУЛЬ">
+      <canvas
+        id="gameCanvas"
+        tabindex="0"
+        role="img"
+        aria-label="Подземная шахта в разрезе. Шахтёр автоматически движется к руде, попавшей в зону чутья."
+      >
+        Для игры нужен браузер с поддержкой Canvas.
+      </canvas>
+
+      <div class="world-dressing" aria-hidden="true">
+        <div class="top-rock top-rock--left"></div>
+        <div class="top-rock top-rock--right"></div>
+        <div class="depth-ruler">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <div class="dust dust--one"></div>
+        <div class="dust dust--two"></div>
+        <div class="dust dust--three"></div>
+      </div>
+
+      <div class="screen-texture" aria-hidden="true"></div>
+      <div id="screenFlash" aria-hidden="true"></div>
+
+      <section id="runHud" class="run-hud hidden" aria-label="Показатели забега">
+        <div class="hud-cluster hud-cluster--left">
+          <div class="hud-chip hud-chip--ore" title="Руда в текущем забеге">
+            <span class="hud-icon ore-icon" aria-hidden="true"></span>
+            <span class="hud-copy">
+              <span class="hud-label">РУДА</span>
+              <strong id="runOre">0</strong>
+            </span>
+          </div>
+
+          <div class="hud-chip" title="Текущая глубина">
+            <span class="hud-glyph" aria-hidden="true">↓</span>
+            <span class="hud-copy">
+              <span class="hud-label">ГЛУБИНА</span>
+              <strong id="depthValue">0 м</strong>
+            </span>
+          </div>
+        </div>
+
+        <div class="timer-module" aria-label="Оставшееся время">
+          <div class="timer-topline">
+            <span class="hud-label">СМЕНА ЗАКОНЧИТСЯ ЧЕРЕЗ</span>
+            <strong id="timerValue">6.0</strong>
+          </div>
+          <div
+            class="timer-track"
+            role="progressbar"
+            aria-label="Оставшееся время забега"
+            aria-valuemin="0"
+            aria-valuemax="6"
+            aria-valuenow="6"
+          >
+            <span id="timerFill"></span>
+            <span class="timer-spark" aria-hidden="true"></span>
+          </div>
+        </div>
+
+        <div id="focusHud" class="focus-hud hidden" title="Рудный фокус игнорирует остальные жилы">
+          <span aria-hidden="true">⌾</span>
+          <small>ФОКУС</small>
+          <strong id="focusHudName">—</strong>
+        </div>
+
+        <div class="hud-cluster hud-cluster--right">
+          <div class="hud-chip" title="Текущий инструмент">
+            <span class="hud-glyph" aria-hidden="true">⚒</span>
+            <span class="hud-copy">
+              <span class="hud-label">ИНСТРУМЕНТ</span>
+              <strong id="toolValue">Кирка</strong>
+            </span>
+          </div>
+
+          <div class="hud-chip hud-chip--combo" title="Серия быстрых находок">
+            <span class="hud-glyph" aria-hidden="true">×</span>
+            <span class="hud-copy">
+              <span class="hud-label">СЕРИЯ</span>
+              <strong id="comboValue">1.0</strong>
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <aside id="fieldGuide" class="field-guide" aria-label="Подсказки и легенда">
+        <button
+          id="guideToggle"
+          class="guide-toggle"
+          type="button"
+          aria-expanded="true"
+          aria-controls="guideBody"
+        >
+          <span aria-hidden="true">?</span>
+          <span>ПАМЯТКА</span>
+        </button>
+        <div id="guideBody" class="guide-body">
+          <p class="guide-kicker">АВТОПИЛОТ ШАХТЁРА</p>
+          <p>Руда входит в круг чутья — шахтёр сам выбирает цель и прокладывает путь.</p>
+          <ul class="legend-list" aria-label="Ярусы руды">
+            <li><span class="legend-swatch swatch--copper"></span><span>Медь</span><b>T1</b></li>
+            <li><span class="legend-swatch swatch--coal"></span><span>Уголь</span><b>T2</b></li>
+            <li><span class="legend-swatch swatch--iron"></span><span>Железо</span><b>T3</b></li>
+            <li><span class="legend-swatch swatch--amber"></span><span>Янтарь</span><b>T4</b></li>
+            <li><span class="legend-swatch swatch--silver"></span><span>Серебро</span><b>T5</b></li>
+            <li><span class="legend-swatch swatch--gold"></span><span>Золото</span><b>T6</b></li>
+            <li><span class="legend-swatch swatch--amethyst"></span><span>Аметист</span><b>T7</b></li>
+            <li><span class="legend-swatch swatch--prism"></span><span>Призмалит</span><b>T8</b></li>
+            <li><span class="legend-swatch swatch--void"></span><span>Пустотная</span><b>T9</b></li>
+            <li><span class="legend-swatch swatch--star"></span><span>Звёздное ядро</span><b>T10</b></li>
+          </ul>
+          <div class="key-hints">
+            <span><kbd>Space</kbd> ускорить цель</span>
+            <span><kbd>Esc</kbd> пауза</span>
+            <span><kbd>?</kbd> памятка</span>
+          </div>
+        </div>
+      </aside>
+
+      <section
+        id="startScreen"
+        class="overlay start-screen"
+        aria-labelledby="gameTitle"
+        aria-describedby="gameIntro"
+      >
+        <div class="overlay-backdrop" aria-hidden="true"></div>
+        <div class="start-layout panel-frame">
+          <div class="brand-block">
+            <p class="eyebrow"><span></span> ЭКСПЕДИЦИЯ 00 <span></span></p>
+            <h1 id="gameTitle">
+              <span>ГЛУБИНА</span>
+              <b>НУЛЬ</b>
+            </h1>
+            <p id="gameIntro" class="game-intro">
+              Шесть секунд. Одна кирка.<br />Бесконечная порода под ногами.
+            </p>
+            <div class="start-actions">
+              <button id="startRun" class="btn btn--primary btn--large" type="button" autofocus>
+                <span class="btn-icon" aria-hidden="true">▶</span>
+                <span><small>НАЧАТЬ СМЕНУ</small>КОПАТЬ</span>
+              </button>
+              <p class="start-key"><kbd>Enter</kbd> начать забег</p>
+            </div>
+          </div>
+
+          <div class="briefing" aria-label="Краткий инструктаж">
+            <div class="briefing-art" aria-hidden="true">
+              <div class="signal-ring signal-ring--outer"></div>
+              <div class="signal-ring signal-ring--inner"></div>
+              <div class="miner-mark">
+                <span class="miner-lamp"></span>
+                <span class="miner-head"></span>
+                <span class="miner-body"></span>
+                <span class="miner-pick"></span>
+              </div>
+              <span class="ore-mark ore-mark--a"></span>
+              <span class="ore-mark ore-mark--b"></span>
+              <span class="ore-mark ore-mark--c"></span>
+            </div>
+            <ol class="briefing-steps">
+              <li><b>01</b><span><strong>ЧУЙ</strong>Находи жилы вокруг себя.</span></li>
+              <li><b>02</b><span><strong>КОПАЙ</strong>Шахтёр работает сам.</span></li>
+              <li><b>03</b><span><strong>УСИЛИВАЙСЯ</strong>Руда остаётся между сменами.</span></li>
+            </ol>
+          </div>
+
+          <footer class="start-footer">
+            <span><i class="status-dot"></i> АВТОСОХРАНЕНИЕ ВКЛЮЧЕНО</span>
+            <span id="campaignStatus" title="Прогресс основной кампании">РАКЕТА · 0% · 0/90 МИН</span>
+          </footer>
+        </div>
+      </section>
+
+      <section
+        id="resultScreen"
+        class="overlay result-screen hidden"
+        aria-labelledby="resultTitle"
+        aria-modal="true"
+        role="dialog"
+      >
+        <div class="overlay-backdrop" aria-hidden="true"></div>
+        <div class="result-card panel-frame">
+          <header class="result-header">
+            <p class="eyebrow"><span></span> ОТЧЁТ ЭКСПЕДИЦИИ <span></span></p>
+            <h2 id="resultTitle">СМЕНА ЗАВЕРШЕНА</h2>
+            <p>Время вышло. Всё добытое поднято на поверхность.</p>
+          </header>
+
+          <div id="resultStats" class="result-stats" aria-live="polite">
+            <div><span>Глубина</span><strong>0 м</strong></div>
+            <div><span>Разрушено блоков</span><strong>0</strong></div>
+            <div><span>Лучшая серия</span><strong>×1.0</strong></div>
+          </div>
+
+          <div class="banked-module">
+            <span class="ore-badge" aria-hidden="true"><i></i></span>
+            <div>
+              <span>ДОБЫТО ЗА СМЕНУ</span>
+              <strong id="bankedOre">+0</strong>
+              <small>РУДЫ В ХРАНИЛИЩЕ</small>
+            </div>
+          </div>
+
+          <div class="result-actions">
+            <button id="launchRocket" class="btn btn--primary final-launch hidden" type="button">
+              <span class="btn-icon" aria-hidden="true">▲</span>
+              <span id="launchLabel">ЗАПУСТИТЬ РАКЕТУ</span>
+            </button>
+            <button id="openUpgrades" class="btn btn--primary" type="button">
+              <span class="btn-icon" aria-hidden="true">◆</span>
+              УЛУЧШЕНИЯ
+            </button>
+            <button id="retryRun" class="btn btn--secondary" type="button">
+              <span class="btn-icon" aria-hidden="true">↻</span>
+              ЕЩЁ СМЕНА
+            </button>
+          </div>
+          <p class="result-hint"><kbd>U</kbd> мастерская <span>•</span> <kbd>Enter</kbd> новый забег</p>
+        </div>
+      </section>
+
+      <section
+        id="upgradeScreen"
+        class="overlay upgrade-screen hidden"
+        aria-labelledby="upgradeTitle"
+        aria-modal="true"
+        role="dialog"
+      >
+        <div class="upgrade-shell">
+          <header class="upgrade-header panel-frame">
+            <div class="upgrade-title-group">
+              <p class="eyebrow">ПОДЗЕМНАЯ МАСТЕРСКАЯ</p>
+              <h2 id="upgradeTitle">МОДУЛИ ЭКСПЕДИЦИИ</h2>
+            </div>
+
+            <div
+              id="oreInventory"
+              class="ore-inventory"
+              role="list"
+              aria-label="Запасы всех десяти видов руды. Названия доступны при наведении или фокусе."
+            >
+              <span class="ore-inventory__empty" role="listitem">ХРАНИЛИЩЕ ПУСТО</span>
+            </div>
+
+            <div class="upgrade-progress-wrap">
+              <div class="progress-copy">
+                <span>ИЗУЧЕНО</span>
+                <strong id="upgradeProgress">0 / 100</strong>
+              </div>
+              <div class="mini-progress" aria-hidden="true"><i></i></div>
+            </div>
+
+            <button id="closeUpgrades" class="icon-btn" type="button" aria-label="Закрыть мастерскую">
+              <span aria-hidden="true">×</span>
+            </button>
+          </header>
+
+          <div class="upgrade-toolbar">
+            <label class="search-box" for="upgradeSearch">
+              <span aria-hidden="true">⌕</span>
+              <span class="sr-only">Поиск улучшения</span>
+              <input id="upgradeSearch" type="search" placeholder="Найти модуль…" autocomplete="off" />
+              <kbd>/</kbd>
+            </label>
+
+            <div class="upgrade-filters" role="group" aria-label="Категории улучшений">
+              <button type="button" class="filter-btn" data-category="all" aria-pressed="true">ВСЕ</button>
+              <button type="button" class="filter-btn" data-category="sense" aria-pressed="false">ЧУТЬЁ</button>
+              <button type="button" class="filter-btn" data-category="dig" aria-pressed="false">КОПКА</button>
+              <button type="button" class="filter-btn" data-category="power" aria-pressed="false">СИЛА</button>
+              <button type="button" class="filter-btn" data-category="time" aria-pressed="false">ВРЕМЯ</button>
+              <button type="button" class="filter-btn" data-category="gadgets" aria-pressed="false">ТЕХНИКА</button>
+              <button type="button" class="filter-btn" data-category="tools" aria-pressed="false">ИНСТРУМЕНТ</button>
+              <button type="button" class="filter-btn" data-category="fortune" aria-pressed="false">УДАЧА</button>
+            </div>
+
+            <div id="oreFocusPanel" class="ore-focus-panel hidden" aria-label="Приоритет поиска руды">
+              <span class="ore-focus-panel__title"><b>⌾ РУДНЫЙ ФОКУС</b><small>Игнорировать остальные жилы · радиус ×2,15</small></span>
+              <div id="oreFocusChoices" class="ore-focus-choices" role="group" aria-label="Выберите приоритетную руду"></div>
+            </div>
+          </div>
+
+          <div id="upgradeGrid" class="upgrade-content upgrade-map-shell panel-frame">
+            <div class="shaft-line shaft-line--left" aria-hidden="true"></div>
+            <div class="shaft-line shaft-line--right" aria-hidden="true"></div>
+
+            <div
+              id="upgradeMapViewport"
+              class="upgrade-map__viewport"
+              tabindex="0"
+              aria-label="Единое дерево модулей экспедиции. Наведите курсор на значок, чтобы увидеть описание."
+            >
+              <div id="upgradeMapWorld" class="upgrade-map__world">
+                <div id="upgradeMapLanes" class="upgrade-map__lanes" aria-hidden="true"></div>
+                <svg
+                  id="upgradeMapLinks"
+                  class="upgrade-map__links"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <defs>
+                    <marker id="upgradeArrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+                      <path d="M 0 0 L 8 4 L 0 8 z"></path>
+                    </marker>
+                  </defs>
+                </svg>
+                <div id="upgradeNodes" class="upgrade-map__nodes" role="group" aria-label="Открытые и ближайшие модули"></div>
+              </div>
+
+              <div id="upgradeEmpty" class="upgrade-empty hidden">
+                <span aria-hidden="true">⌕</span>
+                <strong>МОДУЛИ НЕ НАЙДЕНЫ</strong>
+                <p>Попробуйте изменить запрос или категорию.</p>
+              </div>
+            </div>
+
+            <p id="upgradeMapStatus" class="sr-only" aria-live="polite" aria-atomic="true"></p>
+          </div>
+
+          <footer class="upgrade-footer">
+            <p><span class="mouse-key" aria-hidden="true">↖</span> наведите для описания <span>•</span> нажмите для установки <span>•</span> прокручивайте дерево</p>
+            <button id="wipeSave" class="danger-link" type="button">СБРОСИТЬ ПРОГРЕСС</button>
+          </footer>
+        </div>
+      </section>
+
+      <section
+        id="endingScreen"
+        class="overlay ending-screen hidden"
+        aria-labelledby="endingTitle"
+        aria-describedby="endingCaption"
+        aria-modal="true"
+        role="dialog"
+        tabindex="-1"
+      >
+        <div class="overlay-backdrop" aria-hidden="true"></div>
+        <div class="ending-stage">
+          <header class="ending-masthead">
+            <p class="ending-kicker"><span aria-hidden="true"></span> ЭПИЛОГ // РЕЙС 01</p>
+            <div
+              id="endingProgress"
+              class="ending-progress"
+              role="progressbar"
+              aria-label="Панели эпилога"
+              aria-valuemin="0"
+              aria-valuemax="2"
+              aria-valuenow="2"
+            >
+              <span class="ending-progress__step is-complete" aria-hidden="true">01</span>
+              <i class="ending-progress__rail" aria-hidden="true"><b></b></i>
+              <span class="ending-progress__step is-complete" aria-hidden="true">02</span>
+            </div>
+          </header>
+
+          <figure class="ending-comic">
+            <div class="ending-comic__art">
+              <img
+                id="endingComicImage"
+                src="assets/ending-comic.png"
+                alt="Комикс: шахтёр стартует на ракете с земной шахтёрской площадки, а затем стоит на мостике грузового корабля перед астероидом с рудными жилами."
+                draggable="false"
+              />
+              <span class="ending-comic__gutter" aria-hidden="true"></span>
+              <span class="ending-comic__halftone" aria-hidden="true"></span>
+            </div>
+
+            <figcaption id="endingCaption" class="ending-caption-grid">
+              <p id="endingPanelOne" class="ending-panel ending-panel--one">
+                <span aria-hidden="true">01</span>
+                <strong>«Руда закончилась. Но путь — только начался.»</strong>
+              </p>
+              <p id="endingPanelTwo" class="ending-panel ending-panel--two">
+                <span aria-hidden="true">02</span>
+                <strong>«Грузовой рейс 01. Новый астероид. Новая жила.»</strong>
+              </p>
+            </figcaption>
+          </figure>
+
+          <footer class="ending-footer">
+            <div class="ending-heading">
+              <p>ЭКСПЕДИЦИЯ 00 // ЗАВЕРШЕНА</p>
+              <h2 id="endingTitle">ГЛУБИНА ПРОЙДЕНА</h2>
+            </div>
+            <div class="ending-actions">
+              <button id="endingReplay" class="btn btn--primary" type="button">
+                <span class="btn-icon" aria-hidden="true">↻</span>
+                СМОТРЕТЬ СНОВА
+              </button>
+              <button id="endingContinue" class="btn btn--secondary" type="button">
+                <span class="btn-icon" aria-hidden="true">⌄</span>
+                ВЕРНУТЬСЯ В ШАХТУ
+              </button>
+            </div>
+          </footer>
+        </div>
+      </section>
+
+      <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true">
+        <span class="toast-icon" aria-hidden="true">◆</span>
+        <span class="toast-copy"><strong>МОДУЛЬ УСТАНОВЛЕН</strong><small>Чутьё расширено</small></span>
+      </div>
+
+      <div id="pauseOverlay" class="pause-overlay hidden" role="dialog" aria-modal="true" aria-label="Пауза">
+        <div>
+          <span class="pause-bars" aria-hidden="true"><i></i><i></i></span>
+          <strong>ПАУЗА</strong>
+          <small>Нажмите <kbd>Esc</kbd>, чтобы продолжить</small>
+        </div>
+      </div>
+    </main>
+
+    <noscript>
+      <div class="noscript-message">Включите JavaScript, чтобы спуститься в шахту.</div>
+    </noscript>
+    <script defer src="js/upgrades.js"></script>
+    <script defer src="js/world.js"></script>
+    <script defer src="js/game.js"></script>
+  </body>
+</html>
