@@ -45,6 +45,7 @@
             <span class="hud-copy">
               <span class="hud-label">РУДА</span>
               <strong id="runOre">0</strong>
+              <small id="runOreBreakdown" class="run-ore-breakdown" aria-live="polite">ПОКА ПУСТО</small>
             </span>
           </div>
 
@@ -100,6 +101,57 @@
         </div>
       </section>
 
+      <aside
+        id="tutorialCoach"
+        class="context-tutorial panel-frame hidden"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        aria-labelledby="tutorialTitle"
+      >
+        <div class="context-tutorial__marker" aria-hidden="true">
+          <span>01</span>
+          <i></i>
+        </div>
+        <div class="context-tutorial__copy">
+          <p class="ui-kicker">ПОЛЕВАЯ ПОДСКАЗКА <span id="tutorialHint">1 / 5</span></p>
+          <h2 id="tutorialTitle">РУДА ВОШЛА В ЗОНУ ЧУТЬЯ</h2>
+          <p id="tutorialText">Шахтёр сам выберет жилу и начнёт прокладывать путь. Следите за лучом целеуказания.</p>
+        </div>
+        <div class="context-tutorial__actions">
+          <button id="tutorialClose" class="text-button" type="button">БОЛЬШЕ НЕ ПОКАЗЫВАТЬ</button>
+          <button id="tutorialNext" class="compact-button" type="button">
+            ПОНЯТНО <span aria-hidden="true">›</span>
+          </button>
+        </div>
+      </aside>
+
+      <aside
+        id="microEventBanner"
+        class="micro-event-banner hidden"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        aria-labelledby="microEventTitle"
+      >
+        <span id="microEventIcon" class="micro-event-banner__icon" aria-hidden="true">⚠</span>
+        <div class="micro-event-banner__copy">
+          <span class="ui-kicker">ГЕОЛОГИЧЕСКОЕ СОБЫТИЕ</span>
+          <strong id="microEventTitle">ХРУПКИЙ ПЛАСТ</strong>
+          <small id="microEventText">Плотность породы −35% · осталось 5 сек.</small>
+        </div>
+        <div
+          class="micro-event-banner__meter"
+          role="progressbar"
+          aria-label="Оставшееся время геологического события"
+          aria-valuemin="0"
+          aria-valuemax="5"
+          aria-valuenow="5"
+        >
+          <i id="microEventProgress"></i>
+        </div>
+      </aside>
+
       <aside id="fieldGuide" class="field-guide" aria-label="Подсказки и легенда">
         <button
           id="guideToggle"
@@ -127,7 +179,7 @@
             <li><span class="legend-swatch swatch--star"></span><span>Звёздное ядро</span><b>T10</b></li>
           </ul>
           <div class="key-hints">
-            <span><kbd>Space</kbd> ускорить цель</span>
+            <span><kbd>Space</kbd> импульс чутья</span>
             <span><kbd>Esc</kbd> пауза</span>
             <span><kbd>?</kbd> памятка</span>
           </div>
@@ -143,7 +195,7 @@
         <div class="overlay-backdrop" aria-hidden="true"></div>
         <div class="start-layout panel-frame">
           <div class="brand-block">
-            <p class="eyebrow"><span></span> ЭКСПЕДИЦИЯ 00 <span></span></p>
+            <p class="eyebrow"><span></span> ЭКСПЕДИЦИЯ <span data-total-runs>0</span> <span></span></p>
             <h1 id="gameTitle">
               <span>ГЛУБИНА</span>
               <b>НУЛЬ</b>
@@ -155,6 +207,9 @@
               <button id="startRun" class="btn btn--primary btn--large" type="button" autofocus>
                 <span class="btn-icon" aria-hidden="true">▶</span>
                 <span><small>НАЧАТЬ СМЕНУ</small>КОПАТЬ</span>
+              </button>
+              <button id="replayTutorial" class="start-tutorial-button" type="button">
+                <span aria-hidden="true">?</span> КАК ИГРАТЬ
               </button>
               <p class="start-key"><kbd>Enter</kbd> начать забег</p>
             </div>
@@ -183,9 +238,82 @@
 
           <footer class="start-footer">
             <span><i class="status-dot"></i> АВТОСОХРАНЕНИЕ ВКЛЮЧЕНО</span>
-            <span id="campaignStatus" title="Прогресс основной кампании">РАКЕТА · 0% · 0/90 МИН</span>
+            <span id="campaignStatus" title="Прогресс основной кампании">РАКЕТА · 0%</span>
           </footer>
         </div>
+      </section>
+
+      <section
+        id="sectorScreen"
+        class="overlay sector-select-screen hidden"
+        aria-labelledby="sectorSelectTitle"
+        aria-describedby="sectorSelectDescription"
+        aria-modal="true"
+        role="dialog"
+      >
+        <div class="overlay-backdrop" aria-hidden="true"></div>
+        <form class="sector-select panel-frame">
+          <header class="feature-header">
+            <div>
+              <p class="eyebrow"><span></span> РАЗВЕДКА ПЕРЕД СМЕНОЙ</p>
+              <h2 id="sectorSelectTitle">ВЫБЕРИТЕ ГЕОЛОГИЧЕСКИЙ СЕКТОР</h2>
+              <p id="sectorSelectDescription">Прогноз показывает состав пласта, риск и ожидаемую добычу. Карта сектора не меняется до конца смены.</p>
+            </div>
+            <button id="sectorSkip" class="icon-btn" type="button" aria-label="Пропустить выбор сектора">
+              <span aria-hidden="true">×</span>
+            </button>
+          </header>
+
+          <fieldset id="sectorChoices" class="sector-options">
+            <legend class="sr-only">Доступные геологические секторы</legend>
+
+            <input class="sector-radio sr-only" type="radio" name="geology-sector" id="sectorStable" value="stable" checked />
+            <label class="sector-card" for="sectorStable">
+              <span class="sector-card__map sector-card__map--stable" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+              <span class="sector-card__heading"><small>СЕКТОР A-17</small><strong>СТАБИЛЬНЫЙ ПЛАСТ</strong></span>
+              <span class="sector-card__tags"><b>БАЛАНС</b><em>НИЗКИЙ РИСК</em></span>
+              <span class="sector-card__forecast">
+                <span><small>ПЛОТНОСТЬ</small><b>НОРМА</b></span>
+                <span><small>РЕДКАЯ РУДА</small><b>×1.00</b></span>
+                <span><small>ПОЛОСТИ</small><b>СРЕДНЕ</b></span>
+              </span>
+              <span class="sector-card__note">Надёжная разведка без модификаторов.</span>
+            </label>
+
+            <input class="sector-radio sr-only" type="radio" name="geology-sector" id="sectorKarst" value="karst" />
+            <label class="sector-card" for="sectorKarst">
+              <span class="sector-card__map sector-card__map--karst" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+              <span class="sector-card__heading"><small>СЕКТОР K-04</small><strong>КАРСТОВЫЙ РАЗЛОМ</strong></span>
+              <span class="sector-card__tags"><b>СКОРОСТЬ</b><em>СРЕДНИЙ РИСК</em></span>
+              <span class="sector-card__forecast">
+                <span><small>ПЛОТНОСТЬ</small><b>−18%</b></span>
+                <span><small>РЕДКАЯ РУДА</small><b>×1.12</b></span>
+                <span><small>ПОЛОСТИ</small><b>МНОГО</b></span>
+              </span>
+              <span class="sector-card__note">Быстрые маршруты, но жилы сильнее разбросаны.</span>
+            </label>
+
+            <input class="sector-radio sr-only" type="radio" name="geology-sector" id="sectorMagma" value="magma" />
+            <label class="sector-card" for="sectorMagma">
+              <span class="sector-card__map sector-card__map--magma" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+              <span class="sector-card__heading"><small>СЕКТОР M-91</small><strong>МАГМАТИЧЕСКАЯ ЛИНЗА</strong></span>
+              <span class="sector-card__tags"><b>ЦЕННОСТЬ</b><em>ВЫСОКИЙ РИСК</em></span>
+              <span class="sector-card__forecast">
+                <span><small>ПЛОТНОСТЬ</small><b>+32%</b></span>
+                <span><small>РЕДКАЯ РУДА</small><b>×1.35</b></span>
+                <span><small>ПОЛОСТИ</small><b>МАЛО</b></span>
+              </span>
+              <span class="sector-card__note">Тяжёлый пласт с богатыми компактными жилами.</span>
+            </label>
+          </fieldset>
+
+          <footer class="sector-select__footer">
+            <p><span aria-hidden="true">◆</span> Прогноз обновится после завершения следующей смены.</p>
+            <button id="sectorConfirm" class="btn btn--primary" type="submit">
+              ПОДТВЕРДИТЬ И КОПАТЬ <span aria-hidden="true">▶</span>
+            </button>
+          </footer>
+        </form>
       </section>
 
       <section
@@ -210,13 +338,65 @@
           </div>
 
           <div class="banked-module">
-            <span class="ore-badge" aria-hidden="true"><i></i></span>
+            <span id="resultOreBadge" class="ore-badge" aria-hidden="true"><i></i></span>
             <div>
               <span>ДОБЫТО ЗА СМЕНУ</span>
               <strong id="bankedOre">+0</strong>
               <small>РУДЫ В ХРАНИЛИЩЕ</small>
+              <div id="resultOreBreakdown" class="result-ore-breakdown" role="list" aria-label="Состав добытой руды">
+                <span class="result-ore-chip is-empty" role="listitem">ПОКА ПУСТО</span>
+              </div>
             </div>
           </div>
+
+          <section
+            id="reportPanel"
+            class="run-diagnosis hidden"
+            aria-labelledby="runDiagnosisTitle"
+            aria-live="polite"
+          >
+            <header class="run-diagnosis__header">
+              <div>
+                <span class="ui-kicker">ДИАГНОСТИКА СМЕНЫ</span>
+                <h3 id="runDiagnosisTitle">ТРИ ГЛАВНЫХ ВЫВОДА</h3>
+              </div>
+              <span class="diagnosis-grade" title="Оценка эффективности смены">B+</span>
+            </header>
+
+            <div id="reportHighlights" class="diagnosis-highlights">
+              <article class="diagnosis-highlight is-positive">
+                <span aria-hidden="true">↗</span>
+                <div><small>СИЛЬНАЯ СТОРОНА</small><strong>ЧУТЬЁ НЕ ПРОСТАИВАЛО</strong><p>86% смены рядом была доступная цель.</p></div>
+              </article>
+              <article class="diagnosis-highlight is-warning">
+                <span aria-hidden="true">⌛</span>
+                <div><small>УЗКОЕ МЕСТО</small><strong>МНОГО ВРЕМЕНИ В ПУТИ</strong><p>Передвижение заняло 31% полезного времени.</p></div>
+              </article>
+              <article class="diagnosis-highlight is-neutral">
+                <span aria-hidden="true">◇</span>
+                <div><small>СЛЕДУЮЩИЙ ШАГ</small><strong>УСИЛЬТЕ T4-ПЛАСТ</strong><p>Янтарь дал 42% ценности при 18% находок.</p></div>
+              </article>
+            </div>
+
+            <details id="reportDetails" class="diagnosis-details">
+              <summary>ПОДРОБНЫЕ ДАННЫЕ <span aria-hidden="true">⌄</span></summary>
+              <div class="diagnosis-details__body">
+                <div class="diagnosis-timeline" aria-label="Распределение времени смены">
+                  <span><small>КОПКА</small><i style="--share: 54%"></i><b>54%</b></span>
+                  <span><small>ДВИЖЕНИЕ</small><i style="--share: 31%"></i><b>31%</b></span>
+                  <span><small>ПОИСК</small><i style="--share: 15%"></i><b>15%</b></span>
+                </div>
+                <dl class="diagnosis-metrics">
+                  <div><dt>Бонусное время</dt><dd>+2.4 сек.</dd></div>
+                  <div><dt>Урон кирки</dt><dd>68%</dd></div>
+                  <div><dt>Взрывы и техника</dt><dd>24%</dd></div>
+                  <div><dt>Лишний урон</dt><dd>8%</dd></div>
+                  <div><dt>Смена к прошлой</dt><dd class="is-up">+17%</dd></div>
+                  <div><dt>Прогноз до цели</dt><dd>≈ 3 смены</dd></div>
+                </dl>
+              </div>
+            </details>
+          </section>
 
           <div class="result-actions">
             <button id="launchRocket" class="btn btn--primary final-launch hidden" type="button">
@@ -279,17 +459,6 @@
               <input id="upgradeSearch" type="search" placeholder="Найти модуль…" autocomplete="off" />
               <kbd>/</kbd>
             </label>
-
-            <div class="upgrade-filters" role="group" aria-label="Категории улучшений">
-              <button type="button" class="filter-btn" data-category="all" aria-pressed="true">ВСЕ</button>
-              <button type="button" class="filter-btn" data-category="sense" aria-pressed="false">ЧУТЬЁ</button>
-              <button type="button" class="filter-btn" data-category="dig" aria-pressed="false">КОПКА</button>
-              <button type="button" class="filter-btn" data-category="power" aria-pressed="false">СИЛА</button>
-              <button type="button" class="filter-btn" data-category="time" aria-pressed="false">ВРЕМЯ</button>
-              <button type="button" class="filter-btn" data-category="gadgets" aria-pressed="false">ТЕХНИКА</button>
-              <button type="button" class="filter-btn" data-category="tools" aria-pressed="false">ИНСТРУМЕНТ</button>
-              <button type="button" class="filter-btn" data-category="fortune" aria-pressed="false">УДАЧА</button>
-            </div>
 
             <div id="oreFocusPanel" class="ore-focus-panel hidden" aria-label="Приоритет поиска руды">
               <span class="ore-focus-panel__title"><b>⌾ РУДНЫЙ ФОКУС</b><small>Игнорировать остальные жилы · радиус ×2,15</small></span>
@@ -395,7 +564,7 @@
 
           <footer class="ending-footer">
             <div class="ending-heading">
-              <p>ЭКСПЕДИЦИЯ 00 // ЗАВЕРШЕНА</p>
+              <p>ЭКСПЕДИЦИЯ <span data-total-runs>0</span> // ЗАВЕРШЕНА</p>
               <h2 id="endingTitle">ГЛУБИНА ПРОЙДЕНА</h2>
             </div>
             <div class="ending-actions">
@@ -411,6 +580,147 @@
           </footer>
         </div>
       </section>
+
+      <section
+        id="journalScreen"
+        class="overlay collection-screen hidden"
+        aria-labelledby="geologyJournalTitle"
+        aria-modal="true"
+        role="dialog"
+      >
+        <div class="overlay-backdrop" aria-hidden="true"></div>
+        <div class="collection-shell panel-frame">
+          <header class="feature-header collection-header">
+            <div>
+              <p class="eyebrow"><span></span> АРХИВ ЭКСПЕДИЦИИ</p>
+              <h2 id="geologyJournalTitle">ГЕОЛОГИЧЕСКИЙ ЖУРНАЛ</h2>
+              <p>Изучайте найденные породы, сравнивайте плотность и готовьтесь к следующим ярусам.</p>
+            </div>
+            <div class="collection-header__progress" aria-label="Открыто четыре из десяти пород">
+              <strong id="journalDiscoveryCount">4 / 10</strong><small>ОТКРЫТО</small>
+            </div>
+            <button id="closeJournal" class="icon-btn" type="button" aria-label="Закрыть геологический журнал">
+              <span aria-hidden="true">×</span>
+            </button>
+          </header>
+
+          <div class="journal-toolbar">
+            <div class="journal-filters" role="group" aria-label="Фильтр геологического журнала">
+              <button class="filter-btn is-active" type="button" data-journal-filter="all" aria-pressed="true">ВСЕ</button>
+              <button class="filter-btn" type="button" data-journal-filter="known" aria-pressed="false">ОТКРЫТЫЕ</button>
+              <button class="filter-btn" type="button" data-journal-filter="unknown" aria-pressed="false">НЕИЗВЕСТНЫЕ</button>
+            </div>
+            <p><span aria-hidden="true">⌾</span> Наведите на образец для краткой сводки.</p>
+          </div>
+
+          <div id="journalGrid" class="journal-grid" role="list" aria-label="Каталог пород">
+            <article class="journal-card is-discovered ore-copper" role="listitem" tabindex="0">
+              <span class="journal-card__tier">T1</span><span class="journal-card__sample" aria-hidden="true"><i></i></span>
+              <div><small>ОБРАЗЕЦ 001</small><h3>МЕДЬ</h3><p>Мягкая проводящая жила. Основа первых модулей.</p></div>
+              <dl><div><dt>ПЛОТНОСТЬ</dt><dd>НИЗКАЯ</dd></div><div><dt>РЕКОРД</dt><dd>184</dd></div></dl>
+            </article>
+            <article class="journal-card is-discovered ore-coal" role="listitem" tabindex="0">
+              <span class="journal-card__tier">T2</span><span class="journal-card__sample" aria-hidden="true"><i></i></span>
+              <div><small>ОБРАЗЕЦ 002</small><h3>УГОЛЬ</h3><p>Хрупкие тёмные пласты, полезные для зарядов.</p></div>
+              <dl><div><dt>ПЛОТНОСТЬ</dt><dd>СРЕДНЯЯ</dd></div><div><dt>РЕКОРД</dt><dd>96</dd></div></dl>
+            </article>
+            <article class="journal-card is-discovered ore-iron" role="listitem" tabindex="0">
+              <span class="journal-card__tier">T3</span><span class="journal-card__sample" aria-hidden="true"><i></i></span>
+              <div><small>ОБРАЗЕЦ 003</small><h3>ЖЕЛЕЗО</h3><p>Плотная руда для усиленных инструментов и корпуса.</p></div>
+              <dl><div><dt>ПЛОТНОСТЬ</dt><dd>ВЫСОКАЯ</dd></div><div><dt>РЕКОРД</dt><dd>41</dd></div></dl>
+            </article>
+            <article class="journal-card is-discovered ore-amber" role="listitem" tabindex="0">
+              <span class="journal-card__tier">T4</span><span class="journal-card__sample" aria-hidden="true"><i></i></span>
+              <div><small>ОБРАЗЕЦ 004</small><h3>ЯНТАРЬ</h3><p>Редкие линзы с высоким отношением ценности к массе.</p></div>
+              <dl><div><dt>ПЛОТНОСТЬ</dt><dd>СРЕДНЯЯ</dd></div><div><dt>РЕКОРД</dt><dd>12</dd></div></dl>
+            </article>
+            <article class="journal-card is-unknown" role="listitem" aria-label="Неизвестная порода пятого яруса">
+              <span class="journal-card__tier">T5</span><span class="journal-card__sample" aria-hidden="true"><i></i></span>
+              <div><small>ОБРАЗЕЦ НЕ НАЙДЕН</small><h3>НЕИЗВЕСТНО</h3><p>Достигните глубины 430 м и добудьте первый фрагмент.</p></div>
+              <span class="journal-card__lock"><span aria-hidden="true">◆</span> СИЛУЭТ</span>
+            </article>
+            <article class="journal-card is-unknown is-deep" role="listitem" aria-label="Неизвестная глубокая порода">
+              <span class="journal-card__tier">T6+</span><span class="journal-card__sample" aria-hidden="true"><i></i></span>
+              <div><small>СИГНАЛ ОТСУТСТВУЕТ</small><h3>НЕИЗВЕСТНО</h3><p>Глубина и свойства образца пока не определены.</p></div>
+              <span class="journal-card__lock"><span aria-hidden="true">?</span> НЕТ ДАННЫХ</span>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="balanceScreen"
+        class="overlay balance-lab-screen hidden"
+        aria-labelledby="balanceLabTitle"
+        aria-modal="true"
+        role="dialog"
+      >
+        <div class="overlay-backdrop" aria-hidden="true"></div>
+        <div class="balance-lab panel-frame">
+          <header class="feature-header balance-lab__header">
+            <div>
+              <p class="eyebrow"><span></span> DEV // ЛОКАЛЬНАЯ ТЕЛЕМЕТРИЯ</p>
+              <h2 id="balanceLabTitle">БАЛАНСИРОВОЧНЫЙ СТЕНД</h2>
+              <p>Повторяемые симуляции прогрессии, не меняющие руду и прокачку игрока.</p>
+            </div>
+            <span class="dev-badge">LOCAL ONLY</span>
+            <button id="closeBalance" class="icon-btn" type="button" aria-label="Закрыть балансировочный стенд">
+              <span aria-hidden="true">×</span>
+            </button>
+          </header>
+
+          <form id="balanceLabForm" class="balance-lab__controls">
+            <label for="balanceSeed"><span>FIXED SEED</span><input id="balanceSeed" name="seed" type="text" value="deep-shift-001" spellcheck="false" /></label>
+            <label for="balanceProfile"><span>ПРОФИЛЬ ПРОГРЕССА</span><select id="balanceProfile" name="profile">
+              <option value="0">0% · новый игрок</option>
+              <option value="15">15% · базовые ветки</option>
+              <option value="30" selected>30% · открыт T4–T5</option>
+              <option value="60">60% · продвинутые инструменты</option>
+              <option value="90">90% · предфинальная сборка</option>
+            </select></label>
+            <label for="balanceRuns"><span>СИМУЛЯЦИЙ НА СЕКТОР</span><input id="balanceRuns" name="simulations" type="number" min="1" max="30" step="1" value="12" inputmode="numeric" /></label>
+            <div class="balance-lab__buttons">
+              <button id="runBalance" class="btn btn--primary" type="submit"><span aria-hidden="true">▶</span> ЗАПУСТИТЬ</button>
+              <button id="exportBalance" class="btn btn--secondary" type="button" disabled><span aria-hidden="true">⇩</span> ЭКСПОРТ JSON</button>
+            </div>
+          </form>
+
+          <section id="balanceResults" class="balance-results" aria-labelledby="balanceResultsTitle" aria-live="polite">
+            <header><div><span class="status-dot"></span><strong id="balanceResultsTitle">ПОСЛЕДНИЙ ПРОГОН</strong></div><small>seed: deep-shift-001 · 12 симуляций на сектор</small></header>
+            <div class="balance-result-cards">
+              <article><small>МЕДИАНА ПРОХОЖДЕНИЯ</small><strong>84 мин.</strong><span class="is-good">в коридоре 60–120</span></article>
+              <article><small>РУДА / СМЕНУ P50</small><strong>246</strong><span>разброс 181–329</span></article>
+              <article><small>ДОСТИЖЕНИЕ T5</small><strong>29 мин.</strong><span class="is-warning">+4 мин. к цели</span></article>
+              <article><small>ЗАБЕГИ БЕЗ ЦЕЛИ</small><strong>3.8%</strong><span class="is-good">ниже порога 5%</span></article>
+            </div>
+            <div class="balance-chart" aria-label="График медианной добычи по прогрессу">
+              <span style="--height: 18%"><i>0</i><b>34</b></span><span style="--height: 31%"><i>15</i><b>91</b></span><span style="--height: 49%"><i>30</i><b>246</b></span><span style="--height: 72%"><i>60</i><b>638</b></span><span style="--height: 94%"><i>90</i><b>1 420</b></span>
+            </div>
+            <footer><span><i class="balance-key balance-key--median"></i> медиана добычи</span><span>профиль прогресса, % →</span></footer>
+          </section>
+        </div>
+      </section>
+
+      <nav id="utilityNav" class="utility-nav" aria-label="Журнал и инструменты">
+        <button
+          id="openJournal"
+          class="utility-nav__button"
+          type="button"
+          aria-controls="journalScreen"
+          aria-expanded="false"
+        >
+          <span aria-hidden="true">▤</span><span><small>АРХИВ</small>ЖУРНАЛ</span>
+        </button>
+        <button
+          id="openBalance"
+          class="utility-nav__button utility-nav__button--dev"
+          type="button"
+          aria-controls="balanceScreen"
+          aria-expanded="false"
+        >
+          <span aria-hidden="true">⌁</span><span><small>DEV</small>СТЕНД</span>
+        </button>
+      </nav>
 
       <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true">
         <span class="toast-icon" aria-hidden="true">◆</span>

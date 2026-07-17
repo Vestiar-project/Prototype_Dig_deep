@@ -36,20 +36,24 @@ const formatNumber = (value) => {
   if (number < 1_000_000) return `${(number / 1_000).toFixed(number < 10_000 ? 1 : 0)} тыс.`;
   return `${(number / 1_000_000).toFixed(number < 10_000_000 ? 1 : 0)} млн`;
 };
-const formatDuration = (seconds) => {
-  const total = Math.max(0, Math.floor(Number(seconds) || 0));
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-};
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (character) => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  "'": '&#39;',
+  '"': '&quot;',
+})[character]);
 
 const TILE_SIZE = WORLD_CONFIG.TILE_SIZE || 28;
+const MINER_COLLISION_RADIUS = 8;
 const MIN_RUN_SECONDS = 6;
-const MAX_RUN_SECONDS = 45;
+const DIRECT_MAX_RUN_SECONDS = 45;
+const BONUS_MAX_RUN_SECONDS = 60;
 const EXPLORATION_SCAN_TILES = 18;
 const STORAGE_KEY = 'depth-zero-save-v1';
 const CAMPAIGN = Object.freeze({
-  requiredLevels: 120,
+  requiredLevels: 110,
   requiredLifetimeChunks: 4_000,
-  requiredActiveSeconds: 5_400,
   finalUpgrade: 'core_bon_voyage',
   capstones: Object.freeze([
     'sense_earth_call',
@@ -62,19 +66,25 @@ const CAMPAIGN = Object.freeze({
   ]),
 });
 const DEFAULT_SAVE = Object.freeze({
-  version: 5,
+  version: 7,
   inventory: createOreBag(),
   lifetimeOres: createOreBag(),
   lifetimeChunks: 0,
   levels: {},
   runs: 0,
-  activeMiningSeconds: 0,
   bestHaul: 0,
   bestDepth: 0,
   focusedOreId: null,
   sound: true,
   endingSeen: false,
   campaignComplete: false,
+  tutorialSeen: {},
+  tutorialVersion: 2,
+  oreRecords: {},
+  lastRunReport: null,
+  bestRunReport: null,
+  preferredSectorId: null,
+  balanceHistory: [],
 });
 
 function createDefaultSave() {
@@ -83,6 +93,12 @@ function createDefaultSave() {
     inventory: createOreBag(),
     lifetimeOres: createOreBag(),
     levels: {},
+    tutorialSeen: {},
+    oreRecords: {},
+    lastRunReport: null,
+    bestRunReport: null,
+    preferredSectorId: null,
+    balanceHistory: [],
   };
 }
 
@@ -97,11 +113,108 @@ function migrateLegacyBalance(value) {
   };
 }
 
+function migrateUpgradeLevels(source = {}, storedVersion = 0) {
+  const levels = source && typeof source === 'object' ? { ...source } : {};
+  if ((Number(storedVersion) || 0) >= 7) return levels;
+  const owned = (id) => Math.max(0, Math.floor(Number(levels[id]) || 0));
+  const setLevel = (id, value, cap) => {
+    levels[id] = clamp(Math.max(owned(id), Math.ceil(Number(value) || 0)), 0, cap);
+  };
+
+  // Collapse repeated numeric nodes without taking already bought strength
+  // away from an old save.
+  setLevel(
+    'sense_instinct_spark',
+    (owned('sense_instinct_spark') * 8 + owned('sense_ore_scent') * 12 + owned('sense_wide_sweep') * 18) / 22,
+    18,
+  );
+  setLevel(
+    'dig_arm_swing',
+    (owned('dig_arm_swing') * 4 + owned('dig_long_handle') * 6) / 5,
+    18,
+  );
+  setLevel(
+    'tools_balanced_handle',
+    (owned('tools_balanced_handle') * 0.04 + owned('dig_relentless_rhythm') * 0.06) / 0.05,
+    12,
+  );
+  setLevel(
+    'power_sharpened_edge',
+    (owned('power_sharpened_edge') * 0.35 + owned('power_weighted_head') * 0.55) / 0.45,
+    18,
+  );
+  setLevel(
+    'fortune_prospector_ledger',
+    (owned('fortune_prospector_ledger') * 0.03 + owned('fortune_ore_appraisal') * 0.05) / 0.04,
+    18,
+  );
+  setLevel(
+    'tools_laser_range',
+    (owned('tools_laser_range') * 60 + owned('tools_laser_lens') * 35) / 50,
+    10,
+  );
+
+  const directSeconds = (
+    owned('time_extra_breath') * 0.25
+    + owned('time_wound_spring') * 0.35
+    + owned('time_sand_reserve') * 0.5
+    + owned('time_stolen_second') * 0.75
+    + owned('time_clockwork_heart') * 0.6
+    + owned('time_capsule')
+    + owned('time_overtime_protocol') * 1.25
+    + owned('time_deep_shift') * 1.2
+    + owned('time_keeper') * 1.5
+  );
+  const oldOath = owned('time_thirty_second_oath') > 0;
+  let remainingSeconds = oldOath ? 39 : directSeconds;
+  const extraLevel = Math.min(12, Math.ceil(Math.min(6, remainingSeconds) / 0.5));
+  remainingSeconds = Math.max(0, remainingSeconds - extraLevel * 0.5);
+  let heartLevel = Math.min(12, Math.ceil(Math.min(9, remainingSeconds) / 0.75));
+  remainingSeconds = Math.max(0, remainingSeconds - heartLevel * 0.75);
+  let capsuleLevel = Math.min(12, Math.ceil(remainingSeconds / 2));
+  if (owned('time_frozen_moment') > 0) heartLevel = Math.max(heartLevel, 4);
+  if (owned('time_aftershock_clock') > 0) heartLevel = Math.max(heartLevel, 8);
+  if (owned('time_last_second') > 0) heartLevel = 12;
+  if (owned('time_discovery_bonus') > 0) capsuleLevel = Math.max(capsuleLevel, owned('time_discovery_bonus') * 4);
+  if (owned('time_chrono_shard') > 0 || owned('time_elastic_second') > 0) capsuleLevel = Math.max(capsuleLevel, 8);
+  setLevel('time_extra_breath', oldOath ? 12 : extraLevel, 12);
+  setLevel('time_clockwork_heart', oldOath ? 12 : heartLevel, 12);
+  setLevel('time_capsule', oldOath ? 12 : capsuleLevel, 12);
+  if (owned('time_clockwork_heart') > 0) {
+    setLevel('dig_arm_swing', 1, 18);
+    setLevel('dig_light_footwork', 3, 8);
+  }
+  if (owned('time_capsule') > 0) setLevel('tools_balanced_handle', 5, 12);
+
+  for (const removedId of [
+    'sense_ore_scent',
+    'sense_wide_sweep',
+    'dig_long_handle',
+    'dig_relentless_rhythm',
+    'power_weighted_head',
+    'fortune_ore_appraisal',
+    'tools_laser_lens',
+    'time_wound_spring',
+    'time_sand_reserve',
+    'time_stolen_second',
+    'time_overtime_protocol',
+    'time_frozen_moment',
+    'time_aftershock_clock',
+    'time_last_second',
+    'time_chrono_shard',
+    'time_elastic_second',
+    'time_deep_shift',
+    'time_keeper',
+    'time_discovery_bonus',
+  ]) delete levels[removedId];
+  return levels;
+}
+
 function loadSave() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (!stored || typeof stored !== 'object') return createDefaultSave();
-    const levels = stored.levels && typeof stored.levels === 'object' ? { ...stored.levels } : {};
+    const levels = migrateUpgradeLevels(stored.levels, stored.version);
     const hasLegacyBranchProgress = Object.entries(levels).some(([id, level]) => (
       id !== 'core_first_descent'
       && id !== 'core_bon_voyage'
@@ -127,25 +240,22 @@ function loadSave() {
       ...DEFAULT_SAVE,
       ...stored,
       version: DEFAULT_SAVE.version,
+      tutorialVersion: DEFAULT_SAVE.tutorialVersion,
       inventory,
       lifetimeOres,
       lifetimeChunks: migratedLifetimeChunks,
       levels,
       focusedOreId: ORE_TYPES.some((ore) => ore.id === stored.focusedOreId) ? stored.focusedOreId : null,
+      tutorialSeen: stored.tutorialSeen && typeof stored.tutorialSeen === 'object' ? { ...stored.tutorialSeen } : {},
+      oreRecords: stored.oreRecords && typeof stored.oreRecords === 'object' ? { ...stored.oreRecords } : {},
+      lastRunReport: stored.lastRunReport && typeof stored.lastRunReport === 'object' ? { ...stored.lastRunReport } : null,
+      bestRunReport: stored.bestRunReport && typeof stored.bestRunReport === 'object' ? { ...stored.bestRunReport } : null,
+      preferredSectorId: typeof stored.preferredSectorId === 'string' ? stored.preferredSectorId : null,
+      balanceHistory: Array.isArray(stored.balanceHistory) ? stored.balanceHistory.slice(-12) : [],
     };
     delete merged.currency;
     delete merged.lifetimeOre;
-    if (!Number.isFinite(Number(stored.activeMiningSeconds))) {
-      const runs = Math.max(0, Number(stored.runs) || 0);
-      const currentDuration = clamp(
-        Number(calculateMetaStats(levels).runDuration) || MIN_RUN_SECONDS,
-        MIN_RUN_SECONDS,
-        MAX_RUN_SECONDS,
-      );
-      merged.activeMiningSeconds = stored.campaignComplete
-        ? CAMPAIGN.requiredActiveSeconds
-        : Math.min(CAMPAIGN.requiredActiveSeconds, runs * currentDuration * 0.65);
-    }
+    delete merged.activeMiningSeconds;
     return merged;
   } catch {
     return createDefaultSave();
@@ -173,8 +283,9 @@ function normalizeStats(source = {}) {
     pickPower: source.pickPower ?? 18,
     digSpeed: source.digSpeed ?? 4.2,
     moveSpeed: source.moveSpeed ?? 108,
-    runDuration: clamp(source.runDuration ?? MIN_RUN_SECONDS, MIN_RUN_SECONDS, MAX_RUN_SECONDS),
-    maxRunDuration: MAX_RUN_SECONDS,
+    runDuration: clamp(source.runDuration ?? MIN_RUN_SECONDS, MIN_RUN_SECONDS, DIRECT_MAX_RUN_SECONDS),
+    maxRunDuration: DIRECT_MAX_RUN_SECONDS,
+    bonusRunDurationCap: clamp(source.bonusRunDurationCap ?? BONUS_MAX_RUN_SECONDS, DIRECT_MAX_RUN_SECONDS, BONUS_MAX_RUN_SECONDS),
     critChance: source.critChance ?? 0.05,
     critMultiplier: source.critMultiplier ?? 2,
     bombChance: source.bombChance ?? 0,
@@ -196,6 +307,36 @@ function normalizeStats(source = {}) {
     luck: source.luck ?? 0,
     oreFocusUnlocked: Boolean(source.oreFocusUnlocked),
     oreFocusRadiusMultiplier: source.oreFocusRadiusMultiplier ?? 1,
+    backupTargetSlots: Math.max(0, Math.floor(source.backupTargetSlots || 0)),
+    oreFocusEscalationDelay: Math.max(0, source.oreFocusEscalationDelay || 0),
+    oreFocusEscalationBonus: Math.max(0, source.oreFocusEscalationBonus || 0),
+    leastResistancePathing: Boolean(source.leastResistancePathing),
+    mineLiftRecordDepthRatio: clamp(source.mineLiftRecordDepthRatio || 0, 0, 0.9),
+    focusedOreHardnessReduction: clamp(source.focusedOreHardnessReduction || 0, 0, 0.8),
+    discoveryTimeBonus: Math.max(0, source.discoveryTimeBonus || 0),
+    directionalBombs: Boolean(source.directionalBombs),
+    directionalBombConeTiles: Math.max(0, Math.floor(source.directionalBombConeTiles || 0)),
+    crewBeaconUnlocked: Boolean(source.crewBeaconUnlocked),
+    crewBeaconOverkillCarry: Math.max(0, source.crewBeaconOverkillCarry || 0),
+    laserRicochetCount: clamp(Math.floor(source.laserRicochetCount || 0), 0, 2),
+    laserFirstRicochetMultiplier: clamp(source.laserFirstRicochetMultiplier ?? 0.65, 0, 1),
+    laserSecondRicochetMultiplier: clamp(source.laserSecondRicochetMultiplier ?? 0.45, 0, 1),
+    oreDiversityBonusPerType: Math.max(0, source.oreDiversityBonusPerType || 0),
+    deafKnockStoneThreshold: Math.max(0, Math.floor(source.deafKnockStoneThreshold || 0)),
+    deafKnockSenseRadiusMultiplier: Math.max(1, source.deafKnockSenseRadiusMultiplier || 1),
+    deafKnockMoveSpeedBonus: Math.max(0, source.deafKnockMoveSpeedBonus || 0),
+    deafKnockMoveDuration: Math.max(0, source.deafKnockMoveDuration || 0),
+    deafKnockCooldown: Math.max(0, source.deafKnockCooldown || 0),
+    deafKnockFocusOnly: Boolean(source.deafKnockFocusOnly),
+    triangularFixUnlocked: Boolean(source.triangularFixUnlocked),
+    triangularFixOreMemory: Math.max(0, source.triangularFixOreMemory || 0),
+    triangularFixDronePriority: Boolean(source.triangularFixDronePriority),
+    triangularFixGadgetDamageBonus: Math.max(0, source.triangularFixGadgetDamageBonus || 0),
+    triangularFixRangeBonus: Math.max(0, source.triangularFixRangeBonus || 0),
+    laserSuperPickEchoEvery: Math.max(0, Math.floor(source.laserSuperPickEchoEvery || 0)),
+    laserSuperPickEchoRadiusTiles: Math.max(0, source.laserSuperPickEchoRadiusTiles || 0),
+    laserSuperPickEchoPower: clamp(source.laserSuperPickEchoPower || 0, 0, 1),
+    laserSuperPickEchoNoProcs: Boolean(source.laserSuperPickEchoNoProcs),
   };
 }
 
@@ -203,28 +344,24 @@ function getCampaignProgress() {
   const purchasedLevels = countPurchasedLevels(save.levels);
   const completedCapstones = CAMPAIGN.capstones.filter((id) => (save.levels[id] || 0) >= 1).length;
   const finalInstalled = (save.levels[CAMPAIGN.finalUpgrade] || 0) >= 1;
-  const activeMiningSeconds = Math.max(0, Number(save.activeMiningSeconds) || 0);
   const capstoneFraction = completedCapstones / CAMPAIGN.capstones.length;
   const finalFraction = finalInstalled ? 1 : 0;
   const levelFraction = clamp(purchasedLevels / CAMPAIGN.requiredLevels, 0, 1);
   const oreFraction = clamp(save.lifetimeChunks / CAMPAIGN.requiredLifetimeChunks, 0, 1);
-  const activeTimeFraction = clamp(activeMiningSeconds / CAMPAIGN.requiredActiveSeconds, 0, 1);
   const ready = Boolean(save.campaignComplete) || (
     finalInstalled
     && completedCapstones === CAMPAIGN.capstones.length
     && purchasedLevels >= CAMPAIGN.requiredLevels
     && save.lifetimeChunks >= CAMPAIGN.requiredLifetimeChunks
-    && activeMiningSeconds >= CAMPAIGN.requiredActiveSeconds
   );
 
   return {
     ready,
     percent: ready ? 100 : Math.min(99, Math.floor((
       finalFraction * 0.2
-      + capstoneFraction * 0.3
-      + levelFraction * 0.18
-      + oreFraction * 0.16
-      + activeTimeFraction * 0.16
+      + capstoneFraction * 0.35
+      + levelFraction * 0.2
+      + oreFraction * 0.25
     ) * 100)),
     finalInstalled,
     completedCapstones,
@@ -233,8 +370,6 @@ function getCampaignProgress() {
     requiredLevels: CAMPAIGN.requiredLevels,
     lifetimeChunks: save.lifetimeChunks,
     requiredLifetimeChunks: CAMPAIGN.requiredLifetimeChunks,
-    activeMiningSeconds,
-    requiredActiveSeconds: CAMPAIGN.requiredActiveSeconds,
   };
 }
 
@@ -243,10 +378,68 @@ const upgradeById = new Map(UPGRADE_DEFS.map((definition) => [definition.id, def
 const UPGRADE_LANES = Object.freeze(['time', 'dig', 'tools', 'power', 'fortune', 'gadgets', 'sense']);
 const UPGRADE_NODE_WIDTH = 62;
 const UPGRADE_NODE_HEIGHT = 62;
-const UPGRADE_NODE_STEP_X = 118;
-const UPGRADE_NODE_STEP_Y = 72;
-const UPGRADE_ROOT_X = 46;
+const UPGRADE_RING_START = 170;
+const UPGRADE_RING_STEP = 118;
+const UPGRADE_MAP_PADDING = 270;
 let upgradeLayoutCache = null;
+
+const BREAK_SOURCE_LABELS = Object.freeze({
+  pick: 'Кирка',
+  laser: 'Лазер',
+  multi: 'Дополнительные удары',
+  bomb: 'Бомбы',
+  chain: 'Разряды',
+  drone: 'Дроны',
+  echo: 'Эхо суперкирки',
+  event: 'Микрособытия',
+  shatter: 'Осколочный урон',
+  shock: 'Шок-волны',
+  beacon: 'Маяк артели',
+  clearance: 'Расчистка прохода',
+  debug: 'Отладочное разрушение',
+});
+const TOOL_NAMES = Object.freeze({
+  pickaxe: 'КИРКА',
+  ironPick: 'ЖЕЛЕЗНАЯ КИРКА',
+  steelPick: 'СТАЛЬНАЯ КИРКА',
+  pneumaticPick: 'ПНЕВМОКИРКА',
+  superPick: 'СУПЕРКИРКА',
+  miningLaser: 'ЛАЗЕР',
+  prismaticLaser: 'ПРИЗМОЛАЗЕР',
+});
+
+function breakSourceLabel(source) {
+  return BREAK_SOURCE_LABELS[source] || String(source || 'Неизвестно');
+}
+
+function createRunMetrics() {
+  return {
+    backupPromotions: 0,
+    focusEscalations: 0,
+    pathDetours: 0,
+    liftStarts: 0,
+    focusedCalibrationHits: 0,
+    discoveryBonuses: 0,
+    directionalBlasts: 0,
+    crewRelays: 0,
+    laserRicochets: 0,
+    catalogBonusPieces: 0,
+    movementSeconds: 0,
+    miningSeconds: 0,
+    searchingSeconds: 0,
+    attacks: 0,
+    targetSwitches: 0,
+    sourceBreaks: {},
+    maxBlockHp: 0,
+    maxBlockKind: '',
+    deafKnocks: 0,
+    superPickEchoes: 0,
+    triangleBuffHits: 0,
+    microEvents: {},
+    eventCount: 0,
+  };
+}
+
 const ui = {
   startScreen: $('#startScreen'),
   startRun: $('#startRun'),
@@ -254,12 +447,15 @@ const ui = {
   timerValue: $('#timerValue'),
   timerFill: $('#timerFill'),
   runOre: $('#runOre'),
+  runOreBreakdown: $('#runOreBreakdown'),
   depthValue: $('#depthValue'),
   toolValue: $('#toolValue'),
   comboValue: $('#comboValue'),
   resultScreen: $('#resultScreen'),
   resultTitle: $('#resultTitle'),
   resultStats: $('#resultStats'),
+  resultOreBadge: $('#resultOreBadge'),
+  resultOreBreakdown: $('#resultOreBreakdown'),
   bankedOre: $('#bankedOre'),
   openUpgrades: $('#openUpgrades'),
   retryRun: $('#retryRun'),
@@ -289,6 +485,41 @@ const ui = {
   endingContinue: $('#endingContinue'),
   toast: $('#toast'),
   screenFlash: $('#screenFlash'),
+  tutorialCoach: $('#tutorialCoach'),
+  tutorialTitle: $('#tutorialTitle'),
+  tutorialText: $('#tutorialText'),
+  tutorialHint: $('#tutorialHint'),
+  tutorialClose: $('#tutorialClose'),
+  tutorialNext: $('#tutorialNext'),
+  replayTutorial: $('#replayTutorial'),
+  sectorScreen: $('#sectorScreen'),
+  sectorChoices: $('#sectorChoices'),
+  sectorSkip: $('#sectorSkip'),
+  sectorConfirm: $('#sectorConfirm'),
+  reportHighlights: $('#reportHighlights'),
+  reportDetails: $('#reportDetails'),
+  reportPanel: $('#reportPanel'),
+  reportGrade: $('.diagnosis-grade'),
+  journalScreen: $('#journalScreen'),
+  journalGrid: $('#journalGrid'),
+  journalDiscoveryCount: $('#journalDiscoveryCount'),
+  openJournal: $('#openJournal'),
+  closeJournal: $('#closeJournal'),
+  balanceScreen: $('#balanceScreen'),
+  openBalance: $('#openBalance'),
+  balanceSeed: $('#balanceSeed'),
+  balanceProfile: $('#balanceProfile'),
+  balanceRuns: $('#balanceRuns'),
+  runBalance: $('#runBalance'),
+  exportBalance: $('#exportBalance'),
+  balanceResults: $('#balanceResults'),
+  closeBalance: $('#closeBalance'),
+  microEventBanner: $('#microEventBanner'),
+  microEventIcon: $('#microEventIcon'),
+  microEventTitle: $('#microEventTitle'),
+  microEventText: $('#microEventText'),
+  microEventProgress: $('#microEventProgress'),
+  utilityNav: $('#utilityNav'),
 };
 
 const state = {
@@ -297,7 +528,11 @@ const state = {
   world: null,
   player: null,
   spawn: null,
+  depthOrigin: null,
+  liftDepth: 0,
   target: null,
+  backupTarget: null,
+  pathWaypoint: null,
   seed: Date.now() & 0x7fffffff,
   timeLeft: 0,
   elapsed: 0,
@@ -309,7 +544,10 @@ const state = {
   combo: 0,
   comboExpires: 0,
   attackCooldown: 0,
+  manualPulseCooldown: 0,
+  stuckElapsed: 0,
   targetCooldown: 0,
+  pathCooldown: 0,
   droneCooldown: 0,
   ping: 0,
   shake: 0,
@@ -335,6 +573,34 @@ const state = {
   activeWallElapsed: 0,
   lastBigToast: -99,
   shocks: [],
+  focusMissElapsed: 0,
+  discoveredOreIds: new Set(),
+  bonusTimeEarned: 0,
+  crewBeacon: null,
+  focusEscalationActive: false,
+  metrics: createRunMetrics(),
+  sectorChoices: [],
+  selectedSectorId: null,
+  currentSector: null,
+  pendingRunSeed: 0,
+  dryRockBlocks: 0,
+  deafKnockCooldown: 0,
+  deafKnockBoostRemaining: 0,
+  laserShotCount: 0,
+  triangleOreMemory: new Map(),
+  triangleRefreshCooldown: 0,
+  lastMetricTargetKey: '',
+  microEventCheckCooldown: 0,
+  activeMicroEvent: null,
+  eventYieldBoostRemaining: 0,
+  eventMoveBoostRemaining: 0,
+  eventBannerTimer: 0,
+  balanceReport: null,
+  tutorialQueue: [],
+  activeTutorialId: null,
+  journalFilter: 'all',
+  lastFocusedElement: null,
+  previewMicroEventId: null,
 };
 
 class SoundEngine {
@@ -384,15 +650,287 @@ class SoundEngine {
 
 const sound = new SoundEngine();
 
-function newWorld(seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0) {
+function getHighestUnlockedOreTier() {
+  return ORE_TYPES.reduce((highest, ore) => {
+    const found = (save.lifetimeOres?.[ore.id] || 0) > 0 || (save.inventory?.[ore.id] || 0) > 0;
+    return found ? Math.max(highest, ore.tier || 0) : highest;
+  }, 0);
+}
+
+function depthFromOrigin(x, y) {
+  const origin = state.depthOrigin || state.spawn;
+  if (!origin) return 0;
+  const horizontalDepth = Math.abs(x - origin.x) / TILE_SIZE * 0.42;
+  const verticalDepth = Math.max(0, y - origin.y) / TILE_SIZE;
+  return horizontalDepth + verticalDepth;
+}
+
+function getBonusRunCap() {
+  return clamp(stats.bonusRunDurationCap || BONUS_MAX_RUN_SECONDS, DIRECT_MAX_RUN_SECONDS, BONUS_MAX_RUN_SECONDS);
+}
+
+function addBonusTime(seconds, x, y, label = 'БОНУС') {
+  const amount = Math.max(0, Number(seconds) || 0);
+  if (amount <= 0 || state.mode !== 'run') return 0;
+  const before = state.timeLeft;
+  state.timeLeft = Math.min(getBonusRunCap(), state.timeLeft + amount);
+  const granted = Math.max(0, state.timeLeft - before);
+  if (granted <= 0) return 0;
+  state.bonusTimeEarned += granted;
+  if (label === 'ОТКРЫТИЕ') state.metrics.discoveryBonuses += 1;
+  if (Number.isFinite(x) && Number.isFinite(y)) {
+    state.floaters.push({
+      x,
+      y,
+      text: `${label} +${granted.toFixed(2)}с`,
+      color: '#74e4df',
+      life: 0.95,
+      maxLife: 0.95,
+    });
+  }
+  return granted;
+}
+
+function showTutorial(id, title, text, hint = '') {
+  if (!id || save.tutorialSeen?.[id]) return false;
+  if (state.activeTutorialId === id || state.tutorialQueue.some((lesson) => lesson.id === id)) return false;
+  if (!ui.tutorialCoach) return false;
+  const lesson = { id, title, text, hint };
+  if (state.activeTutorialId) {
+    state.tutorialQueue.push(lesson);
+    return true;
+  }
+  state.activeTutorialId = id;
+  if (ui.tutorialTitle) ui.tutorialTitle.textContent = title;
+  if (ui.tutorialText) ui.tutorialText.textContent = text;
+  if (ui.tutorialHint) {
+    ui.tutorialHint.textContent = hint;
+    ui.tutorialHint.classList.toggle('hidden', !hint);
+  }
+  ui.tutorialCoach.dataset.lesson = id;
+  ui.tutorialCoach.classList.remove('hidden');
+  return true;
+}
+
+function markTutorialSeen(id) {
+  if (!id) return;
+  save.tutorialSeen = { ...(save.tutorialSeen || {}), [id]: true };
+}
+
+function dismissTutorial(skipQueued = false) {
+  markTutorialSeen(state.activeTutorialId);
+  if (skipQueued) {
+    state.tutorialQueue.forEach((lesson) => markTutorialSeen(lesson.id));
+    state.tutorialQueue.length = 0;
+  }
+  persistSave();
+  ui.tutorialCoach?.classList.add('hidden');
+  state.activeTutorialId = null;
+  const next = state.tutorialQueue.shift();
+  if (next) {
+    state.activeTutorialId = next.id;
+    if (ui.tutorialTitle) ui.tutorialTitle.textContent = next.title;
+    if (ui.tutorialText) ui.tutorialText.textContent = next.text;
+    if (ui.tutorialHint) {
+      ui.tutorialHint.textContent = next.hint;
+      ui.tutorialHint.classList.toggle('hidden', !next.hint);
+    }
+    ui.tutorialCoach.dataset.lesson = next.id;
+    ui.tutorialCoach.classList.remove('hidden');
+  }
+}
+
+const ONBOARDING_LESSONS = Object.freeze([
+  Object.freeze({
+    id: 'onboarding_v2_shift',
+    title: 'КОРОТКАЯ СМЕНА',
+    text: 'Шахтёр работает сам: чует руду, прокладывает к ней ход и добывает груз. Первая смена длится 6 секунд — это нормально, между сменами ты усиливаешь постоянное оборудование.',
+    hint: 'Нажми «НАЧАТЬ ЗАБЕГ», выбери сектор и наблюдай за целью шахтёра.',
+  }),
+  Object.freeze({
+    id: 'onboarding_v2_pulse',
+    title: 'ИМПУЛЬС ЧУТЬЯ',
+    text: 'Пробел или щелчок по шахте немедленно обновляет поиск цели. Он не ускоряет время и не даёт бесплатных ударов.',
+    hint: 'Используй импульс, если хочешь сразу пересканировать окружение.',
+  }),
+  Object.freeze({
+    id: 'onboarding_v2_cargo',
+    title: 'ГРУЗ И РУДА',
+    text: 'Вверху во время смены видно, какие именно руды уже лежат в грузе. После смены весь состав показан цветными значками и переносится в постоянный запас.',
+    hint: 'Разные улучшения требуют конкретные виды руды, а не одну общую валюту.',
+  }),
+  Object.freeze({
+    id: 'onboarding_v2_tree',
+    title: 'ЕДИНОЕ ДЕРЕВО',
+    text: 'Все постоянные улучшения растут из одной центральной точки. Наведи на иконку, чтобы увидеть эффект, требования и цену; дальние узлы открываются постепенно.',
+    hint: 'Кнопка «КАК ИГРАТЬ» на стартовом экране повторяет это обучение.',
+  }),
+]);
+
+function startOnboarding(force = false) {
+  clearTutorialCoach();
+  if (force) {
+    for (const lesson of ONBOARDING_LESSONS) delete save.tutorialSeen[lesson.id];
+    persistSave();
+  }
+  for (const lesson of ONBOARDING_LESSONS) {
+    showTutorial(lesson.id, lesson.title, lesson.text, lesson.hint);
+  }
+}
+
+function clearTutorialCoach() {
+  ui.tutorialCoach?.classList.add('hidden');
+  state.activeTutorialId = null;
+  state.tutorialQueue.length = 0;
+}
+
+function trapOverlayFocus(event) {
+  if (event.key !== 'Tab') return false;
+  const modal = ({
+    sector: ui.sectorScreen,
+    journal: ui.journalScreen,
+    balance: ui.balanceScreen,
+    upgrades: ui.upgradeScreen,
+    result: ui.resultScreen,
+    ending: ui.endingScreen,
+  })[state.mode];
+  const tutorialVisible = Boolean(state.activeTutorialId && ui.tutorialCoach && !ui.tutorialCoach.classList.contains('hidden'));
+  const focusScope = tutorialVisible ? ui.tutorialCoach : modal;
+  if (!focusScope || focusScope.classList.contains('hidden')) return false;
+  const focusable = [...focusScope.querySelectorAll('button, summary, [href], input, select, textarea, [tabindex]')]
+    .filter((element) => (
+      !element.disabled
+      && element.getAttribute('aria-hidden') !== 'true'
+      && element.tabIndex !== -1
+      && !element.closest('.hidden')
+      && (typeof element.getClientRects !== 'function' || element.getClientRects().length > 0)
+    ));
+  if (!focusable.length) return false;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (!focusScope.contains(document.activeElement)) {
+    event.preventDefault();
+    (event.shiftKey ? last : first).focus();
+    return true;
+  }
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+    return true;
+  }
+  if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+    return true;
+  }
+  return false;
+}
+
+function getRunSeed() {
+  return (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+}
+
+function getAvailableSectorChoices(seed = getRunSeed()) {
+  const choices = typeof worldApi.getSectorChoices === 'function'
+    ? worldApi.getSectorChoices(seed)
+    : typeof MineWorld.getSectorChoices === 'function'
+      ? MineWorld.getSectorChoices(seed)
+      : [];
+  return Array.isArray(choices) ? choices.slice(0, 3) : [];
+}
+
+function renderSectorChoices() {
+  if (!ui.sectorChoices) return;
+  const fragment = document.createDocumentFragment();
+  const legend = document.createElement('legend');
+  legend.className = 'sr-only';
+  legend.textContent = 'Доступные геологические секторы';
+  fragment.append(legend);
+  for (const sector of state.sectorChoices) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `sector-card${sector.id === save.preferredSectorId ? ' is-preferred' : ''}${sector.id === state.selectedSectorId ? ' is-selected' : ''}`;
+    button.dataset.sectorId = sector.id;
+    button.setAttribute('aria-pressed', String(sector.id === state.selectedSectorId));
+    button.style.setProperty('--sector-color', sector.color || '#68e0c1');
+    const forecast = (sector.forecast || []).slice(0, 3).map((line) => {
+      const [label, ...value] = String(line).split(':');
+      return `<span><small>${label}</small><b>${value.join(':').trim() || '—'}</b></span>`;
+    }).join('');
+    const mapClass = sector.id === 'cavern_karst' ? 'sector-card__map--karst' : sector.id === 'ore_ridge' ? 'sector-card__map--magma' : 'sector-card__map--stable';
+    button.innerHTML = `
+      <span class="sector-card__map ${mapClass}" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span class="sector-card__heading"><small>${sector.icon || '◆'} ГЕОПРОГНОЗ</small><strong>${sector.label || sector.id}</strong></span>
+      <span class="sector-card__tags"><b>${sector.ratings?.abundance || 'обычное'}</b><em>${sector.ratings?.hardness || 'обычная'}</em></span>
+      <span class="sector-card__forecast">${forecast}</span>
+      <span class="sector-card__note">${sector.description || ''}${sector.id === save.preferredSectorId ? ' · Прошлый выбор.' : ''}</span>`;
+    fragment.append(button);
+  }
+  ui.sectorChoices.replaceChildren(fragment);
+}
+
+function requestRunStart() {
+  const seed = getRunSeed();
+  const choices = getAvailableSectorChoices(seed);
+  if (save.runs < 2 || choices.length < 3 || !ui.sectorScreen || !ui.sectorChoices) {
+    startRun({ seed, sectorId: choices[0]?.id || 'stable_strata' });
+    return;
+  }
+  state.pendingRunSeed = seed;
+  state.sectorChoices = choices;
+  state.selectedSectorId = choices.some((sector) => sector.id === save.preferredSectorId)
+    ? save.preferredSectorId
+    : choices[0].id;
+  state.returnMode = state.mode === 'result' ? 'result' : 'title';
+  state.mode = 'sector';
+  state.lastFocusedElement = document.activeElement || null;
+  hideAllScreens();
+  renderSectorChoices();
+  ui.sectorScreen.classList.remove('hidden');
+  updateUtilityNavState();
+  requestAnimationFrame(() => ui.sectorChoices?.querySelector?.('[aria-pressed="true"]')?.focus?.({ preventScroll: true }));
+  showTutorial(
+    'sector_choice',
+    'ГЕОЛОГИЧЕСКИЙ ПРОГНОЗ',
+    'Перед сменой выбирай один из трёх участков. У каждого заметно отличаются пещеры, твёрдость и богатство жил.',
+    'Карточки всегда показывают все плюсы и минусы — скрытых штрафов нет.',
+  );
+}
+
+function newWorld(seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0, options = {}) {
   state.seed = seed;
-  state.world = new MineWorld(ORE_TYPES, seed);
-  const spawn = state.world.getSpawn();
+  state.world = new MineWorld(ORE_TYPES, seed, { sectorId: options.sectorId || 'stable_strata' });
+  state.currentSector = typeof state.world.getSectorInfo === 'function'
+    ? state.world.getSectorInfo()
+    : null;
+  const baseSpawn = state.world.getSpawn();
+  state.depthOrigin = {
+    ...baseSpawn,
+    x: baseSpawn.x ?? (baseSpawn.tx + 0.5) * TILE_SIZE,
+    y: baseSpawn.y ?? (baseSpawn.ty + 0.5) * TILE_SIZE,
+  };
+  let spawn = baseSpawn;
+  if (
+    options.useLift
+    && (stats.mineLiftRecordDepthRatio || 0) > 0
+    && save.bestDepth > 0
+    && typeof state.world.getLiftStart === 'function'
+  ) {
+    spawn = state.world.getLiftStart(
+      save.bestDepth,
+      stats.mineLiftRecordDepthRatio,
+      save.bestDepth,
+      { unlockedTierCap: getHighestUnlockedOreTier() },
+    ) || baseSpawn;
+  }
   state.spawn = {
     ...spawn,
     x: spawn.x ?? (spawn.tx + 0.5) * TILE_SIZE,
     y: spawn.y ?? (spawn.ty + 0.5) * TILE_SIZE,
   };
+  state.liftDepth = Number.isFinite(Number(spawn.depth))
+    ? Math.max(0, Number(spawn.depth))
+    : depthFromOrigin(state.spawn.x, state.spawn.y);
   state.player = {
     x: state.spawn.x,
     y: state.spawn.y,
@@ -407,24 +945,37 @@ function newWorld(seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >
   state.camera.y = state.player.y - state.viewport.height * 0.52;
 }
 
-function startRun() {
+function startRun(options = {}) {
+  const runOptions = options && typeof options === 'object' && !('currentTarget' in options)
+    ? options
+    : {};
   sound.unlock();
   stats = normalizeStats(calculateMetaStats(save.levels));
-  newWorld();
+  newWorld(runOptions.seed ?? getRunSeed(), {
+    useLift: true,
+    sectorId: runOptions.sectorId || save.preferredSectorId || 'stable_strata',
+  });
+  save.preferredSectorId = state.currentSector?.id || runOptions.sectorId || 'stable_strata';
+  persistSave();
   Object.assign(state, {
     mode: 'run',
     target: null,
+    backupTarget: null,
+    pathWaypoint: null,
     timeLeft: stats.runDuration,
     elapsed: 0,
     runOre: 0,
     oreCounts: createOreBag(),
     yieldRemainders: {},
     blocksBroken: 0,
-    deepest: 0,
+    deepest: state.liftDepth,
     combo: 0,
     comboExpires: 0,
     attackCooldown: 0,
+    manualPulseCooldown: 0,
+    stuckElapsed: 0,
     targetCooldown: 0,
+    pathCooldown: 0,
     droneCooldown: 0,
     ping: 1,
     paused: false,
@@ -436,36 +987,196 @@ function startRun() {
     pauseStartedAt: 0,
     activeWallElapsed: 0,
     lastBigToast: -99,
+    focusMissElapsed: 0,
+    discoveredOreIds: new Set(),
+    bonusTimeEarned: 0,
+    crewBeacon: null,
+    focusEscalationActive: false,
+    metrics: createRunMetrics(),
+    selectedSectorId: state.currentSector?.id || runOptions.sectorId || 'stable_strata',
+    dryRockBlocks: 0,
+    deafKnockCooldown: 0,
+    deafKnockBoostRemaining: 0,
+    laserShotCount: 0,
+    triangleOreMemory: new Map(),
+    triangleRefreshCooldown: 0,
+    lastMetricTargetKey: '',
+    microEventCheckCooldown: 0,
+    activeMicroEvent: null,
+    eventYieldBoostRemaining: 0,
+    eventMoveBoostRemaining: 0,
+    eventBannerTimer: 0,
+    previewMicroEventId: null,
   });
+  if (state.liftDepth > 1) state.metrics.liftStarts = 1;
   state.particles.length = 0;
   state.floaters.length = 0;
   state.beams.length = 0;
   state.shocks.length = 0;
   hideAllScreens();
+  updateUtilityNavState();
   ui.runHud?.classList.remove('hidden');
   $('#fieldGuide')?.classList.remove('hidden');
   updateHud();
-  toast('ЧУТЬЁ АКТИВНО — ИЩЕМ ЖИЛУ', 'info');
+  const sectorLabel = state.currentSector?.label ? ` · ${state.currentSector.label.toUpperCase()}` : '';
+  toast(state.liftDepth > 1 ? `ЛИФТ: СТАРТ С ${Math.floor(state.liftDepth)} М${sectorLabel}` : `ЧУТЬЁ АКТИВНО — ИЩЕМ ЖИЛУ${sectorLabel}`, 'info');
+  showTutorial(
+    'first_run',
+    'СМЕНА НАЧАЛАСЬ',
+    'Шахтёр работает сам: чутьё выбирает цель, затем он идёт к ней и копает. Забег короткий — добыча остаётся навсегда.',
+    'Клик по шахте или пробел немедленно обновляет импульс поиска.',
+  );
   sound.tone(145, 0.16, 'triangle', 0.04, 180);
+}
+
+function applyCatalogBonus(sourceHaul) {
+  const haul = sanitizeOreBag(sourceHaul);
+  const distinctTypes = state.discoveredOreIds?.size || 0;
+  const multiplier = 1 + Math.max(0, distinctTypes - 1) * (stats.oreDiversityBonusPerType || 0);
+  const rawCount = countOreBag(haul);
+  const bonusCount = Math.max(0, Math.floor(rawCount * (multiplier - 1)));
+  if (bonusCount <= 0 || rawCount <= 0) return { haul, rawCount, bonusCount: 0, multiplier, distinctTypes };
+
+  const shares = ORE_TYPES
+    .filter((ore) => haul[ore.id] > 0)
+    .map((ore) => {
+      const exact = bonusCount * haul[ore.id] / rawCount;
+      const whole = Math.floor(exact);
+      haul[ore.id] += whole;
+      return { ore, fraction: exact - whole, whole };
+    })
+    .sort((left, right) => right.fraction - left.fraction || right.ore.tier - left.ore.tier);
+  let distributed = shares.reduce((sum, share) => sum + share.whole, 0);
+  for (let index = 0; distributed < bonusCount && shares.length; index = (index + 1) % shares.length) {
+    haul[shares[index].ore.id] += 1;
+    distributed += 1;
+  }
+  state.metrics.catalogBonusPieces += bonusCount;
+  return { haul, rawCount, bonusCount, multiplier, distinctTypes };
+}
+
+function buildRunReport(catalog, haul, activeRunSeconds) {
+  const sourceEntries = Object.entries(state.metrics.sourceBreaks || {})
+    .sort((left, right) => right[1] - left[1]);
+  const previous = save.lastRunReport;
+  const haulCount = countOreBag(haul);
+  const duration = Math.max(0.01, activeRunSeconds || state.elapsed || 0.01);
+  const movement = Math.min(duration, state.metrics.movementSeconds || 0);
+  const mining = Math.min(duration, state.metrics.miningSeconds || 0);
+  const searching = Math.min(duration, state.metrics.searchingSeconds || 0);
+  const rarest = Object.entries(state.oreCounts)
+    .filter(([, amount]) => amount > 0)
+    .sort(([a], [b]) => (oreById.get(b)?.tier || 0) - (oreById.get(a)?.tier || 0))[0];
+  const report = {
+    seed: state.seed,
+    run: save.runs + 1,
+    sectorId: state.currentSector?.id || state.selectedSectorId || 'stable_strata',
+    sectorLabel: state.currentSector?.label || 'Стабильные пласты',
+    haul: haulCount,
+    rawHaul: catalog.rawCount,
+    catalogBonus: catalog.bonusCount,
+    duration: Number(duration.toFixed(2)),
+    depth: Math.floor(state.deepest),
+    blocks: state.blocksBroken,
+    oreTypes: state.discoveredOreIds?.size || 0,
+    rarestOreId: rarest?.[0] || null,
+    rarestAmount: rarest?.[1] || 0,
+    efficiency: Number((haulCount / duration).toFixed(2)),
+    movementSeconds: Number(movement.toFixed(2)),
+    miningSeconds: Number(mining.toFixed(2)),
+    searchingSeconds: Number(searching.toFixed(2)),
+    bonusTime: Number(state.bonusTimeEarned.toFixed(2)),
+    targetSwitches: state.metrics.targetSwitches || 0,
+    eventCount: state.metrics.eventCount || 0,
+    microEvents: { ...(state.metrics.microEvents || {}) },
+    sourceBreaks: { ...(state.metrics.sourceBreaks || {}) },
+    strongestSource: sourceEntries[0]?.[0] || '—',
+    strongestSourceBlocks: sourceEntries[0]?.[1] || 0,
+    maxBlockHp: Math.round(state.metrics.maxBlockHp || 0),
+    maxBlockKind: state.metrics.maxBlockKind || '—',
+    deafKnocks: state.metrics.deafKnocks || 0,
+    superPickEchoes: state.metrics.superPickEchoes || 0,
+    triangleBuffHits: state.metrics.triangleBuffHits || 0,
+    deltaHaul: previous ? haulCount - (previous.haul || 0) : null,
+    deltaDepth: previous ? Math.floor(state.deepest) - (previous.depth || 0) : null,
+  };
+  return report;
+}
+
+function renderRunReport(report) {
+  if (!report) return;
+  ui.reportPanel?.classList.remove('hidden');
+  const rare = report.rarestOreId ? oreById.get(report.rarestOreId) : null;
+  const deltaLabel = (value, suffix = '') => value == null
+    ? 'первый замер'
+    : `${value >= 0 ? '+' : ''}${value}${suffix} к прошлой смене`;
+  if (ui.reportHighlights) {
+    ui.reportHighlights.innerHTML = `
+      <article class="diagnosis-highlight is-positive"><span aria-hidden="true">↗</span><div><small>ЭФФЕКТИВНОСТЬ</small><strong>${report.efficiency.toFixed(1)} куск./с</strong><p>${deltaLabel(report.deltaHaul)}</p></div></article>
+      <article class="diagnosis-highlight is-warning"><span aria-hidden="true">⌛</span><div><small>ГЛУБИНА</small><strong>${report.depth} м</strong><p>${deltaLabel(report.deltaDepth, ' м')}</p></div></article>
+      <article class="diagnosis-highlight is-neutral"><span aria-hidden="true">◇</span><div><small>ГЛАВНАЯ НАХОДКА</small><strong>${rare ? `${rare.name} ×${report.rarestAmount}` : 'нет руды'}</strong><p>${report.sectorLabel}</p></div></article>`;
+  }
+  if (ui.reportGrade) {
+    ui.reportGrade.textContent = report.efficiency >= 1.25
+      ? 'A+'
+      : report.efficiency >= 0.7
+        ? 'A'
+        : report.efficiency >= 0.3
+          ? 'B'
+          : report.haul > 0 ? 'C' : 'D';
+  }
+  if (ui.reportDetails) {
+    const sourceText = Object.entries(report.sourceBreaks)
+      .sort((left, right) => right[1] - left[1])
+      .map(([source, amount]) => `${escapeHtml(breakSourceLabel(source))}: ${amount}`)
+      .join(' · ') || 'нет разрушений';
+    const share = (seconds) => `${clamp(seconds / Math.max(0.01, report.duration) * 100, 0, 100).toFixed(0)}%`;
+    ui.reportDetails.innerHTML = `
+      <summary>ПОДРОБНЫЕ ДАННЫЕ <span aria-hidden="true">⌄</span></summary>
+      <div class="diagnosis-details__body">
+        <div class="diagnosis-timeline" aria-label="Распределение времени смены">
+          <span><small>КОПКА</small><i style="--share:${share(report.miningSeconds)}"></i><b>${share(report.miningSeconds)}</b></span>
+          <span><small>ДВИЖЕНИЕ</small><i style="--share:${share(report.movementSeconds)}"></i><b>${share(report.movementSeconds)}</b></span>
+          <span><small>ПОИСК</small><i style="--share:${share(report.searchingSeconds)}"></i><b>${share(report.searchingSeconds)}</b></span>
+        </div>
+        <dl class="diagnosis-metrics">
+        <div><dt>В движении</dt><dd>${report.movementSeconds.toFixed(1)} с</dd></div>
+        <div><dt>За работой</dt><dd>${report.miningSeconds.toFixed(1)} с</dd></div>
+        <div><dt>Без цели</dt><dd>${report.searchingSeconds.toFixed(1)} с</dd></div>
+        <div><dt>Бонусное время</dt><dd>+${report.bonusTime.toFixed(1)} с</dd></div>
+        <div><dt>Смен цели</dt><dd>${report.targetSwitches}</dd></div>
+        <div><dt>Микрособытия</dt><dd>${report.eventCount}</dd></div>
+        <div><dt>Глухой стук</dt><dd>${report.deafKnocks}</dd></div>
+        <div><dt>Эхо суперкирки</dt><dd>${report.superPickEchoes}</dd></div>
+        <div><dt>Усиления триангуляции</dt><dd>${report.triangleBuffHits}</dd></div>
+        <div><dt>Плотнейший блок</dt><dd>${report.maxBlockHp} · ${report.maxBlockKind}</dd></div>
+          <div><dt>Разрушения</dt><dd>${sourceText}</dd></div>
+        </dl>
+      </div>`;
+  }
 }
 
 function finishRun() {
   if (state.mode !== 'run') return;
   state.mode = 'result';
+  updateUtilityNavState();
   ui.runHud?.classList.add('hidden');
   updateFocusHud();
-  const activeRunSeconds = clamp(state.activeWallElapsed, 0, MAX_RUN_SECONDS);
-  const haul = sanitizeOreBag(state.oreCounts);
+  const activeRunSeconds = clamp(state.activeWallElapsed, 0, getBonusRunCap());
+  const catalog = applyCatalogBonus(state.oreCounts);
+  const haul = catalog.haul;
   const haulCount = countOreBag(haul);
+  const report = buildRunReport(catalog, haul, activeRunSeconds);
   state.lastHaul = haul;
   state.lastHaulCount = haulCount;
   addOreBag(save.inventory, haul);
   addOreBag(save.lifetimeOres, haul);
   save.runs += 1;
   save.lifetimeChunks += haulCount;
-  save.activeMiningSeconds = Math.max(0, Number(save.activeMiningSeconds) || 0) + activeRunSeconds;
   save.bestHaul = Math.max(save.bestHaul, haulCount);
   save.bestDepth = Math.max(save.bestDepth, Math.floor(state.deepest));
+  save.lastRunReport = report;
+  if (!save.bestRunReport || report.haul > (save.bestRunReport.haul || 0)) save.bestRunReport = { ...report };
   persistSave();
 
   const rarest = Object.entries(state.oreCounts)
@@ -481,27 +1192,44 @@ function finishRun() {
     ui.resultStats.innerHTML = `
       <div><span>Добыча</span><strong>${formatNumber(haulCount)} куск.</strong></div>
       <div><span>Разрушено</span><strong>${state.blocksBroken}</strong></div>
-      <div><span>Удаление</span><strong>${Math.floor(state.deepest)} м</strong></div>
+      <div><span>Глубина</span><strong>${Math.floor(state.deepest)} м</strong></div>
       <div><span>Лучшая находка</span><strong>${rareText}</strong></div>
       <div><span>Состав груза</span><strong>${haulText}</strong></div>
-      <div><span>Стаж экспедиции</span><strong>${formatDuration(save.activeMiningSeconds)} / ${formatDuration(CAMPAIGN.requiredActiveSeconds)}</strong></div>`;
+      ${catalog.bonusCount > 0 ? `<div><span>Каталог находок</span><strong>+${catalog.bonusCount} · ×${catalog.multiplier.toFixed(2)}</strong></div>` : ''}
+      `;
   }
   if (ui.bankedOre) ui.bankedOre.textContent = `+${formatNumber(haulCount)}`;
+  if (ui.resultOreBreakdown) ui.resultOreBreakdown.innerHTML = oreBreakdownMarkup(haul);
+  if (ui.resultOreBadge) {
+    if (rarest) {
+      ui.resultOreBadge.dataset.ore = rarest[0];
+      ui.resultOreBadge.title = `${oreById.get(rarest[0])?.name || rarest[0]} ×${formatNumber(haul[rarest[0]] || rarest[1])}`;
+    } else {
+      delete ui.resultOreBadge.dataset.ore;
+      ui.resultOreBadge.title = 'Руда не найдена';
+    }
+  }
+  renderRunReport(report);
   ui.resultScreen?.classList.remove('hidden');
   $('#fieldGuide')?.classList.add('hidden');
   updatePersistentLabels();
+  showTutorial(
+    'first_report',
+    'РАЗБОР СМЕНЫ',
+    'После каждого забега отчёт показывает, куда ушло время, что разрушало породу и насколько результат лучше прошлого.',
+    'Геологический журнал хранит постоянные рекорды по каждому виду руды.',
+  );
+  requestAnimationFrame(() => ui.retryRun?.focus({ preventScroll: true }));
   sound.tone(220, 0.15, 'triangle', 0.04, -80);
 }
 
 function refreshCampaignUI() {
   const progress = getCampaignProgress();
   if (ui.campaignStatus) {
-    const activeMinutes = Math.floor(progress.activeMiningSeconds / 60);
-    const requiredMinutes = Math.ceil(progress.requiredActiveSeconds / 60);
     ui.campaignStatus.textContent = progress.ready
       ? (save.endingSeen ? 'ФИНАЛ ОТКРЫТ' : 'РАКЕТА ГОТОВА')
-      : `РАКЕТА · ${progress.percent}% · ${activeMinutes}/${requiredMinutes} МИН`;
-    ui.campaignStatus.title = `Верхушки веток ${progress.completedCapstones}/${progress.totalCapstones} · «В добрый путь» ${progress.finalInstalled ? 'установлен' : 'не установлен'} · уровни ${progress.purchasedLevels}/${progress.requiredLevels} · добыто ${formatNumber(progress.lifetimeChunks)}/${formatNumber(progress.requiredLifetimeChunks)} кусков · активная добыча ${activeMinutes}/${requiredMinutes} мин`;
+      : `РАКЕТА · ${progress.percent}% · УР. ${progress.purchasedLevels}/${progress.requiredLevels} · РУДА ${formatNumber(progress.lifetimeChunks)}/${formatNumber(progress.requiredLifetimeChunks)}`;
+    ui.campaignStatus.title = `Верхушки веток ${progress.completedCapstones}/${progress.totalCapstones} · «В добрый путь» ${progress.finalInstalled ? 'установлен' : 'не установлен'} · уровни ${progress.purchasedLevels}/${progress.requiredLevels} · добыто ${formatNumber(progress.lifetimeChunks)}/${formatNumber(progress.requiredLifetimeChunks)} кусков`;
   }
   ui.launchRocket?.classList.toggle('hidden', !progress.ready);
   if (ui.launchLabel) ui.launchLabel.textContent = save.endingSeen ? 'СМОТРЕТЬ ФИНАЛ' : 'ЗАПУСТИТЬ РАКЕТУ';
@@ -523,6 +1251,7 @@ function showEnding() {
   const progress = getCampaignProgress();
   if (!progress.ready && !save.campaignComplete) return;
   state.mode = 'ending';
+  updateUtilityNavState();
   save.campaignComplete = true;
   save.endingSeen = true;
   persistSave();
@@ -547,6 +1276,9 @@ function hideAllScreens() {
   ui.resultScreen?.classList.add('hidden');
   ui.upgradeScreen?.classList.add('hidden');
   ui.endingScreen?.classList.add('hidden');
+  ui.sectorScreen?.classList.add('hidden');
+  ui.journalScreen?.classList.add('hidden');
+  ui.balanceScreen?.classList.add('hidden');
 }
 
 function showTitle() {
@@ -554,27 +1286,38 @@ function showTitle() {
   hideAllScreens();
   ui.runHud?.classList.add('hidden');
   ui.startScreen?.classList.remove('hidden');
+  updateUtilityNavState();
   updatePersistentLabels();
 }
 
 function openUpgradeScreen() {
-  if (state.mode === 'run') return;
+  if (!['title', 'result'].includes(state.mode)) return;
   state.returnMode = state.mode === 'result' ? 'result' : 'title';
   state.mode = 'upgrades';
+  updateUtilityNavState();
   ui.startScreen?.classList.add('hidden');
   ui.resultScreen?.classList.add('hidden');
   ui.upgradeScreen?.classList.remove('hidden');
   renderUpgrades();
+  showTutorial(
+    'upgrade_tree',
+    'ЕДИНОЕ ДЕРЕВО',
+    'Вся мета-прокачка начинается в одном корне. Ветки расходятся, снова пересекаются и сходятся к перку «В добрый путь».',
+    'Наведи курсор на иконку, чтобы увидеть эффект и цену следующего уровня.',
+  );
   requestAnimationFrame(() => {
     const selected = state.selectedUpgradeId ? upgradeById.get(state.selectedUpgradeId) : null;
     scrollUpgradeIntoView(selected, false);
+    ui.closeUpgrades?.focus({ preventScroll: true });
   });
 }
 
 function closeUpgradeScreen() {
+  clearTutorialCoach();
   ui.upgradeScreen?.classList.add('hidden');
   if (state.returnMode === 'result') {
     state.mode = 'result';
+    updateUtilityNavState();
     if (ui.bankedOre) ui.bankedOre.textContent = `+${formatNumber(state.lastHaulCount)}`;
     ui.resultScreen?.classList.remove('hidden');
   } else {
@@ -589,6 +1332,469 @@ function updatePersistentLabels() {
   $$('[data-total-runs]').forEach((element) => { element.textContent = save.runs; });
   $$('[data-best-haul]').forEach((element) => { element.textContent = formatNumber(save.bestHaul); });
   refreshCampaignUI();
+}
+
+function oreIsKnown(ore) {
+  return Boolean(
+    (save.lifetimeOres?.[ore.id] || 0) > 0
+    || (save.inventory?.[ore.id] || 0) > 0
+    || save.oreRecords?.[ore.id]
+  );
+}
+
+function renderGeologicalJournal() {
+  if (!ui.journalGrid) return;
+  const fragment = document.createDocumentFragment();
+  let knownCount = 0;
+  let renderedCount = 0;
+  for (const ore of ORE_TYPES) {
+    const known = oreIsKnown(ore);
+    if (known) knownCount += 1;
+    if (state.journalFilter === 'known' && !known) continue;
+    if (state.journalFilter === 'unknown' && known) continue;
+    const record = save.oreRecords?.[ore.id] || {};
+    const card = document.createElement('article');
+    card.className = `journal-card${known ? ' is-discovered' : ' is-unknown'}`;
+    card.style.setProperty('--ore-journal', ore.color || '#71808c');
+    card.setAttribute('role', 'listitem');
+    if (known) card.tabIndex = 0;
+    if (known) {
+      card.innerHTML = `
+        <span class="journal-card__tier">T${(ore.tier || 0) + 1}</span>
+        <span class="journal-card__sample" aria-hidden="true"><i></i></span>
+        <div><small>ОБРАЗЕЦ · ${Math.round(ore.hardness || ore.hp || 0)} ПЛОТН.</small><h3>${ore.name}</h3><p>${ore.description || 'Рудная жила.'}</p></div>
+        <dl>
+          <div><dt>Всего</dt><dd>${formatNumber(save.lifetimeOres?.[ore.id] || 0)}</dd></div>
+          <div><dt>Ценность</dt><dd>×${formatNumber(ore.value || 1)}</dd></div>
+          <div><dt>Встречается</dt><dd>от ~${Math.floor((ore.depth || 0) / TILE_SIZE)} м</dd></div>
+          <div><dt>Выход</dt><dd>${formatNumber(record.largestYield || 0)}</dd></div>
+          <div><dt>Рекорд глубины</dt><dd>${Math.floor(record.deepest || 0)} м</dd></div>
+          <div><dt>Блоки</dt><dd>${formatNumber(record.physicalBlocks || 0)}</dd></div>
+        </dl>`;
+    } else {
+      const depthHint = Math.max(0, Math.floor((ore.depth || 0) / TILE_SIZE * 0.9));
+      card.innerHTML = `
+        <span class="journal-card__tier">T${(ore.tier || 0) + 1}</span>
+        <span class="journal-card__sample" aria-hidden="true"><i></i></span>
+        <div><small>ОБРАЗЕЦ НЕ НАЙДЕН</small><h3>НЕИЗВЕСТНО</h3><p>Ищите примерно после ${depthHint} м. Свойства откроются после первой добычи.</p></div>
+        <span class="journal-card__lock"><span aria-hidden="true">◆</span> СИЛУЭТ</span>`;
+    }
+    fragment.append(card);
+    renderedCount += 1;
+  }
+  if (!renderedCount) {
+    const empty = document.createElement('p');
+    empty.className = 'journal-empty';
+    empty.textContent = state.journalFilter === 'known'
+      ? 'Открытых образцов пока нет — первая находка появится здесь автоматически.'
+      : 'Неоткрытых образцов не осталось.';
+    fragment.append(empty);
+  }
+  ui.journalGrid.replaceChildren(fragment);
+  if (ui.journalDiscoveryCount) ui.journalDiscoveryCount.textContent = `${knownCount} / ${ORE_TYPES.length}`;
+  ui.journalDiscoveryCount?.parentElement?.setAttribute('aria-label', `Открыто ${knownCount} из ${ORE_TYPES.length} пород`);
+  $$('[data-journal-filter]').forEach((button) => {
+    const active = button.dataset.journalFilter === state.journalFilter;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+}
+
+function rememberAuxiliaryReturnMode() {
+  state.returnMode = ['result', 'upgrades', 'title'].includes(state.mode) ? state.mode : 'title';
+  state.lastFocusedElement = document.activeElement || null;
+}
+
+function updateUtilityNavState() {
+  const suppressed = ['run', 'sector', 'journal', 'balance', 'ending'].includes(state.mode);
+  ui.utilityNav?.classList.toggle('is-suppressed', suppressed);
+  ui.openJournal?.setAttribute('aria-expanded', String(state.mode === 'journal'));
+  ui.openBalance?.setAttribute('aria-expanded', String(state.mode === 'balance'));
+}
+
+function openJournalScreen() {
+  if (!['title', 'result', 'upgrades'].includes(state.mode)) return;
+  rememberAuxiliaryReturnMode();
+  state.mode = 'journal';
+  hideAllScreens();
+  renderGeologicalJournal();
+  ui.journalScreen?.classList.remove('hidden');
+  updateUtilityNavState();
+  requestAnimationFrame(() => ui.closeJournal?.focus({ preventScroll: true }));
+}
+
+function closeAuxiliaryScreen() {
+  const returnFocus = state.lastFocusedElement;
+  hideAllScreens();
+  if (state.returnMode === 'result') {
+    state.mode = 'result';
+    ui.resultScreen?.classList.remove('hidden');
+    renderRunReport(save.lastRunReport);
+  } else if (state.returnMode === 'upgrades') {
+    state.mode = 'upgrades';
+    ui.upgradeScreen?.classList.remove('hidden');
+    renderUpgrades();
+  } else {
+    showTitle();
+  }
+  updateUtilityNavState();
+  requestAnimationFrame(() => returnFocus?.focus?.({ preventScroll: true }));
+}
+
+function profileLevels(percent) {
+  const fraction = clamp((Number(percent) || 0) / 100, 0, 1);
+  const totalLevels = UPGRADE_DEFS.reduce((sum, definition) => sum + definition.maxLevel, 0);
+  const targetLevels = Math.round(totalLevels * fraction);
+  const levels = {};
+  const depthMemo = new Map();
+  const dependency = (requirement) => (
+    typeof requirement === 'string'
+      ? { id: requirement, level: 1 }
+      : { id: requirement.id, level: requirement.level || 1 }
+  );
+  const nodeDepth = (definition, visiting = new Set()) => {
+    if (depthMemo.has(definition.id)) return depthMemo.get(definition.id);
+    if (visiting.has(definition.id)) return Number.MAX_SAFE_INTEGER;
+    const nextVisiting = new Set(visiting).add(definition.id);
+    const parents = (definition.requires || [])
+      .map((requirement) => upgradeById.get(dependency(requirement).id))
+      .filter(Boolean);
+    const depth = parents.length
+      ? 1 + Math.max(...parents.map((parent) => nodeDepth(parent, nextVisiting)))
+      : 0;
+    depthMemo.set(definition.id, depth);
+    return depth;
+  };
+  const spreadWeight = 2 + fraction * 9;
+  let purchased = 0;
+
+  while (purchased < targetLevels) {
+    let candidate = null;
+    let candidateScore = Infinity;
+    for (const definition of UPGRADE_DEFS) {
+      const current = levels[definition.id] || 0;
+      if (current >= definition.maxLevel) continue;
+      const ready = (definition.requires || []).every((requirement) => {
+        const required = dependency(requirement);
+        return (levels[required.id] || 0) >= required.level;
+      });
+      if (!ready) continue;
+      const score = nodeDepth(definition) + current / definition.maxLevel * spreadWeight;
+      if (score < candidateScore) {
+        candidate = definition;
+        candidateScore = score;
+      }
+    }
+    if (!candidate) break;
+    levels[candidate.id] = (levels[candidate.id] || 0) + 1;
+    purchased += 1;
+  }
+  return levels;
+}
+
+function validateProfileLevels(levels) {
+  return UPGRADE_DEFS.flatMap((definition) => {
+    if ((levels[definition.id] || 0) <= 0) return [];
+    const missing = (definition.requires || []).filter((requirement) => {
+      const id = typeof requirement === 'string' ? requirement : requirement.id;
+      const level = typeof requirement === 'string' ? 1 : (requirement.level || 1);
+      return (levels[id] || 0) < level;
+    });
+    return missing.length ? [definition.id] : [];
+  });
+}
+
+function estimateBalanceRun(seed, profilePercent, sectorId, preparedStats = null) {
+  const simulatedStats = preparedStats || normalizeStats(calculateMetaStats(profileLevels(profilePercent)));
+  const world = new MineWorld(ORE_TYPES, seed, { sectorId });
+  const spawn = world.getSpawn();
+  const sector = typeof world.getSector === 'function' ? world.getSector() : null;
+  const targets = [];
+  const originX = spawn.x ?? (spawn.tx + 0.5) * TILE_SIZE;
+  const originY = spawn.y ?? (spawn.ty + 0.5) * TILE_SIZE;
+  const expectedChance = (baseChance = 0, luckWeight = 0.22) => clamp(
+    (baseChance || 0) + (simulatedStats.luck || 0) * luckWeight + (simulatedStats.fortuneProcChance || 0),
+    0,
+    0.95,
+  );
+  const expectedCritical = 1 + expectedChance(simulatedStats.critChance, 0.16)
+    * Math.max(0, simulatedStats.critMultiplier - 1);
+  const expectedMulti = 1
+    + Math.max(0, (simulatedStats.multiHitCount || 1) - 1) * 0.65
+    + expectedChance(simulatedStats.multiHitChance, 0.1) * 0.65;
+  const expectedCharged = 1 + Math.max(0, simulatedStats.chargedHitPower || 0) / 8;
+  const expectedStreak = 1 + Math.max(0, simulatedStats.streakPower || 0)
+    * Math.max(0, simulatedStats.streakCap || 0) * 0.45;
+  const beamCount = simulatedStats.laserUnlocked
+    ? clamp(Math.floor(simulatedStats.laserBeams || 1), 1, 5)
+    : 1;
+  const beamPower = simulatedStats.laserUnlocked
+    ? (simulatedStats.laserPower || 1)
+      * (1 + Math.max(0, beamCount - 1) * 0.62)
+      * (1 + Math.max(0, simulatedStats.laserPierce || 1) * 0.08)
+    : 1;
+  const overclock = simulatedStats.chronoOverclock
+    ? 1
+      + (simulatedStats.startTimeFreeze || 0) * 0.025
+      + (simulatedStats.timerDrainReduction || 0) * 0.28
+      + (simulatedStats.timeRefundChance || 0) * 0.25
+      + (simulatedStats.timeShardChance || 0) * 0.18
+      + (simulatedStats.lastChanceCharges || 0) * 0.03
+    : 1;
+  const attackRate = simulatedStats.digSpeed
+    * (simulatedStats.laserUnlocked ? (simulatedStats.laserChargeRate || 1) : 1)
+    * overclock;
+  const densityPower = 1 + Math.max(0, simulatedStats.hardnessPierce || 0) * 0.07;
+  const directDps = simulatedStats.pickPower * attackRate * densityPower
+    * (1 + Math.max(0, simulatedStats.oreDamageBonus || 0))
+    * expectedCritical * expectedMulti * expectedCharged * expectedStreak * beamPower;
+  const toolSweep = simulatedStats.laserUnlocked
+    ? 1 + Math.min(10,
+      simulatedStats.laserRange / TILE_SIZE
+        * Math.max(0.35, simulatedStats.laserWidth / TILE_SIZE)
+        * (1 + Math.max(0, beamCount - 1) * 0.45)
+        * 0.42)
+    : 1 + (simulatedStats.areaMiningUnlocked
+      ? Math.min(5, Math.PI * (simulatedStats.digRadius / TILE_SIZE) ** 2 * 0.45)
+      : 0);
+  const bombChance = (simulatedStats.bombChance || 0) > 0
+    ? expectedChance(simulatedStats.bombChance, 0.18)
+    : 0;
+  const chainChance = (simulatedStats.chainChance || 0) > 0
+    ? expectedChance(simulatedStats.chainChance, 0.16)
+    : 0;
+  const bombArea = Math.max(1, Math.PI * (simulatedStats.bombRadius / TILE_SIZE) ** 2 * 0.22);
+  const volatileFactor = 1 + ((simulatedStats.volatileBombChance || 0) > 0
+    ? expectedChance(simulatedStats.volatileBombChance, 0.1) * 2.2
+    : 0);
+  const stickyFactor = 1 + ((simulatedStats.stickyBombChance || 0) > 0
+    ? expectedChance(simulatedStats.stickyBombChance, 0.12) * 0.45
+    : 0);
+  const fragmentFactor = 1 + Math.min(6, simulatedStats.bombFragments || 0)
+    * Math.max(0, simulatedStats.bombFragmentPower || 0.3) * 0.2;
+  const bombDps = attackRate * bombChance * simulatedStats.pickPower
+    * Math.max(0, simulatedStats.bombPower || 1) * 1.8 * bombArea
+    * volatileFactor * stickyFactor * fragmentFactor;
+  const chainDps = attackRate * chainChance
+    * Math.max(1, simulatedStats.chainCount || 1) * simulatedStats.pickPower
+    * Math.max(0, simulatedStats.chainPower || 0.55)
+    * (1 + (simulatedStats.triangularFixGadgetDamageBonus || 0) * 0.35);
+  const droneDps = Math.max(0, simulatedStats.droneCount || 0)
+    * Math.max(0, simulatedStats.droneSpeed || 1)
+    * simulatedStats.pickPower * Math.max(0, simulatedStats.dronePower || 0.35)
+    * clamp(simulatedStats.droneLifetime || 0, 0, 1);
+  const echoDps = simulatedStats.laserUnlocked && simulatedStats.laserSuperPickEchoEvery > 0
+    ? attackRate / simulatedStats.laserSuperPickEchoEvery
+      * simulatedStats.pickPower * simulatedStats.laserSuperPickEchoPower
+      * Math.max(1, Math.PI * simulatedStats.laserSuperPickEchoRadiusTiles ** 2 * 0.28)
+    : 0;
+  const effectiveDps = Math.max(0.1, directDps + bombDps + chainDps + droneDps + echoDps);
+  const workRange = simulatedStats.laserUnlocked
+    ? simulatedStats.laserRange * 0.78
+    : Math.max(simulatedStats.digReach, TILE_SIZE * 0.9);
+  const movementSpeed = Math.max(1, simulatedStats.moveSpeed * (simulatedStats.mineMoveMultiplier || 1));
+  const routeResistance = clamp(
+    (sector?.modifiers?.hardness || 1) / Math.sqrt(sector?.modifiers?.caves || 1),
+    0.6,
+    1.55,
+  );
+  if (typeof world.forEachOreTileInBounds === 'function') {
+    world.forEachOreTileInBounds(0, 0, WORLD_CONFIG.WIDTH - 1, WORLD_CONFIG.HEIGHT - 1, (tile, tx, ty) => {
+      const ore = oreById.get(tile.oreId);
+      if (!ore) return;
+      const x = (tx + 0.5) * TILE_SIZE;
+      const y = (ty + 0.5) * TILE_SIZE;
+      const travelDistance = Math.max(0, distance(originX, originY, x, y) - workRange);
+      const travel = travelDistance / movementSpeed * routeResistance;
+      const rarePower = 1 + ((ore.tier || 0) >= 4 ? (simulatedStats.rareOreDamageBonus || 0) : 0);
+      const work = Math.max(1, tile.hp || 1) / Math.max(0.1, effectiveDps * rarePower);
+      const valueWeight = 1 + Math.log2(1 + (ore.value || 1)) * Math.max(0, simulatedStats.targetValueBias || 0);
+      const score = (travel * 0.22 + work) / valueWeight;
+      targets.push({ tile, ore, tx, ty, x, y, travel, work, score });
+    });
+  }
+  targets.sort((left, right) => left.score - right.score || left.ty - right.ty || left.tx - right.tx);
+  const timerDrain = clamp(simulatedStats.timerDrainMultiplier || 1, 0.5, 1);
+  const directDuration = clamp(simulatedStats.runDuration, MIN_RUN_SECONDS, DIRECT_MAX_RUN_SECONDS);
+  const bonusCap = clamp(simulatedStats.bonusRunDurationCap || BONUS_MAX_RUN_SECONDS, DIRECT_MAX_RUN_SECONDS, BONUS_MAX_RUN_SECONDS);
+  let duration = Math.min(
+    bonusCap,
+    directDuration / timerDrain
+      + Math.max(0, simulatedStats.startTimeFreeze || 0)
+      + Math.max(0, simulatedStats.lastChanceCharges || 0) * Math.max(0, simulatedStats.lastChanceSeconds || 0),
+  );
+  let time = 0;
+  let haul = 0;
+  let cargoValue = 0;
+  let depth = 0;
+  let mined = 0;
+  let oreBlocks = 0;
+  const oreBreakdown = createOreBag();
+  let previousX = originX;
+  let previousY = originY;
+  const foundTypes = new Set();
+  const collateralPerTarget = clamp(
+    1
+      + Math.max(0, toolSweep - 1) * 0.18
+      + bombChance * Math.min(3, bombArea * 0.16)
+      + chainChance * Math.min(2, simulatedStats.chainCount || 1) * 0.22,
+    1,
+    5,
+  );
+  for (const target of targets) {
+    const legDistance = Math.max(0, distance(previousX, previousY, target.x, target.y) - workRange);
+    const incrementalTravel = (legDistance / movementSpeed) * routeResistance * (oreBlocks ? 0.24 : 1);
+    const cost = incrementalTravel + target.work;
+    if (time + cost > duration) continue;
+    time += cost;
+    previousX = target.x;
+    previousY = target.y;
+    const collateral = Math.min(collateralPerTarget, targets.length - oreBlocks);
+    oreBlocks += collateral;
+    mined += collateral * (1 + Math.max(0, toolSweep - 1) * 0.65)
+      + legDistance / TILE_SIZE * 0.18;
+    depth = Math.max(depth, target.ty - spawn.ty);
+    const firstOfType = !foundTypes.has(target.ore.id);
+    foundTypes.add(target.ore.id);
+    const dropMultiplier = 1
+      + expectedChance(simulatedStats.extraYieldChance, 0.24)
+      + expectedChance(simulatedStats.doubleDropChance, 0.18)
+      + expectedChance(simulatedStats.tripleDropChance, 0.12) * 2
+      + expectedChance(simulatedStats.richVeinChance, 0.18)
+      + expectedChance(simulatedStats.motherlodeChance, 0.08) * 4;
+    const comboMultiplier = 1 + Math.min(
+      1.1,
+      Math.max(0, attackRate - 2) * 0.018 * Math.max(1, simulatedStats.comboMultiplier || 1),
+    );
+    const depthProgress = clamp((target.ty - spawn.ty) / Math.max(1, WORLD_CONFIG.HEIGHT - spawn.ty), 0, 1);
+    const gemMultiplier = (target.ore.tier || 0) >= 6 ? (simulatedStats.gemValueMultiplier || 1) : 1;
+    const diversityMultiplier = 1 + Math.max(0, foundTypes.size - 1)
+      * Math.max(0, simulatedStats.oreDiversityBonusPerType || 0);
+    const yieldPerBlock = Math.max(1,
+      (simulatedStats.oreValueMultiplier || 1)
+        * dropMultiplier
+        * comboMultiplier
+        * gemMultiplier
+        * (1 + depthProgress * Math.max(0, simulatedStats.depthValueBonus || 0))
+        * diversityMultiplier);
+    const relicPieces = expectedChance(simulatedStats.relicChance, 0.08) * (1 + depth / 45);
+    const pieces = collateral * yieldPerBlock + relicPieces;
+    oreBreakdown[target.ore.id] = (oreBreakdown[target.ore.id] || 0) + pieces;
+    const upgradedValue = (target.ore.value || 1)
+      * (1 + expectedChance(simulatedStats.rareOreChance, 0.2))
+      * (1 + expectedChance(simulatedStats.goldenOreChance, 0.12) * 0.35);
+    haul += pieces;
+    cargoValue += pieces * upgradedValue;
+    const expectedTimeBonus = collateral * (
+      ((simulatedStats.timeRefundChance || 0) > 0
+        ? expectedChance(simulatedStats.timeRefundChance, 0.1) * Math.max(0, simulatedStats.timeRefundAmount || 0)
+        : 0)
+      + ((simulatedStats.timeShardChance || 0) > 0
+        ? expectedChance(simulatedStats.timeShardChance, 0.08) * Math.max(0, simulatedStats.timeShardSeconds || 0)
+        : 0)
+    ) + (firstOfType ? Math.max(0, simulatedStats.discoveryTimeBonus || 0) : 0);
+    duration = Math.min(bonusCap, duration + expectedTimeBonus);
+    if (oreBlocks >= targets.length || mined >= 2_500) break;
+  }
+  return {
+    haul: Math.max(0, haul),
+    cargoValue: Math.max(0, cargoValue),
+    depth: Math.max(0, depth),
+    mined: Math.max(0, mined),
+    oreBlocks: Math.max(0, oreBlocks),
+    idle: Math.max(0, duration - time),
+    duration,
+    oreBreakdown,
+  };
+}
+
+function runBalanceBench() {
+  const baseSeed = String(ui.balanceSeed?.value || 'depth-zero-bench').trim() || 'depth-zero-bench';
+  const profile = clamp(Number(ui.balanceProfile?.value) || 0, 0, 100);
+  const simulations = clamp(Math.floor(Number(ui.balanceRuns?.value) || 12), 1, 30);
+  if (ui.balanceRuns) ui.balanceRuns.value = String(simulations);
+  const levels = profileLevels(profile);
+  const preparedStats = normalizeStats(calculateMetaStats(levels));
+  const invalidRequirements = validateProfileLevels(levels);
+  const sectorChoices = getAvailableSectorChoices(baseSeed);
+  const sectorIds = sectorChoices.map((sector) => sector.id);
+  const sectors = sectorIds.length ? sectorIds : ['stable_strata'];
+  const rows = sectors.map((sectorId) => {
+    const samples = [];
+    for (let index = 0; index < simulations; index += 1) {
+      samples.push(estimateBalanceRun(`${baseSeed}:${index}`, profile, sectorId, preparedStats));
+    }
+    const average = (key) => samples.reduce((sum, sample) => sum + sample[key], 0) / samples.length;
+    return {
+      sectorId,
+      sectorLabel: sectorChoices.find((sector) => sector.id === sectorId)?.label || sectorId,
+      averageHaul: Number(average('haul').toFixed(1)),
+      averageCargoValue: Number(average('cargoValue').toFixed(1)),
+      averageDepth: Number(average('depth').toFixed(1)),
+      averageBlocks: Number(average('mined').toFixed(1)),
+      averageOreBlocks: Number(average('oreBlocks').toFixed(1)),
+      averageIdle: Number(average('idle').toFixed(2)),
+      averageOreBreakdown: Object.fromEntries(ORE_TYPES.map((ore) => [
+        ore.id,
+        Number((samples.reduce((sum, sample) => sum + (sample.oreBreakdown?.[ore.id] || 0), 0) / samples.length).toFixed(2)),
+      ])),
+    };
+  });
+  state.balanceReport = {
+    generatedAt: new Date().toISOString(),
+    seed: baseSeed,
+    profile,
+    simulations,
+    profileBuild: {
+      purchasedLevels: countPurchasedLevels(levels),
+      purchasedNodes: Object.values(levels).filter((level) => level > 0).length,
+      invalidRequirements,
+      tool: preparedStats.tool,
+      laserUnlocked: preparedStats.laserUnlocked,
+      droneCount: preparedStats.droneCount,
+      runDuration: preparedStats.runDuration,
+    },
+    rows,
+  };
+  save.balanceHistory = [...(save.balanceHistory || []), state.balanceReport].slice(-12);
+  persistSave();
+  if (ui.balanceResults) {
+    const maxHaul = Math.max(1, ...rows.map((row) => row.averageHaul));
+    const safeSeed = escapeHtml(baseSeed);
+    ui.balanceResults.innerHTML = `
+      <header><div><span class="status-dot"></span><strong id="balanceResultsTitle">СРАВНЕНИЕ СЕКТОРОВ</strong></div><small>seed: ${safeSeed} · ${simulations} на сектор</small></header>
+      <div class="balance-result-cards">${rows.map((row) => `
+        <article><small>${escapeHtml(row.sectorLabel.toUpperCase())}</small><strong>${row.averageHaul}</strong><span>кусков · ценность ${formatNumber(row.averageCargoValue)} · ${row.averageDepth} м · ${row.averageBlocks} блок.</span><span>${averageOreBreakdownText(row.averageOreBreakdown)}</span></article>`).join('')}</div>
+      <div class="balance-chart is-sector-comparison" aria-label="Средняя добыча по геологическим секторам">${rows.map((row) => `
+        <span style="--height:${Math.max(12, row.averageHaul / maxHaul * 94)}%"><i>${escapeHtml(row.sectorLabel)}</i><b>${row.averageHaul}</b></span>`).join('')}</div>
+      <footer><span><i class="balance-key balance-key--median"></i> ожидаемые куски руды</span><span>профиль ${profile}% · ${escapeHtml(TOOL_NAMES[preparedStats.tool] || preparedStats.tool)} · модель учитывает инструменты, гаджеты и бонусный таймер</span></footer>`;
+  }
+  ui.exportBalance?.removeAttribute?.('disabled');
+  return state.balanceReport;
+}
+
+function openBalanceScreen() {
+  if (!['title', 'result', 'upgrades'].includes(state.mode)) return;
+  rememberAuxiliaryReturnMode();
+  state.mode = 'balance';
+  hideAllScreens();
+  ui.balanceScreen?.classList.remove('hidden');
+  if (ui.balanceSeed && !ui.balanceSeed.value) ui.balanceSeed.value = 'depth-zero-bench';
+  if (ui.balanceResults && !state.balanceReport) ui.balanceResults.innerHTML = '<p id="balanceResultsTitle">Задайте профиль и запустите локальную серию.</p>';
+  updateUtilityNavState();
+  requestAnimationFrame(() => ui.closeBalance?.focus({ preventScroll: true }));
+}
+
+function exportBalanceReport() {
+  if (!state.balanceReport || typeof Blob === 'undefined' || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') return false;
+  const blob = new Blob([JSON.stringify(state.balanceReport, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `depth-zero-balance-${state.balanceReport.seed}.json`.replace(/[^a-zа-яё0-9._-]+/gi, '-');
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+  return true;
 }
 
 function renderOreInventory() {
@@ -614,6 +1820,25 @@ function renderOreInventory() {
 function getFocusedOre() {
   if (!stats.oreFocusUnlocked || !save.focusedOreId) return null;
   return oreById.get(save.focusedOreId) || null;
+}
+
+function focusedDamageMultiplier(tileOrOreId) {
+  const focused = getFocusedOre();
+  const oreId = typeof tileOrOreId === 'string' ? tileOrOreId : tileOrOreId?.oreId;
+  if (!focused || !oreId || focused.id !== oreId) return 1;
+  return 1 / Math.max(0.2, 1 - (stats.focusedOreHardnessReduction || 0));
+}
+
+function tileDamageAmount(tx, ty, hpBefore) {
+  if (!state.world || !(hpBefore > 0)) return 0;
+  const tile = state.world.getTile(tx, ty);
+  if (!tile) return 0;
+  if (tile.kind === 'air') return hpBefore;
+  return clamp(hpBefore - Math.max(0, tile.hp || 0), 0, hpBefore);
+}
+
+function tileReceivedDamage(tx, ty, hpBefore) {
+  return tileDamageAmount(tx, ty, hpBefore) > 1e-9;
 }
 
 function renderOreFocusPanel() {
@@ -648,7 +1873,15 @@ function renderOreFocusPanel() {
 function updateFocusHud() {
   const focused = getFocusedOre();
   ui.focusHud?.classList.toggle('hidden', !focused || state.mode !== 'run');
-  if (ui.focusHudName) ui.focusHudName.textContent = focused ? `${focused.name.toUpperCase()} · ×${Number(stats.oreFocusRadiusMultiplier || 1).toFixed(2)}` : '—';
+  const multiplier = focusedSenseMultiplier(focused);
+  const escalating = Boolean(focused && multiplier > (stats.oreFocusRadiusMultiplier || 1) + 0.01);
+  ui.focusHud?.classList.toggle('is-escalating', escalating);
+  if (ui.focusHud) {
+    ui.focusHud.title = focused
+      ? `${focused.name}: остальные жилы игнорируются; текущий радиус поиска ×${multiplier.toFixed(2)}`
+      : 'Рудный фокус игнорирует остальные жилы';
+  }
+  if (ui.focusHudName) ui.focusHudName.textContent = focused ? `${focused.name.toUpperCase()} · ×${multiplier.toFixed(2)}` : '—';
 }
 
 function toast(message, tone = 'info') {
@@ -732,6 +1965,12 @@ function buyUpgrade(id) {
   sound.tone(330, 0.12, 'triangle', 0.04, 210);
   flash('#68e0c1', 0.18);
   toast(`${definition.name.toUpperCase()} · УР. ${level + 1}`, 'success');
+  showTutorial(
+    'first_upgrade',
+    'УЗЕЛ УСТАНОВЛЕН',
+    'Апгрейды постоянны и действуют со следующей смены. Некоторые узлы многоуровневые, а сложные требуют несколько родительских веток.',
+    'Запас руды сверху показывает все ресурсы; название появляется при наведении.',
+  );
   renderUpgrades();
   if (!campaignWasReady && getCampaignProgress().ready) {
     toast('РАКЕТА ГОТОВА — ЗАВЕРШИТЕ СМЕНУ', 'success');
@@ -803,56 +2042,72 @@ function getUpgradeLayout() {
   };
   UPGRADE_DEFS.forEach(getDepth);
 
-  const branchDefinitions = UPGRADE_DEFS.filter((definition) => UPGRADE_LANES.includes(definition.category));
-  const bucketByLaneDepth = new Map();
+  // Categories still define the broad direction of a branch, while layoutLobe
+  // lets cross-discipline nodes grow inside another branch. Nothing is split
+  // into labelled rows: the whole graph grows concentrically from one root.
+  const branchDefinitions = UPGRADE_DEFS.filter((definition) => definition.category !== 'core');
+  const bucketByLobeDepth = new Map();
   for (const definition of branchDefinitions) {
-    const key = `${definition.category}:${depthById.get(definition.id) || 0}`;
-    if (!bucketByLaneDepth.has(key)) bucketByLaneDepth.set(key, []);
-    bucketByLaneDepth.get(key).push(definition);
+    const lobe = UPGRADE_LANES.includes(definition.layoutLobe)
+      ? definition.layoutLobe
+      : definition.category;
+    const key = `${lobe}:${depthById.get(definition.id) || 0}`;
+    if (!bucketByLobeDepth.has(key)) bucketByLobeDepth.set(key, []);
+    bucketByLobeDepth.get(key).push(definition);
   }
-  const laneHeights = new Map();
-  for (const lane of UPGRADE_LANES) {
-    const maxBucket = Math.max(1, ...[...bucketByLaneDepth.entries()]
-      .filter(([key]) => key.startsWith(`${lane}:`))
-      .map(([, definitions]) => definitions.length));
-    laneHeights.set(lane, Math.max(116, 44 + maxBucket * UPGRADE_NODE_STEP_Y));
-  }
-  const laneY = new Map();
-  let cursorY = 20;
-  for (const lane of UPGRADE_LANES) {
-    laneY.set(lane, cursorY);
-    cursorY += laneHeights.get(lane);
-  }
+  const branchMaxDepth = Math.max(1, ...branchDefinitions.map((definition) => depthById.get(definition.id) || 1));
+  const finalRadius = UPGRADE_RING_START + branchMaxDepth * UPGRADE_RING_STEP + 150;
+  const maximumRadius = finalRadius + 70;
+  const width = Math.ceil((maximumRadius + UPGRADE_MAP_PADDING) * 2);
+  const height = width;
+  const centerX = width * 0.5;
+  const centerY = height * 0.5;
   const positions = new Map();
-  let maxDepth = 0;
-  for (const [key, definitions] of bucketByLaneDepth) {
-    const [lane, depthText] = key.split(':');
+  for (const [key, definitions] of bucketByLobeDepth) {
+    const [lobe, depthText] = key.split(':');
     const depth = Number(depthText);
-    maxDepth = Math.max(maxDepth, depth);
     definitions.sort((a, b) => UPGRADE_DEFS.indexOf(a) - UPGRADE_DEFS.indexOf(b));
+    const baseAngle = -Math.PI * 0.5 + UPGRADE_LANES.indexOf(lobe) * (Math.PI * 2 / UPGRADE_LANES.length);
+    const baseRadius = UPGRADE_RING_START + Math.max(0, depth - 1) * UPGRADE_RING_STEP;
     definitions.forEach((definition, index) => {
+      let angle;
+      let radius;
+      if (definitions.length < 4) {
+        const slotStep = Math.min(0.44, Math.max(0.13, 88 / baseRadius));
+        angle = baseAngle + (index - (definitions.length - 1) * 0.5) * slotStep;
+        radius = baseRadius;
+      } else {
+        const slotStep = Math.min(0.3, Math.max(0.13, 90 / baseRadius));
+        const innerCount = Math.ceil(definitions.length / 2);
+        const inInnerArc = index < innerCount;
+        const arcIndex = inInnerArc ? index : index - innerCount;
+        const arcCount = inInnerArc ? innerCount : definitions.length - innerCount;
+        const evenRowShift = definitions.length % 2 === 0
+          ? slotStep * (inInnerArc ? -0.25 : 0.25)
+          : 0;
+        angle = baseAngle + (arcIndex - (arcCount - 1) * 0.5) * slotStep + evenRowShift;
+        radius = baseRadius + (inInnerArc ? -26 : 26);
+      }
       positions.set(definition.id, {
-        x: UPGRADE_ROOT_X + depth * UPGRADE_NODE_STEP_X,
-        y: laneY.get(lane) + 40 + index * UPGRADE_NODE_STEP_Y,
+        x: centerX + Math.cos(angle) * radius - UPGRADE_NODE_WIDTH * 0.5,
+        y: centerY + Math.sin(angle) * radius - UPGRADE_NODE_HEIGHT * 0.5,
       });
     });
   }
-  const height = cursorY + 20;
-  for (const definition of UPGRADE_DEFS.filter((item) => item.category === 'core')) {
-    const depth = depthById.get(definition.id) || 0;
-    maxDepth = Math.max(maxDepth, depth);
-    const nodeHeight = definition.id === CAMPAIGN.finalUpgrade ? 68 : UPGRADE_NODE_HEIGHT;
-    positions.set(definition.id, {
-      x: UPGRADE_ROOT_X + depth * UPGRADE_NODE_STEP_X,
-      y: Math.round((height - nodeHeight) * 0.5),
-    });
-  }
+  positions.set('core_first_descent', {
+    x: centerX - UPGRADE_NODE_WIDTH * 0.5,
+    y: centerY - UPGRADE_NODE_HEIGHT * 0.5,
+  });
+  positions.set(CAMPAIGN.finalUpgrade, {
+    x: centerX - 34,
+    y: centerY - finalRadius - 34,
+  });
   upgradeLayoutCache = {
     positions,
     depthById,
-    laneY,
-    laneHeights,
-    width: UPGRADE_ROOT_X + maxDepth * UPGRADE_NODE_STEP_X + 180,
+    centerX,
+    centerY,
+    width,
     height,
   };
   return upgradeLayoutCache;
@@ -875,6 +2130,36 @@ function recipeMarkup(recipe, compact = false) {
   }).join('');
 }
 
+function oreBreakdownEntries(bag = {}) {
+  return ORE_TYPES
+    .map((ore) => ({ ore, amount: Math.max(0, Math.floor(Number(bag[ore.id]) || 0)) }))
+    .filter((entry) => entry.amount > 0);
+}
+
+function oreBreakdownText(bag = {}) {
+  const entries = oreBreakdownEntries(bag);
+  return entries.length
+    ? entries.map(({ ore, amount }) => `${ore.name} ×${formatNumber(amount)}`).join(' · ')
+    : 'ПОКА ПУСТО';
+}
+
+function averageOreBreakdownText(bag = {}) {
+  const entries = ORE_TYPES
+    .map((ore) => ({ ore, amount: Math.max(0, Number(bag[ore.id]) || 0) }))
+    .filter((entry) => entry.amount >= 0.01);
+  return entries.length
+    ? entries.map(({ ore, amount }) => `${ore.name} ×${amount.toFixed(1)}`).join(' · ')
+    : 'ПОКА ПУСТО';
+}
+
+function oreBreakdownMarkup(bag = {}) {
+  const entries = oreBreakdownEntries(bag);
+  if (!entries.length) return '<span class="result-ore-chip is-empty" role="listitem">ПОКА ПУСТО</span>';
+  return entries.map(({ ore, amount }) => (
+    `<span class="result-ore-chip" data-ore="${ore.id}" role="listitem" title="${ore.name}">${ore.name} ×${formatNumber(amount)}</span>`
+  )).join('');
+}
+
 function renderUpgrades() {
   if (!ui.upgradeNodes || !ui.upgradeWorld || !ui.upgradeEdges) return;
   const previousVisible = state.visibleUpgradeIds;
@@ -891,28 +2176,10 @@ function renderUpgrades() {
   }
 
   const layout = getUpgradeLayout();
-  const farthestVisibleEdge = Math.max(...visible.map((definition) => {
-    const position = layout.positions.get(definition.id);
-    return position.x + getUpgradeNodeSize(definition).width;
-  }), UPGRADE_ROOT_X + UPGRADE_NODE_WIDTH);
-  const mapWidth = Math.max(
-    ui.upgradeViewport?.clientWidth || 0,
-    Math.min(layout.width, farthestVisibleEdge + 130),
-  );
+  const mapWidth = Math.max(ui.upgradeViewport?.clientWidth || 0, layout.width);
   ui.upgradeWorld.style.setProperty('--map-width', `${mapWidth}px`);
   ui.upgradeWorld.style.setProperty('--map-height', `${layout.height}px`);
-
-  const laneFragment = document.createDocumentFragment();
-  for (const lane of UPGRADE_LANES) {
-    const element = document.createElement('div');
-    element.className = 'upgrade-lane';
-    element.dataset.category = lane;
-    element.style.setProperty('--lane-y', `${layout.laneY.get(lane)}px`);
-    element.style.setProperty('--lane-height', `${layout.laneHeights.get(lane)}px`);
-    element.innerHTML = `<span class="upgrade-lane__label">${categoryLabel(lane)}</span>`;
-    laneFragment.append(element);
-  }
-  ui.upgradeLanes?.replaceChildren(laneFragment);
+  ui.upgradeLanes?.replaceChildren();
 
   const query = state.upgradeQuery.trim().toLocaleLowerCase('ru');
   let matchingNodes = 0;
@@ -926,7 +2193,7 @@ function renderUpgrades() {
     const recipe = atMax ? {} : getUpgradeRecipe(definition, level);
     const affordable = available && canAffordRecipe(save.inventory, recipe);
     const searchMatch = !query || `${definition.name} ${definition.description}`.toLocaleLowerCase('ru').includes(query);
-    const categoryMatch = state.upgradeFilter === 'all' || definition.category === state.upgradeFilter;
+    const categoryMatch = true;
     if (searchMatch && categoryMatch) matchingNodes += 1;
     const position = layout.positions.get(definition.id);
     const node = document.createElement('button');
@@ -948,7 +2215,7 @@ function renderUpgrades() {
     node.dataset.category = definition.category;
     node.dataset.state = atMax ? 'maxed' : preview ? 'preview' : owned ? 'owned' : 'available';
     if (available && !atMax) node.dataset.buyUpgrade = definition.id;
-    if (position.x + 340 > mapWidth) node.dataset.tooltipSide = 'left';
+    if (position.x + getUpgradeNodeSize(definition).width * 0.5 > layout.centerX) node.dataset.tooltipSide = 'left';
     node.style.setProperty('--node-x', `${position.x}px`);
     node.style.setProperty('--node-y', `${position.y}px`);
     const requirements = definition.requires?.length
@@ -997,12 +2264,19 @@ function renderUpgrades() {
       const path = document.createElementNS(svgNamespace, 'path');
       const parentSize = getUpgradeNodeSize(parent);
       const childSize = getUpgradeNodeSize(child);
-      const x1 = parentPosition.x + parentSize.width;
-      const y1 = parentPosition.y + parentSize.height * 0.5;
-      const x2 = childPosition.x;
-      const y2 = childPosition.y + childSize.height * 0.5;
-      const bend = Math.max(35, (x2 - x1) * 0.45);
-      path.setAttribute('d', `M ${x1} ${y1} C ${x1 + bend} ${y1}, ${x2 - bend} ${y2}, ${x2} ${y2}`);
+      const parentCenterX = parentPosition.x + parentSize.width * 0.5;
+      const parentCenterY = parentPosition.y + parentSize.height * 0.5;
+      const childCenterX = childPosition.x + childSize.width * 0.5;
+      const childCenterY = childPosition.y + childSize.height * 0.5;
+      const lineLength = Math.max(1, Math.hypot(childCenterX - parentCenterX, childCenterY - parentCenterY));
+      const unitX = (childCenterX - parentCenterX) / lineLength;
+      const unitY = (childCenterY - parentCenterY) / lineLength;
+      const x1 = parentCenterX + unitX * parentSize.width * 0.46;
+      const y1 = parentCenterY + unitY * parentSize.height * 0.46;
+      const x2 = childCenterX - unitX * childSize.width * 0.46;
+      const y2 = childCenterY - unitY * childSize.height * 0.46;
+      const bend = lineLength * 0.34;
+      path.setAttribute('d', `M ${x1} ${y1} C ${x1 + unitX * bend} ${y1 + unitY * bend}, ${x2 - unitX * bend} ${y2 - unitY * bend}, ${x2} ${y2}`);
       path.classList.add('upgrade-edge', complete ? 'is-complete' : 'is-preview');
       if (parent?.category !== child.category) path.classList.add('is-cross-category');
       if (state.selectedUpgradeId === child.id || state.selectedUpgradeId === parentId) path.classList.add('is-focused');
@@ -1027,8 +2301,9 @@ function scrollUpgradeIntoView(definition, smooth = true) {
   if (!definition || !ui.upgradeViewport) return;
   const position = getUpgradeLayout().positions.get(definition.id);
   if (!position) return;
-  const left = Math.max(0, position.x - Math.max(28, ui.upgradeViewport.clientWidth * 0.22));
-  const top = Math.max(0, position.y - Math.max(28, ui.upgradeViewport.clientHeight * 0.28));
+  const size = getUpgradeNodeSize(definition);
+  const left = Math.max(0, position.x + size.width * 0.5 - ui.upgradeViewport.clientWidth * 0.5);
+  const top = Math.max(0, position.y + size.height * 0.5 - ui.upgradeViewport.clientHeight * 0.5);
   if (typeof ui.upgradeViewport.scrollTo === 'function') {
     ui.upgradeViewport.scrollTo({ left, top, behavior: smooth ? 'smooth' : 'auto' });
   } else {
@@ -1039,29 +2314,29 @@ function scrollUpgradeIntoView(definition, smooth = true) {
 
 function updateHud() {
   const duration = Math.max(0.01, stats.runDuration);
-  const displayedTime = Math.max(0, Math.min(state.timeLeft, MAX_RUN_SECONDS - state.activeWallElapsed));
+  const displayedTime = Math.max(0, Math.min(state.timeLeft, getBonusRunCap() - state.activeWallElapsed));
   if (ui.timerValue) ui.timerValue.textContent = displayedTime.toFixed(1);
   if (ui.timerFill) {
     const fraction = clamp(displayedTime / duration, 0, 1);
     ui.timerFill.style.transform = `scaleX(${fraction})`;
     ui.timerFill.classList.toggle('is-danger', fraction < 0.28);
+    ui.timerFill.classList.toggle('is-bonus', state.bonusTimeEarned > 0 && displayedTime > Math.max(0, duration - state.activeWallElapsed));
   }
   const timerTrack = ui.timerFill?.parentElement;
-  timerTrack?.setAttribute('aria-valuemax', String(duration));
+  timerTrack?.setAttribute('aria-valuemax', String(getBonusRunCap()));
   timerTrack?.setAttribute('aria-valuenow', displayedTime.toFixed(1));
-  if (ui.runOre) ui.runOre.textContent = formatNumber(state.runOre);
+  if (ui.runOre) {
+    ui.runOre.textContent = formatNumber(state.runOre);
+    const types = state.discoveredOreIds?.size || 0;
+    const catalogMultiplier = 1 + Math.max(0, types - 1) * (stats.oreDiversityBonusPerType || 0);
+    ui.runOre.title = types > 0
+      ? `Найдено типов: ${types}${catalogMultiplier > 1 ? ` · итоговый каталог ×${catalogMultiplier.toFixed(2)}` : ''}`
+      : 'Добыча текущего забега';
+  }
+  if (ui.runOreBreakdown) ui.runOreBreakdown.textContent = oreBreakdownText(state.oreCounts);
   if (ui.depthValue) ui.depthValue.textContent = `${Math.floor(state.deepest)} м`;
   if (ui.toolValue) {
-    const toolNames = {
-      pickaxe: 'КИРКА',
-      ironPick: 'ЖЕЛЕЗНАЯ',
-      steelPick: 'СТАЛЬНАЯ',
-      pneumaticPick: 'ПНЕВМОКИРКА',
-      superPick: 'СУПЕРКИРКА',
-      miningLaser: 'ЛАЗЕР',
-      prismaticLaser: 'ПРИЗМОЛАЗЕР',
-    };
-    ui.toolValue.textContent = toolNames[stats.tool] || (stats.laserUnlocked ? 'ЛАЗЕР' : 'КИРКА');
+    ui.toolValue.textContent = TOOL_NAMES[stats.tool] || (stats.laserUnlocked ? 'ЛАЗЕР' : 'КИРКА');
   }
   if (ui.comboValue) {
     ui.comboValue.textContent = state.combo > 1 ? `×${state.combo}` : '—';
@@ -1095,15 +2370,25 @@ function oreRank(ore) {
 }
 
 function effectiveSenseRadius() {
-  if (!state.player || !state.spawn) return stats.senseRadius;
+  const origin = state.depthOrigin || state.spawn;
+  if (!state.player || !origin) return stats.senseRadius;
   const worldProgress = clamp(
-    (Math.abs(state.player.x - state.spawn.x) * 0.35 + Math.max(0, state.player.y - state.spawn.y))
+    (Math.abs(state.player.x - origin.x) * 0.35 + Math.max(0, state.player.y - origin.y))
       / (WORLD_CONFIG.HEIGHT * TILE_SIZE),
     0,
     1,
   );
   const deepBoost = 1 + (stats.deepOreSenseBonus || 0) * worldProgress;
   return stats.senseRadius * deepBoost;
+}
+
+function focusedSenseMultiplier(focusedOre) {
+  if (!focusedOre) return 1;
+  const delay = Math.max(0, stats.oreFocusEscalationDelay || 0);
+  const ramp = delay > 0
+    ? clamp((state.focusMissElapsed - delay) / 2, 0, 1)
+    : 0;
+  return (stats.oreFocusRadiusMultiplier || 1) * (1 + (stats.oreFocusEscalationBonus || 0) * ramp);
 }
 
 function hasSenseLine(originX, originY, targetX, targetY, solidLayerLimit = 2) {
@@ -1126,42 +2411,299 @@ function hasSenseLine(originX, originY, targetX, targetY, solidLayerLimit = 2) {
   return true;
 }
 
-function findBestOreTarget(x, y, radius, focusedOreId = null) {
+function findBestOreTargets(x, y, radius, focusedOreId = null, options = {}, limit = 1) {
   const bias = Math.max(0, stats.targetValueBias || 0);
+  const excludedKeys = options.excludedKeys instanceof Set ? options.excludedKeys : new Set(options.excludedKeys || []);
   const center = state.world.worldToTile(x, y);
   const reach = Math.ceil(radius / TILE_SIZE);
   const radiusSquared = radius * radius;
-  let best = null;
-  let bestScore = Infinity;
-  for (let ty = Math.max(0, center.ty - reach); ty <= Math.min(WORLD_CONFIG.HEIGHT - 1, center.ty + reach); ty += 1) {
-    for (let tx = Math.max(0, center.tx - reach); tx <= Math.min(WORLD_CONFIG.WIDTH - 1, center.tx + reach); tx += 1) {
-      const tile = state.world.getTile(tx, ty);
-      if (!tile?.oreId || tile.kind === 'air') continue;
-      if (focusedOreId && tile.oreId !== focusedOreId) continue;
-      const targetX = (tx + 0.5) * TILE_SIZE;
-      const targetY = (ty + 0.5) * TILE_SIZE;
-      const dx = targetX - x;
-      const dy = targetY - y;
-      const distanceSquared = dx * dx + dy * dy;
-      if (distanceSquared > radiusSquared) continue;
-      if (!hasSenseLine(x, y, targetX, targetY, focusedOreId ? 7 : 2)) continue;
-      const ore = oreById.get(tile.oreId);
-      const valueWeight = 1 + Math.log2(1 + (ore?.value || 1)) * bias;
-      const travelSeconds = Math.sqrt(distanceSquared) / Math.max(1, stats.moveSpeed * (stats.mineMoveMultiplier || 1));
-      const expectedCritical = 1 + procChance(stats.critChance, 0.16) * Math.max(0, stats.critMultiplier - 1);
-      const expectedMulti = 1 + Math.max(0, (stats.multiHitCount || 1) - 1) * 0.65 + procChance(stats.multiHitChance, 0.1) * 0.65;
-      const rarePower = 1 + (oreRank(ore) >= 4 ? (stats.rareOreDamageBonus || 0) : 0);
-      const laserPower = stats.laserUnlocked ? (stats.laserPower || 1) * (1 + Math.max(0, (stats.laserBeams || 1) - 1) * 0.55) : 1;
-      const effectivePower = stats.pickPower * (1 + (stats.hardnessPierce || 0) * 0.07) * (1 + (stats.oreDamageBonus || 0)) * expectedCritical * expectedMulti * rarePower * laserPower;
-      const miningSeconds = (tile.hp || 1) / Math.max(0.1, effectivePower * stats.digSpeed);
-      const score = (travelSeconds + miningSeconds) / valueWeight;
-      if (score < bestScore) {
-        bestScore = score;
-        best = { kind: 'ore', tile, tx, ty, x: targetX, y: targetY, distance: Math.sqrt(distanceSquared) };
+  const resultLimit = clamp(Math.floor(Number(limit) || 1), 1, 4);
+  const ranked = [];
+  const minTx = Math.max(0, center.tx - reach);
+  const maxTx = Math.min(WORLD_CONFIG.WIDTH - 1, center.tx + reach);
+  const minTy = Math.max(0, center.ty - reach);
+  const maxTy = Math.min(WORLD_CONFIG.HEIGHT - 1, center.ty + reach);
+
+  const consider = (tile, tx, ty) => {
+    if (!tile?.oreId || tile.kind === 'air') return;
+    if (focusedOreId && tile.oreId !== focusedOreId) return;
+    if (options.veinId && tile.veinId !== options.veinId) return;
+    if (excludedKeys.has(`${tx}:${ty}`)) return;
+    const targetX = (tx + 0.5) * TILE_SIZE;
+    const targetY = (ty + 0.5) * TILE_SIZE;
+    if (typeof options.predicate === 'function' && !options.predicate({ tile, tx, ty, x: targetX, y: targetY })) return;
+    const dx = targetX - x;
+    const dy = targetY - y;
+    const distanceSquared = dx * dx + dy * dy;
+    if (distanceSquared > radiusSquared) return;
+    const ore = oreById.get(tile.oreId);
+    const valueWeight = 1 + Math.log2(1 + (ore?.value || 1)) * bias;
+    const distanceToTarget = Math.sqrt(distanceSquared);
+    const travelSeconds = distanceToTarget / Math.max(1, stats.moveSpeed * (stats.mineMoveMultiplier || 1));
+    const expectedCritical = 1 + procChance(stats.critChance, 0.16) * Math.max(0, stats.critMultiplier - 1);
+    const expectedMulti = 1 + Math.max(0, (stats.multiHitCount || 1) - 1) * 0.65 + procChance(stats.multiHitChance, 0.1) * 0.65;
+    const rarePower = 1 + (oreRank(ore) >= 4 ? (stats.rareOreDamageBonus || 0) : 0);
+    const laserPower = stats.laserUnlocked ? (stats.laserPower || 1) * (1 + Math.max(0, (stats.laserBeams || 1) - 1) * 0.55) : 1;
+    const focusedCalibration = focusedOreId ? focusedDamageMultiplier(tile) : 1;
+    const effectivePower = stats.pickPower * (1 + (stats.hardnessPierce || 0) * 0.07) * (1 + (stats.oreDamageBonus || 0)) * expectedCritical * expectedMulti * rarePower * laserPower * focusedCalibration;
+    const miningSeconds = (tile.hp || 1) / Math.max(0.1, effectivePower * stats.digSpeed);
+    const score = (travelSeconds + miningSeconds) / valueWeight;
+    const threshold = ranked.length >= resultLimit ? ranked[ranked.length - 1].score : Infinity;
+    if (score >= threshold) return;
+    if (!options.ignoreSenseLine && !hasSenseLine(x, y, targetX, targetY, focusedOreId ? 7 : 2)) return;
+
+    const candidate = { kind: 'ore', tile, tx, ty, x: targetX, y: targetY, distance: distanceToTarget, score };
+    const insertion = ranked.findIndex((entry) => score < entry.score);
+    if (insertion < 0) ranked.push(candidate);
+    else ranked.splice(insertion, 0, candidate);
+    if (ranked.length > resultLimit) ranked.length = resultLimit;
+  };
+
+  if (typeof state.world.forEachOreTileInBounds === 'function') {
+    state.world.forEachOreTileInBounds(minTx, minTy, maxTx, maxTy, consider);
+  } else {
+    for (let ty = minTy; ty <= maxTy; ty += 1) {
+      for (let tx = minTx; tx <= maxTx; tx += 1) {
+        consider(state.world.getTile(tx, ty), tx, ty);
       }
     }
   }
-  return best;
+  return ranked;
+}
+
+function findBestOreTarget(x, y, radius, focusedOreId = null, options = {}) {
+  return findBestOreTargets(x, y, radius, focusedOreId, options, 1)[0] || null;
+}
+
+function oreTargetIsValid(target, focusedOreId = null) {
+  if (!target || target.kind !== 'ore') return false;
+  const tile = state.world?.getTile(target.tx, target.ty);
+  if (!tile?.oreId || tile.kind === 'air' || tile.kind === 'bedrock') return false;
+  if (focusedOreId && tile.oreId !== focusedOreId) return false;
+  target.tile = tile;
+  target.x = (target.tx + 0.5) * TILE_SIZE;
+  target.y = (target.ty + 0.5) * TILE_SIZE;
+  return true;
+}
+
+function chooseOreTargets(x, y, radius, focusedOreId = null) {
+  const targets = findBestOreTargets(
+    x,
+    y,
+    radius,
+    focusedOreId,
+    {},
+    (stats.backupTargetSlots || 0) > 0 ? 2 : 1,
+  );
+  const [primary = null, backup = null] = targets;
+  return { primary, backup };
+}
+
+function getTriangulationTriangle() {
+  if (!stats.triangularFixUnlocked || !state.player) return null;
+  const focusedOreId = getFocusedOre()?.id || null;
+  if (!oreTargetIsValid(state.target, focusedOreId) || !oreTargetIsValid(state.backupTarget, focusedOreId)) return null;
+  if (distance(state.target.x, state.target.y, state.backupTarget.x, state.backupTarget.y) < TILE_SIZE * 2) return null;
+  const triangle = [
+    { x: state.player.x, y: state.player.y },
+    { x: state.target.x, y: state.target.y },
+    { x: state.backupTarget.x, y: state.backupTarget.y },
+  ];
+  const twiceArea = Math.abs(
+    (triangle[1].x - triangle[0].x) * (triangle[2].y - triangle[0].y)
+    - (triangle[2].x - triangle[0].x) * (triangle[1].y - triangle[0].y)
+  );
+  return twiceArea >= TILE_SIZE * TILE_SIZE * 0.65 ? triangle : null;
+}
+
+function pointInTriangle(x, y, triangle = getTriangulationTriangle()) {
+  if (!triangle) return false;
+  const sign = (point, left, right) => (
+    (point.x - right.x) * (left.y - right.y)
+    - (left.x - right.x) * (point.y - right.y)
+  );
+  const point = { x, y };
+  const d1 = sign(point, triangle[0], triangle[1]);
+  const d2 = sign(point, triangle[1], triangle[2]);
+  const d3 = sign(point, triangle[2], triangle[0]);
+  const hasNegative = d1 < -0.001 || d2 < -0.001 || d3 < -0.001;
+  const hasPositive = d1 > 0.001 || d2 > 0.001 || d3 > 0.001;
+  return !(hasNegative && hasPositive);
+}
+
+function tileInsideTriangulation(tx, ty, triangle = getTriangulationTriangle()) {
+  return pointInTriangle((tx + 0.5) * TILE_SIZE, (ty + 0.5) * TILE_SIZE, triangle);
+}
+
+function refreshTriangleOreMemory() {
+  const triangle = getTriangulationTriangle();
+  if (!triangle || !state.world || !(stats.triangularFixOreMemory > 0)) return triangle;
+  const xs = triangle.map((point) => point.x / TILE_SIZE);
+  const ys = triangle.map((point) => point.y / TILE_SIZE);
+  const minTx = clamp(Math.floor(Math.min(...xs)), 0, WORLD_CONFIG.WIDTH - 1);
+  const maxTx = clamp(Math.ceil(Math.max(...xs)), 0, WORLD_CONFIG.WIDTH - 1);
+  const minTy = clamp(Math.floor(Math.min(...ys)), 0, WORLD_CONFIG.HEIGHT - 1);
+  const maxTy = clamp(Math.ceil(Math.max(...ys)), 0, WORLD_CONFIG.HEIGHT - 1);
+  const remember = (tile, tx, ty) => {
+    if (!tile?.oreId || !tileInsideTriangulation(tx, ty, triangle)) return;
+    tile.sensedUntil = Math.max(tile.sensedUntil || 0, state.elapsed + stats.triangularFixOreMemory);
+    state.triangleOreMemory.set(`${tx}:${ty}`, state.elapsed + stats.triangularFixOreMemory);
+  };
+  if (typeof state.world.forEachOreTileInBounds === 'function') {
+    state.world.forEachOreTileInBounds(minTx, minTy, maxTx, maxTy, remember);
+  } else {
+    for (let ty = minTy; ty <= maxTy; ty += 1) {
+      for (let tx = minTx; tx <= maxTx; tx += 1) remember(state.world.getTile(tx, ty), tx, ty);
+    }
+  }
+  return triangle;
+}
+
+function noteTargetAcquired(target) {
+  if (!target) return;
+  const key = `${target.kind || 'ore'}:${target.tx}:${target.ty}`;
+  if (state.lastMetricTargetKey && state.lastMetricTargetKey !== key) state.metrics.targetSwitches += 1;
+  state.lastMetricTargetKey = key;
+  if (target.kind === 'ore') {
+    showTutorial(
+      'sense_target',
+      'ЧУТЬЁ ВЗЯЛО СЛЕД',
+      'Пунктир указывает текущую цель. Если руды рядом нет, шахтёр прокладывает разведочный ход и продолжает искать.',
+      'Позже откроются запасная цель и фокус на конкретной руде.',
+    );
+  }
+}
+
+function promoteBackupTarget(focusedOreId = null) {
+  if (!oreTargetIsValid(state.backupTarget, focusedOreId)) {
+    state.backupTarget = null;
+    return false;
+  }
+  state.target = state.backupTarget;
+  state.backupTarget = null;
+  state.targetCooldown = 0;
+  state.metrics.backupPromotions += 1;
+  noteTargetAcquired(state.target);
+  refreshCrewBeacon(state.target);
+  state.floaters.push({
+    x: state.target.x,
+    y: state.target.y - 18,
+    text: 'ВТОРАЯ ЗАСЕЧКА',
+    color: '#7fe9dd',
+    life: 0.65,
+    maxLife: 0.65,
+  });
+  return true;
+}
+
+function refreshCrewBeacon(target) {
+  if (!stats.crewBeaconUnlocked || !oreTargetIsValid(target)) return;
+  state.crewBeacon = {
+    oreId: target.tile.oreId,
+    veinId: target.tile.veinId || null,
+    tx: target.tx,
+    ty: target.ty,
+    x: target.x,
+    y: target.y,
+    expires: state.elapsed + 2.4,
+    validatedAt: state.elapsed,
+  };
+}
+
+function crewVeinHasLiveTile(beacon) {
+  if (!state.world || !beacon?.veinId) return false;
+  if (typeof state.world.forEachOreTileInBounds === 'function') {
+    let found = false;
+    state.world.forEachOreTileInBounds(
+      0,
+      0,
+      WORLD_CONFIG.WIDTH - 1,
+      WORLD_CONFIG.HEIGHT - 1,
+      (tile) => {
+        if (tile.veinId !== beacon.veinId) return true;
+        found = true;
+        return false;
+      },
+    );
+    return found;
+  }
+  for (let ty = 0; ty < WORLD_CONFIG.HEIGHT; ty += 1) {
+    for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+      const tile = state.world.getTile(tx, ty);
+      if (tile?.veinId === beacon.veinId && tile.kind !== 'air' && tile.kind !== 'bedrock' && tile.oreId) return true;
+    }
+  }
+  return false;
+}
+
+function getCrewBeacon(forceValidation = false) {
+  const beacon = state.crewBeacon;
+  if (!stats.crewBeaconUnlocked || !beacon || beacon.expires < state.elapsed) {
+    state.crewBeacon = null;
+    return null;
+  }
+  if (forceValidation || beacon.validatedAt !== state.elapsed) {
+    beacon.validatedAt = state.elapsed;
+    if (!crewVeinHasLiveTile(beacon)) {
+      state.crewBeacon = null;
+      return null;
+    }
+  }
+  return beacon;
+}
+
+function findBeaconAwareTarget(x, y, radius, focusedOre, beacon, options = {}) {
+  const target = findBestOreTarget(
+    x,
+    y,
+    radius,
+    beacon?.oreId || focusedOre?.id || null,
+    {
+      ...options,
+      ignoreSenseLine: Boolean(beacon),
+      veinId: beacon?.veinId || null,
+    },
+  );
+  if (target || !beacon) return target;
+
+  // A living marked vein can be outside a gadget's local reach. In that case
+  // the upgrade must not suppress the chain/drone proc that existed before it.
+  return findBestOreTarget(
+    x,
+    y,
+    radius,
+    focusedOre?.id || null,
+    { ...options, ignoreSenseLine: false, veinId: null },
+  );
+}
+
+function findCrewVeinTarget(x, y, oreId, excludedKeys = []) {
+  if (!oreId) return null;
+  const beacon = getCrewBeacon();
+  return findBestOreTarget(x, y, Math.max(TILE_SIZE * 4.5, stats.digRadius * 3), oreId, {
+    excludedKeys: new Set(excludedKeys),
+    ignoreSenseLine: true,
+    veinId: beacon?.veinId || null,
+  });
+}
+
+function relayCrewOverkill(origin, oreId, amount, excludedKeys = []) {
+  const carry = Math.max(0, amount) * Math.max(0, stats.crewBeaconOverkillCarry || 0);
+  if (carry <= 0 || !getCrewBeacon()) return;
+  const next = findCrewVeinTarget(origin.x, origin.y, oreId, excludedKeys);
+  if (!next) return;
+  state.metrics.crewRelays += 1;
+  state.world.damageTile(next.tx, next.ty, carry, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'beacon'));
+  state.beams.push({
+    x: origin.x,
+    y: origin.y,
+    x2: next.x,
+    y2: next.y,
+    color: '#ffc95e',
+    life: 0.16,
+    maxLife: 0.16,
+    width: 3,
+  });
 }
 
 function findExplorationTarget(x, y, focusedOreId = null) {
@@ -1223,29 +2765,135 @@ function findExplorationTarget(x, y, focusedOreId = null) {
   return best;
 }
 
+function triggerDeafKnock(x = state.player?.x, y = state.player?.y) {
+  if (!state.player || !state.world || !(stats.deafKnockStoneThreshold > 0)) return false;
+  const focusedOre = getFocusedOre();
+  const focusedOreId = stats.deafKnockFocusOnly ? focusedOre?.id || null : null;
+  const radius = effectiveSenseRadius() * (stats.deafKnockSenseRadiusMultiplier || 1.4)
+    * (focusedOre ? focusedSenseMultiplier(focusedOre) : 1);
+  const targets = findBestOreTargets(
+    state.player.x,
+    state.player.y,
+    radius,
+    focusedOreId,
+    { ignoreSenseLine: true },
+    (stats.backupTargetSlots || 0) > 0 ? 2 : 1,
+  );
+  state.dryRockBlocks = 0;
+  state.deafKnockCooldown = stats.deafKnockCooldown || 3;
+  state.metrics.deafKnocks += 1;
+  state.ping = 1;
+  state.shocks.push({
+    x: x ?? state.player.x,
+    y: y ?? state.player.y,
+    life: 0.42,
+    maxLife: 0.42,
+    tick: Infinity,
+    radius,
+    color: '#69e4d5',
+  });
+  if (targets[0]) {
+    targets[0].lockRadius = radius;
+    if (targets[1]) targets[1].lockRadius = radius;
+    state.target = targets[0];
+    state.backupTarget = targets[1] || null;
+    noteTargetAcquired(state.target);
+    state.pathWaypoint = null;
+    state.targetCooldown = Math.max(state.targetCooldown, 0.08);
+    state.deafKnockBoostRemaining = stats.deafKnockMoveDuration || 1.2;
+    state.floaters.push({
+      x: state.player.x,
+      y: state.player.y - 42,
+      text: 'ГЛУХОЙ СТУК · ЦЕЛЬ!',
+      color: '#79f4df',
+      life: 1,
+      maxLife: 1,
+    });
+    sound.tone(118, 0.18, 'sine', 0.035, 290);
+    return true;
+  }
+  state.floaters.push({ x: state.player.x, y: state.player.y - 36, text: 'ГЛУХО…', color: '#8497a4', life: 0.65, maxLife: 0.65 });
+  sound.tone(92, 0.12, 'sine', 0.02, -20);
+  return false;
+}
+
+function triggerSuperPickEcho(aimTarget, baseDamage) {
+  if (!aimTarget || !(baseDamage > 0) || !(stats.laserSuperPickEchoEvery > 0)) return false;
+  const radius = Math.max(TILE_SIZE * 0.75, stats.laserSuperPickEchoRadiusTiles * TILE_SIZE);
+  const power = baseDamage * stats.laserSuperPickEchoPower;
+  state.world.damageCircle(
+    aimTarget.x,
+    aimTarget.y,
+    radius,
+    power,
+    (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'echo'),
+  );
+  state.metrics.superPickEchoes += 1;
+  state.shocks.push({
+    x: aimTarget.x,
+    y: aimTarget.y,
+    life: 0.48,
+    maxLife: 0.48,
+    tick: Infinity,
+    radius,
+    color: '#65ffe3',
+  });
+  state.floaters.push({ x: aimTarget.x, y: aimTarget.y - 28, text: 'ЭХО СУПЕРКИРКИ', color: '#a4fff1', life: 0.9, maxLife: 0.9 });
+  spawnSparks(aimTarget.x, aimTarget.y, '#7affea', 13);
+  state.shake = Math.max(state.shake, 8);
+  sound.tone(205, 0.16, 'square', 0.035, 380);
+  return true;
+}
+
 function resolveBrokenTile(tile, tx, ty, source = 'pick') {
   state.blocksBroken += 1;
+  const countsForDeafKnock = ['pick', 'laser', 'multi'].includes(source);
+  state.metrics.sourceBreaks[source] = (state.metrics.sourceBreaks[source] || 0) + 1;
+  if ((tile?.maxHp || 0) > state.metrics.maxBlockHp) {
+    state.metrics.maxBlockHp = tile.maxHp || 0;
+    state.metrics.maxBlockKind = tile?.oreId ? (oreById.get(tile.oreId)?.name || tile.oreId) : (tile?.kind || 'порода');
+  }
+  if (tile?.veinId && state.crewBeacon?.veinId === tile.veinId) getCrewBeacon(true);
   const x = (tx + 0.5) * TILE_SIZE;
   const y = (ty + 0.5) * TILE_SIZE;
   const ore = tile?.oreId ? oreById.get(tile.oreId) : null;
   spawnDebris(x, y, ore?.color || (tile?.kind === 'dirt' ? '#74523d' : '#626779'), ore ? 8 : 4);
-  if (source !== 'shatter' && (stats.breakSplashChance || 0) > 0 && Math.random() < procChance(stats.breakSplashChance, 0.12)) {
+  const noProcSource = source === 'event' || (source === 'echo' && stats.laserSuperPickEchoNoProcs);
+  if (!noProcSource && source !== 'shatter' && (stats.breakSplashChance || 0) > 0 && Math.random() < procChance(stats.breakSplashChance, 0.12)) {
     state.world.damageCircle(x, y, Math.max(TILE_SIZE, stats.splashRadius || TILE_SIZE), stats.pickPower * (stats.breakSplashPower || 0.25), (nearTile, nearTx, nearTy) => resolveBrokenTile(nearTile, nearTx, nearTy, 'shatter'));
   }
-  if (!ore) return;
+  checkMicroEventsAt(x, y, true);
+  if (!ore) {
+    if (countsForDeafKnock && stats.deafKnockStoneThreshold > 0) {
+      state.dryRockBlocks += 1;
+      if (state.dryRockBlocks >= stats.deafKnockStoneThreshold && state.deafKnockCooldown <= 0) triggerDeafKnock(x, y);
+    }
+    return;
+  }
+  if (countsForDeafKnock) state.dryRockBlocks = 0;
+
+  const firstOfType = !state.discoveredOreIds.has(ore.id);
+  if (firstOfType) {
+    state.discoveredOreIds.add(ore.id);
+    if ((stats.discoveryTimeBonus || 0) > 0) {
+      addBonusTime(stats.discoveryTimeBonus, x, y - 30, 'ОТКРЫТИЕ');
+    }
+  }
 
   const now = state.elapsed;
   state.combo = now <= state.comboExpires ? state.combo + 1 : 1;
   state.comboExpires = now + stats.comboWindow;
   let yieldCount = 1;
-  const bonusChance = procChance(stats.extraYieldChance, 0.24);
+  const bonusChance = noProcSource ? 0 : procChance(stats.extraYieldChance, 0.24);
   if (Math.random() < bonusChance) yieldCount += 1;
-  if (Math.random() < procChance(stats.doubleDropChance, 0.18)) yieldCount *= 2;
-  if (Math.random() < procChance(stats.tripleDropChance, 0.12)) yieldCount *= 3;
-  if (Math.random() < procChance(stats.richVeinChance, 0.18)) yieldCount *= 2;
-  const motherlode = Math.random() < procChance(stats.motherlodeChance, 0.08);
+  // Jackpot effects stack additively. Multiplying five independent rolls made
+  // the late economy jump by two orders of magnitude and skipped whole tiers.
+  if (!noProcSource && Math.random() < procChance(stats.doubleDropChance, 0.18)) yieldCount += 1;
+  if (!noProcSource && Math.random() < procChance(stats.tripleDropChance, 0.12)) yieldCount += 2;
+  if (!noProcSource && Math.random() < procChance(stats.richVeinChance, 0.18)) yieldCount += 1;
+  const motherlode = !noProcSource && Math.random() < procChance(stats.motherlodeChance, 0.08);
   if (motherlode) {
-    yieldCount *= 5;
+    yieldCount += 4;
     if (state.elapsed - state.lastBigToast > 1.2) {
       state.lastBigToast = state.elapsed;
       toast('МАТЕРИНСКАЯ ЖИЛА!', 'success');
@@ -1254,11 +2902,11 @@ function resolveBrokenTile(tile, tx, ty, source = 'pick') {
   }
 
   let rewardOre = ore;
-  if (Math.random() < procChance(stats.rareOreChance, 0.2)) {
+  if (!noProcSource && Math.random() < procChance(stats.rareOreChance, 0.2)) {
     rewardOre = ORE_TYPES[Math.min(ORE_TYPES.length - 1, oreRank(ore) + 1)] || ore;
   }
   let golden = false;
-  if (Math.random() < procChance(stats.goldenOreChance, 0.12)) {
+  if (!noProcSource && Math.random() < procChance(stats.goldenOreChance, 0.12)) {
     const gold = oreById.get('gold');
     if (gold && (gold.tier || 0) > (rewardOre.tier || 0)) rewardOre = gold;
     golden = true;
@@ -1273,31 +2921,44 @@ function resolveBrokenTile(tile, tx, ty, source = 'pick') {
   const sourceBonus = source === 'bomb' ? (stats.bombValueMultiplier || 1) : 1;
   const goldenBonus = golden ? 1.35 : 1;
   const pickupBonus = 1 + Math.max(0, (stats.pickupRadius || 46) - 46) / 1400;
-  const exactYield = Math.max(1, yieldCount * stats.oreValueMultiplier * comboBonus * gemBonus * depthBonus * conversionBonus * sourceBonus * goldenBonus * pickupBonus);
+  const eventYieldBonus = state.eventYieldBoostRemaining > 0 ? 1.5 : 1;
+  const exactYield = Math.max(1, yieldCount * stats.oreValueMultiplier * comboBonus * gemBonus * depthBonus * conversionBonus * sourceBonus * goldenBonus * pickupBonus * eventYieldBonus);
   const remainder = Math.max(0, Number(state.yieldRemainders[rewardOre.id]) || 0);
   yieldCount = Math.floor(exactYield + remainder);
   state.yieldRemainders[rewardOre.id] = exactYield + remainder - yieldCount;
-  if ((stats.timeRefundChance || 0) > 0 && Math.random() < procChance(stats.timeRefundChance, 0.1)) {
-    state.timeLeft = Math.min(stats.runDuration, state.timeLeft + (stats.timeRefundAmount || 0));
-    state.floaters.push({ x, y: y - 28, text: `+${(stats.timeRefundAmount || 0).toFixed(1)}с`, color: '#74e4df', life: 0.85, maxLife: 0.85 });
+  if (!noProcSource && (stats.timeRefundChance || 0) > 0 && Math.random() < procChance(stats.timeRefundChance, 0.1)) {
+    addBonusTime(stats.timeRefundAmount || 0, x, y - 28, 'ВОЗВРАТ');
   }
-  if ((stats.timeShardChance || 0) > 0 && Math.random() < procChance(stats.timeShardChance, 0.08)) {
-    state.timeLeft = Math.min(stats.runDuration, state.timeLeft + (stats.timeShardSeconds || 0));
-    state.floaters.push({ x: x + 10, y: y - 35, text: `ХРОНО +${(stats.timeShardSeconds || 0).toFixed(1)}с`, color: '#8cecff', life: 1, maxLife: 1 });
+  if (!noProcSource && (stats.timeShardChance || 0) > 0 && Math.random() < procChance(stats.timeShardChance, 0.08)) {
+    addBonusTime(stats.timeShardSeconds || 0, x + 10, y - 35, 'ХРОНО');
   }
   const relicChance = procChance((stats.relicChance || 0) * (1 + Math.max(0, (stats.pickupRadius || 46) - 46) / 300), 0.08);
-  if (relicChance > 0 && Math.random() < relicChance) {
+  if (!noProcSource && relicChance > 0 && Math.random() < relicChance) {
     const relicPieces = 1 + Math.floor(state.deepest / 45);
     yieldCount += relicPieces;
     state.floaters.push({ x: x - 8, y: y - 42, text: `РЕЛИКТ +${relicPieces}`, color: '#ff9fe3', life: 1.15, maxLife: 1.15 });
   }
   state.runOre += yieldCount;
   state.oreCounts[rewardOre.id] = (state.oreCounts[rewardOre.id] || 0) + yieldCount;
-  if ((stats.veinRevealChance || 0) > 0 && Math.random() < procChance(stats.veinRevealChance, 0.08)) revealVein(tx, ty, ore.id);
+  const existingRecord = save.oreRecords?.[ore.id] || {};
+  save.oreRecords = save.oreRecords || {};
+  save.oreRecords[ore.id] = {
+    firstRun: existingRecord.firstRun || save.runs + 1,
+    deepest: Math.max(existingRecord.deepest || 0, Math.floor(depthFromOrigin(x, y))),
+    physicalBlocks: (existingRecord.physicalBlocks || 0) + 1,
+    largestYield: Math.max(existingRecord.largestYield || 0, yieldCount),
+  };
+  if (!noProcSource && (stats.veinRevealChance || 0) > 0 && Math.random() < procChance(stats.veinRevealChance, 0.08)) revealVein(tx, ty, ore.id);
   state.floaters.push({ x, y: y - 10, text: `+${yieldCount} ${rewardOre.name.toUpperCase()}`, color: golden ? '#ffe477' : (rewardOre.accent || rewardOre.color), life: 1, maxLife: 1 });
   state.shake = Math.max(state.shake, source === 'bomb' ? 9 : 3.5);
   sound.ore(ore);
   if ((ore.tier || 0) >= 5) flash(ore.color, 0.12);
+  showTutorial(
+    'first_ore',
+    'ПЕРВАЯ ЖИЛА',
+    'Цветные прожилки — руда. Чем дальше от точки высадки, тем она ценнее и плотнее.',
+    'Собранный груз начисляется после завершения смены и тратится в дереве улучшений.',
+  );
 }
 
 function revealVein(centerTx, centerTy, oreId) {
@@ -1313,35 +2974,210 @@ function revealVein(centerTx, centerTy, oreId) {
   state.ping = 1;
 }
 
-function attack() {
-  if (!state.target || !state.player || !state.world) return;
+function fireLaserRicochets(originTarget, baseDamage, onBreak) {
+  const ricochetCount = clamp(Math.floor(stats.laserRicochetCount || 0), 0, 2);
+  if (ricochetCount <= 0 || !originTarget || originTarget.kind !== 'ore') return;
+  const focusedOre = getFocusedOre();
+  const used = new Set([`${originTarget.tx}:${originTarget.ty}`]);
+  let from = { x: originTarget.x, y: originTarget.y };
+
+  for (let index = 0; index < ricochetCount; index += 1) {
+    const multiplier = index === 0
+      ? (stats.laserFirstRicochetMultiplier || 0.65)
+      : (stats.laserSecondRicochetMultiplier || 0.45);
+    const target = findBestOreTarget(
+      from.x,
+      from.y,
+      Math.max(stats.laserRange * 0.82, effectiveSenseRadius() * 0.7),
+      focusedOre?.id || null,
+      { excludedKeys: used, ignoreSenseLine: true },
+    );
+    if (!target) break;
+    const rayExcludedKeys = new Set(used);
+    used.add(`${target.tx}:${target.ty}`);
+    const dx = target.x - from.x;
+    const dy = target.y - from.y;
+    const segmentLength = Math.max(0.001, Math.hypot(dx, dy));
+    const power = baseDamage * multiplier;
+    const hpBefore = target.tile.hp || 0;
+    const targetOreId = target.tile.oreId;
+    const calibration = focusedDamageMultiplier(target.tile);
+    const rayRange = Math.min(stats.laserRange, segmentLength + TILE_SIZE * 0.45);
+    state.world.damageRay(
+      from.x,
+      from.y,
+      dx / segmentLength,
+      dy / segmentLength,
+      rayRange,
+      power,
+      stats.laserWidth,
+      onBreak,
+      { excludedKeys: rayExcludedKeys },
+    );
+    const targetHit = tileReceivedDamage(target.tx, target.ty, hpBefore);
+    if (targetHit && calibration > 1) {
+      state.metrics.focusedCalibrationHits += 1;
+      if (state.world.getTile(target.tx, target.ty)?.kind !== 'air') {
+        state.world.damageTile(target.tx, target.ty, power * (calibration - 1), onBreak);
+      }
+    }
+    if (targetHit && state.world.getTile(target.tx, target.ty)?.kind === 'air') {
+      relayCrewOverkill(target, targetOreId || focusedOre?.id, Math.max(0, power * calibration - hpBefore), used);
+    }
+    const beamLength = targetHit ? segmentLength : Math.min(segmentLength, rayRange);
+    state.beams.push({
+      x: from.x,
+      y: from.y,
+      x2: from.x + dx / segmentLength * beamLength,
+      y2: from.y + dy / segmentLength * beamLength,
+      color: index === 0 ? '#bafcff' : '#f0c5ff',
+      life: 0.18,
+      maxLife: 0.18,
+      width: Math.max(2, stats.laserWidth * (0.72 - index * 0.12)),
+    });
+    state.metrics.laserRicochets += 1;
+    if (!targetHit) break;
+    from = { x: target.x, y: target.y };
+  }
+}
+
+function expandedTileRayEntry(originX, originY, nx, ny, maxDistance, tx, ty, padding) {
+  let entry = 0;
+  let exit = maxDistance;
+  const bounds = [
+    [originX, nx, tx * TILE_SIZE - padding, (tx + 1) * TILE_SIZE + padding],
+    [originY, ny, ty * TILE_SIZE - padding, (ty + 1) * TILE_SIZE + padding],
+  ];
+
+  for (const [origin, direction, minimum, maximum] of bounds) {
+    if (Math.abs(direction) < 1e-9) {
+      if (origin < minimum || origin > maximum) return null;
+      continue;
+    }
+    let near = (minimum - origin) / direction;
+    let far = (maximum - origin) / direction;
+    if (near > far) [near, far] = [far, near];
+    entry = Math.max(entry, near);
+    exit = Math.min(exit, far);
+    if (entry > exit) return null;
+  }
+
+  return exit >= 0 && entry <= maxDistance ? Math.max(0, entry) : null;
+}
+
+function findPickContact(player, nx, ny, reach, preferredTarget = null) {
+  const endX = player.x + nx * reach;
+  const endY = player.y + ny * reach;
+  const padding = MINER_COLLISION_RADIUS;
+  const minTx = clamp(Math.floor((Math.min(player.x, endX) - padding) / TILE_SIZE), 0, WORLD_CONFIG.WIDTH - 1);
+  const maxTx = clamp(Math.floor((Math.max(player.x, endX) + padding) / TILE_SIZE), 0, WORLD_CONFIG.WIDTH - 1);
+  const minTy = clamp(Math.floor((Math.min(player.y, endY) - padding) / TILE_SIZE), 0, WORLD_CONFIG.HEIGHT - 1);
+  const maxTy = clamp(Math.floor((Math.max(player.y, endY) + padding) / TILE_SIZE), 0, WORLD_CONFIG.HEIGHT - 1);
+  const preferredKey = preferredTarget ? `${preferredTarget.tx}:${preferredTarget.ty}` : '';
+  const candidates = [];
+
+  for (let ty = minTy; ty <= maxTy; ty += 1) {
+    for (let tx = minTx; tx <= maxTx; tx += 1) {
+      const tile = state.world.getTile(tx, ty);
+      if (!tile || tile.kind === 'air' || tile.kind === 'bedrock' || tile.hp <= 0) continue;
+      const centerX = (tx + 0.5) * TILE_SIZE;
+      const centerY = (ty + 0.5) * TILE_SIZE;
+      const forward = (centerX - player.x) * nx + (centerY - player.y) * ny;
+      if (forward < -padding) continue;
+      const entry = expandedTileRayEntry(player.x, player.y, nx, ny, reach, tx, ty, padding);
+      if (entry === null) continue;
+      const lateral = Math.abs((centerX - player.x) * -ny + (centerY - player.y) * nx);
+      candidates.push({ tx, ty, tile, entry, lateral, preferred: `${tx}:${ty}` === preferredKey });
+    }
+  }
+
+  candidates.sort((left, right) => (
+    left.entry - right.entry
+    || Number(right.preferred) - Number(left.preferred)
+    || left.lateral - right.lateral
+    || left.ty - right.ty
+    || left.tx - right.tx
+  ));
+  return candidates[0] || null;
+}
+
+function clearanceTarget(blockedTiles, player) {
+  const unique = new Map();
+  for (const blocked of blockedTiles) {
+    if (!blocked?.tile || blocked.tile.kind === 'air' || blocked.tile.kind === 'bedrock') continue;
+    const key = `${blocked.tx}:${blocked.ty}`;
+    const previous = unique.get(key);
+    if (!previous || Math.abs(blocked.probeOffset || 0) < Math.abs(previous.probeOffset || 0)) unique.set(key, blocked);
+  }
+  const candidates = [...unique.values()];
+  candidates.sort((left, right) => {
+    const leftX = (left.tx + 0.5) * TILE_SIZE;
+    const leftY = (left.ty + 0.5) * TILE_SIZE;
+    const rightX = (right.tx + 0.5) * TILE_SIZE;
+    const rightY = (right.ty + 0.5) * TILE_SIZE;
+    return Math.abs(left.probeOffset || 0) - Math.abs(right.probeOffset || 0)
+      || distance(player.x, player.y, leftX, leftY) - distance(player.x, player.y, rightX, rightY)
+      || left.ty - right.ty
+      || left.tx - right.tx;
+  });
+  const blocked = candidates[0];
+  if (!blocked) return null;
+  const x = (blocked.tx + 0.5) * TILE_SIZE;
+  const y = (blocked.ty + 0.5) * TILE_SIZE;
+  return {
+    kind: blocked.tx === state.target?.tx && blocked.ty === state.target?.ty ? state.target.kind : 'clearance',
+    tile: blocked.tile,
+    tx: blocked.tx,
+    ty: blocked.ty,
+    x,
+    y,
+    distance: distance(player.x, player.y, x, y),
+  };
+}
+
+function attack(aimTarget = state.target) {
+  if (!aimTarget || !state.target || !state.player || !state.world) return;
   const player = state.player;
-  const dx = state.target.x - player.x;
-  const dy = state.target.y - player.y;
-  const length = Math.max(0.001, Math.hypot(dx, dy));
-  const nx = dx / length;
-  const ny = dy / length;
+  const dx = aimTarget.x - player.x;
+  const dy = aimTarget.y - player.y;
+  const rawLength = Math.hypot(dx, dy);
+  const length = Math.max(0.001, rawLength);
+  const nx = rawLength > 0.001 ? dx / rawLength : Math.cos(player.angle || 0);
+  const ny = rawLength > 0.001 ? dy / rawLength : Math.sin(player.angle || 0);
   player.facing = nx < 0 ? -1 : 1;
   player.angle = Math.atan2(ny, nx);
   player.swing = 1;
 
   state.attackCount += 1;
-  const targetKey = `${state.target.tx}:${state.target.ty}`;
+  state.metrics.attacks += 1;
+  const targetKey = `${aimTarget.tx}:${aimTarget.ty}`;
   state.hitStreak = state.lastTargetKey === targetKey ? state.hitStreak + 1 : 1;
   state.lastTargetKey = targetKey;
-  const targetOre = oreById.get(state.target.tile?.oreId);
+  const aimTile = state.world.getTile(aimTarget.tx, aimTarget.ty) || aimTarget.tile;
+  const targetOre = oreById.get(aimTile?.oreId);
+  const aimHpBefore = targetOre ? Math.max(0, aimTile.hp || 0) : 0;
   const streakBonus = 1 + Math.min(state.hitStreak, stats.streakCap || 0) * (stats.streakPower || 0);
   const densityBonus = 1 + (stats.hardnessPierce || 0) * 0.07;
   const oreBonus = 1 + (targetOre ? (stats.oreDamageBonus || 0) : 0);
   const rareBonus = 1 + (oreRank(targetOre) >= 4 ? (stats.rareOreDamageBonus || 0) : 0);
+  const focusedCalibration = focusedDamageMultiplier(aimTile);
   const charged = (stats.chargedHitPower || 0) > 0 && state.attackCount % 8 === 0;
   const chargedBonus = charged ? 1 + stats.chargedHitPower : 1;
   const critical = Math.random() < procChance(stats.critChance, 0.16);
   const damage = stats.pickPower * streakBonus * densityBonus * oreBonus * rareBonus * chargedBonus * (critical ? stats.critMultiplier : 1);
+  const aimingAtMainTarget = aimTarget.tx === state.target.tx && aimTarget.ty === state.target.ty;
+  const primaryHpBefore = aimingAtMainTarget && aimTile?.oreId ? Math.max(0, aimTile.hp || 0) : 0;
+  const primaryOreId = aimingAtMainTarget ? aimTile?.oreId : null;
+  let primaryPhaseDamage = 0;
+  let primaryBasePowerApplied = 0;
+  let primaryOverkill = 0;
+  let maxHittingLaserDamage = 0;
+  let aimReceivedPrimaryHit = false;
   const broken = [];
   const onBreak = (tile, tx, ty) => {
     broken.push({ tile, tx, ty });
-    resolveBrokenTile(tile, tx, ty, stats.laserUnlocked ? 'laser' : 'pick');
+    const pickSource = !aimingAtMainTarget && aimTarget.kind === 'clearance' ? 'clearance' : 'pick';
+    resolveBrokenTile(tile, tx, ty, stats.laserUnlocked ? 'laser' : pickSource);
   };
 
   if (stats.laserUnlocked) {
@@ -1355,24 +3191,30 @@ function attack() {
       const beamY = nx * sin + ny * cos;
       const splitPower = beamIndex === Math.floor(beamCount / 2) ? 1 : 0.62;
       const beamDamage = damage * (stats.laserPower || 1) * (1 + (stats.laserPierce || 1) * 0.08) * splitPower;
+      const beamTarget = state.world.getTile(aimTarget.tx, aimTarget.ty);
+      const beamHpBefore = beamTarget?.oreId ? Math.max(0, beamTarget.hp || 0) : 0;
       state.world.damageRay(player.x, player.y, beamX, beamY, stats.laserRange, beamDamage, stats.laserWidth, onBreak);
+      const beamDamageTaken = tileDamageAmount(aimTarget.tx, aimTarget.ty, beamHpBefore);
+      if (beamDamageTaken > 0) {
+        primaryBasePowerApplied += beamDamage;
+        maxHittingLaserDamage = Math.max(maxHittingLaserDamage, beamDamage);
+        if (state.world.getTile(aimTarget.tx, aimTarget.ty)?.kind === 'air') {
+          primaryOverkill += Math.max(0, beamDamage - beamHpBefore);
+        }
+      }
       state.beams.push({ x: player.x, y: player.y, x2: player.x + beamX * stats.laserRange, y2: player.y + beamY * stats.laserRange, color: '#69f4da', life: 0.12, maxLife: 0.12, width: stats.laserWidth });
     }
+    primaryPhaseDamage = tileDamageAmount(aimTarget.tx, aimTarget.ty, aimHpBefore);
+    aimReceivedPrimaryHit = primaryPhaseDamage > 1e-9;
     sound.tone(420, 0.07, 'sawtooth', 0.025, 360);
   } else {
     const reach = Math.min(stats.digReach, Math.max(TILE_SIZE * 0.72, length));
     let hitX = player.x + nx * reach;
     let hitY = player.y + ny * reach;
-    let impactTile = null;
-    for (let probeDistance = 7; probeDistance <= reach + TILE_SIZE * 0.35; probeDistance += 5) {
-      const probe = state.world.worldToTile(player.x + nx * probeDistance, player.y + ny * probeDistance);
-      const tile = state.world.getTile(probe.tx, probe.ty);
-      if (tile && tile.kind !== 'air' && tile.kind !== 'bedrock') {
-        impactTile = probe;
-        hitX = (probe.tx + 0.5) * TILE_SIZE;
-        hitY = (probe.ty + 0.5) * TILE_SIZE;
-        break;
-      }
+    const impactTile = findPickContact(player, nx, ny, reach, aimTarget);
+    if (impactTile) {
+      hitX = (impactTile.tx + 0.5) * TILE_SIZE;
+      hitY = (impactTile.ty + 0.5) * TILE_SIZE;
     }
     const arcBonus = clamp((stats.digArc - Math.PI / 3) / Math.PI, 0, 0.7);
     if (impactTile) {
@@ -1382,11 +3224,58 @@ function attack() {
         state.world.damageTile(impactTile.tx, impactTile.ty, damage, onBreak);
       }
     }
+    primaryPhaseDamage = tileDamageAmount(aimTarget.tx, aimTarget.ty, aimHpBefore);
+    aimReceivedPrimaryHit = primaryPhaseDamage > 1e-9;
+    if (aimReceivedPrimaryHit) primaryBasePowerApplied = damage;
+    if (aimReceivedPrimaryHit && state.world.getTile(aimTarget.tx, aimTarget.ty)?.kind === 'air') {
+      primaryOverkill += Math.max(0, damage - aimHpBefore);
+    }
     if ((stats.splashDamage || 0) > 0 && (stats.splashRadius || 0) > 0) {
       state.world.damageCircle(hitX, hitY, stats.digRadius + stats.splashRadius, damage * stats.splashDamage, onBreak);
     }
     spawnSparks(hitX, hitY, critical ? '#fff1a6' : '#edbb66', critical ? 7 : 3);
     sound.hit(critical);
+  }
+
+  if (targetOre && focusedCalibration > 1 && aimReceivedPrimaryHit) {
+    state.metrics.focusedCalibrationHits += 1;
+    const calibrationDamage = primaryBasePowerApplied * (focusedCalibration - 1);
+    const targetBeforeCalibration = state.world.getTile(aimTarget.tx, aimTarget.ty);
+    if (targetBeforeCalibration?.kind !== 'air') {
+      const calibrationHpBefore = Math.max(0, targetBeforeCalibration.hp || 0);
+      state.world.damageTile(aimTarget.tx, aimTarget.ty, calibrationDamage, onBreak);
+      if (state.world.getTile(aimTarget.tx, aimTarget.ty)?.kind === 'air') {
+        primaryOverkill += Math.max(0, calibrationDamage - calibrationHpBefore);
+      }
+    } else {
+      primaryOverkill += calibrationDamage;
+    }
+  }
+
+  if (primaryOreId && aimReceivedPrimaryHit && state.world.getTile(aimTarget.tx, aimTarget.ty)?.kind === 'air') {
+    relayCrewOverkill(
+      { x: aimTarget.x, y: aimTarget.y },
+      primaryOreId,
+      primaryOverkill,
+      [`${aimTarget.tx}:${aimTarget.ty}`],
+    );
+  }
+
+  if (stats.laserUnlocked && aimReceivedPrimaryHit) {
+    // Calibration is target-specific hardness reduction. The ricochet applies
+    // it to its own target, so its outgoing base must remain the raw hit power.
+    fireLaserRicochets(aimTarget, maxHittingLaserDamage, onBreak);
+  }
+
+  if (stats.laserUnlocked && aimingAtMainTarget) {
+    state.laserShotCount += 1;
+    if (
+      stats.laserSuperPickEchoEvery > 0
+      && state.laserShotCount % stats.laserSuperPickEchoEvery === 0
+      && maxHittingLaserDamage > 0
+    ) {
+      triggerSuperPickEcho(aimTarget, maxHittingLaserDamage);
+    }
   }
 
   if (critical || charged) {
@@ -1397,7 +3286,7 @@ function attack() {
   const impactX = player.x + nx * Math.min(length, Math.max(stats.digReach, TILE_SIZE));
   const impactY = player.y + ny * Math.min(length, Math.max(stats.digReach, TILE_SIZE));
   if (stats.bombChance > 0 && Math.random() < procChance(stats.bombChance, 0.18)) {
-    detonate(impactX, impactY);
+    detonate(impactX, impactY, nx, ny);
   }
   if (stats.chainCount > 0 && stats.chainChance > 0 && Math.random() < procChance(stats.chainChance, 0.16)) {
     chainStrike(impactX, impactY, nx, ny);
@@ -1414,11 +3303,27 @@ function attack() {
       const jy = nx * sin + ny * cos;
       const bonusX = player.x + jx * stats.digReach;
       const bonusY = player.y + jy * stats.digReach;
+      const bonusPoint = state.world.worldToTile(bonusX, bonusY);
+      const bonusTargetTile = state.world.getTile(bonusPoint.tx, bonusPoint.ty);
+      const bonusHpBefore = bonusTargetTile?.oreId ? Math.max(0, bonusTargetTile.hp || 0) : 0;
+      const bonusCalibration = focusedDamageMultiplier(bonusTargetTile);
+      const onMultiBreak = (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'multi');
       if (stats.areaMiningUnlocked) {
-        state.world.damageCircle(bonusX, bonusY, stats.digRadius * 0.75, stats.pickPower * 0.65, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'multi'));
+        state.world.damageCircle(bonusX, bonusY, stats.digRadius * 0.75, stats.pickPower * 0.65, onMultiBreak);
       } else {
-        const bonusTile = state.world.worldToTile(bonusX, bonusY);
-        state.world.damageTile(bonusTile.tx, bonusTile.ty, stats.pickPower * 0.65, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'multi'));
+        state.world.damageTile(bonusPoint.tx, bonusPoint.ty, stats.pickPower * 0.65, onMultiBreak);
+      }
+      const bonusDamage = tileDamageAmount(bonusPoint.tx, bonusPoint.ty, bonusHpBefore);
+      if (bonusDamage > 0 && bonusCalibration > 1) {
+        state.metrics.focusedCalibrationHits += 1;
+        if (state.world.getTile(bonusPoint.tx, bonusPoint.ty)?.kind !== 'air') {
+          state.world.damageTile(
+            bonusPoint.tx,
+            bonusPoint.ty,
+            bonusDamage * (bonusCalibration - 1),
+            onMultiBreak,
+          );
+        }
       }
     }
   }
@@ -1427,43 +3332,160 @@ function attack() {
   }
 }
 
-function detonate(x, y) {
+function damageBombShape(x, y, radius, power, directionX, directionY) {
+  const magnitude = Math.hypot(directionX, directionY);
+  const directional = Boolean(stats.directionalBombs && stats.directionalBombConeTiles > 0 && magnitude > 0.001);
+  if (directional) state.metrics.directionalBlasts += 1;
+  const nx = directional ? directionX / magnitude : 0;
+  const ny = directional ? directionY / magnitude : 1;
+  const centerRadius = directional ? radius * 0.58 : radius;
+  const coneLength = directional ? radius * 0.65 + stats.directionalBombConeTiles * TILE_SIZE : 0;
+  const tileReach = TILE_SIZE * Math.SQRT1_2;
+  const reach = centerRadius + coneLength + tileReach;
+  const min = state.world.worldToTile(x - reach, y - reach);
+  const max = state.world.worldToTile(x + reach, y + reach);
+  const candidates = [];
+
+  for (let ty = Math.max(0, min.ty); ty <= Math.min(WORLD_CONFIG.HEIGHT - 1, max.ty); ty += 1) {
+    for (let tx = Math.max(0, min.tx); tx <= Math.min(WORLD_CONFIG.WIDTH - 1, max.tx); tx += 1) {
+      const tile = state.world.getTile(tx, ty);
+      if (!tile || tile.kind === 'air' || tile.kind === 'bedrock') continue;
+      const tileX = (tx + 0.5) * TILE_SIZE;
+      const tileY = (ty + 0.5) * TILE_SIZE;
+      const dx = tileX - x;
+      const dy = tileY - y;
+      const radialDistance = Math.hypot(dx, dy);
+      const inCenter = radialDistance <= centerRadius + tileReach;
+      let inCone = false;
+      let progress = 0;
+      if (directional) {
+        const projection = dx * nx + dy * ny;
+        const lateral = Math.abs(dx * -ny + dy * nx);
+        progress = clamp(projection / Math.max(1, coneLength), 0, 1);
+        const halfWidth = radius * (0.2 + progress * 0.65) + tileReach;
+        inCone = projection >= 0 && projection <= coneLength + tileReach && lateral <= halfWidth;
+      }
+      if (!inCenter && !inCone) continue;
+      candidates.push({
+        tx,
+        ty,
+        order: inCenter ? radialDistance : centerRadius + progress * coneLength,
+        factor: inCenter ? 1 : 0.9 - progress * 0.18,
+      });
+    }
+  }
+
+  candidates.sort((left, right) => left.order - right.order || left.ty - right.ty || left.tx - right.tx);
+  for (const candidate of candidates) {
+    const tile = state.world.getTile(candidate.tx, candidate.ty);
+    if (!tile || tile.kind === 'air' || tile.kind === 'bedrock') continue;
+    const hpBefore = tile.hp || 0;
+    const oreId = tile.oreId;
+    const veinId = tile.veinId;
+    const triangularBonus = tileInsideTriangulation(candidate.tx, candidate.ty)
+      ? stats.triangularFixGadgetDamageBonus
+      : 0;
+    if (triangularBonus > 0) state.metrics.triangleBuffHits += 1;
+    const amount = power * candidate.factor * focusedDamageMultiplier(tile) * (1 + triangularBonus);
+    state.world.damageTile(candidate.tx, candidate.ty, amount, (brokenTile, tx, ty) => resolveBrokenTile(brokenTile, tx, ty, 'bomb'));
+    const beacon = getCrewBeacon();
+    if (oreId && tile.kind === 'air' && beacon?.veinId && veinId === beacon.veinId) {
+      relayCrewOverkill(
+        { x: (candidate.tx + 0.5) * TILE_SIZE, y: (candidate.ty + 0.5) * TILE_SIZE },
+        oreId,
+        Math.max(0, amount - hpBefore),
+        [`${candidate.tx}:${candidate.ty}`],
+      );
+    }
+  }
+
+  if (directional) {
+    const halfAngle = Math.atan2(radius * 0.72, Math.max(TILE_SIZE, coneLength));
+    const baseAngle = Math.atan2(ny, nx);
+    for (const sign of [-1, 1]) {
+      const angle = baseAngle + halfAngle * sign;
+      state.beams.push({
+        x,
+        y,
+        x2: x + Math.cos(angle) * coneLength,
+        y2: y + Math.sin(angle) * coneLength,
+        color: '#ffb65c',
+        life: 0.2,
+        maxLife: 0.2,
+        width: 2,
+      });
+    }
+  }
+}
+
+function detonate(x, y, directionX = 0, directionY = 1) {
   sound.boom();
   state.shake = Math.max(state.shake, 15);
   flash('#f0a24c', 0.28);
   const volatile = (stats.volatileBombChance || 0) > 0 && Math.random() < procChance(stats.volatileBombChance, 0.1);
   const sticky = (stats.stickyBombChance || 0) > 0 && Math.random() < procChance(stats.stickyBombChance, 0.12);
+  const beacon = getCrewBeacon();
+  let blastX = x;
+  let blastY = y;
+  let blastDirectionX = directionX;
+  let blastDirectionY = directionY;
+  if (sticky && beacon) {
+    blastDirectionX = beacon.x - x;
+    blastDirectionY = beacon.y - y;
+    blastX = beacon.x;
+    blastY = beacon.y;
+  }
   const radius = stats.bombRadius * (volatile ? 1.75 : 1);
   const power = stats.pickPower * stats.bombPower * 1.8 * (volatile ? 2.2 : 1) * (sticky ? 1.45 : 1);
-  state.world.damageCircle(x, y, radius, power, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'bomb'));
+  damageBombShape(blastX, blastY, radius, power, blastDirectionX, blastDirectionY);
   const fragments = Math.min(6, Math.floor(stats.bombFragments || 0));
   for (let index = 0; index < fragments; index += 1) {
     const angle = index / Math.max(1, fragments) * Math.PI * 2 + Math.random() * 0.4;
-    const fragmentX = x + Math.cos(angle) * radius * 0.72;
-    const fragmentY = y + Math.sin(angle) * radius * 0.72;
+    const fragmentX = blastX + Math.cos(angle) * radius * 0.72;
+    const fragmentY = blastY + Math.sin(angle) * radius * 0.72;
     state.world.damageCircle(fragmentX, fragmentY, radius * 0.36, power * (stats.bombFragmentPower || 0.3), (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'bomb'));
   }
   if (volatile) toast('НЕСТАБИЛЬНЫЙ ЗАРЯД!', 'warning');
   for (let index = 0; index < 26; index += 1) {
     const angle = Math.random() * Math.PI * 2;
     const speed = 55 + Math.random() * 180;
-    state.particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, size: 2 + Math.random() * 6, color: index % 3 ? '#e06b3e' : '#ffd67d', life: 0.65 + Math.random() * 0.5, maxLife: 1.1, gravity: 80, glow: true });
+    state.particles.push({ x: blastX, y: blastY, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, size: 2 + Math.random() * 6, color: index % 3 ? '#e06b3e' : '#ffd67d', life: 0.65 + Math.random() * 0.5, maxLife: 1.1, gravity: 80, glow: true });
   }
 }
 
 function chainStrike(x, y, nx, ny) {
   let fromX = x;
   let fromY = y;
+  const visited = new Set();
   for (let index = 0; index < Math.floor(stats.chainCount); index += 1) {
     const focusedOre = getFocusedOre();
-    const target = findBestOreTarget(
+    const beacon = getCrewBeacon();
+    const targetOreId = beacon?.oreId || focusedOre?.id || null;
+    const triangle = getTriangulationTriangle();
+    const chainRangeBonus = triangle ? 1 + stats.triangularFixRangeBonus : 1;
+    const target = findBeaconAwareTarget(
       fromX + nx * TILE_SIZE,
       fromY + ny * TILE_SIZE,
-      stats.senseRadius * 0.65 * (focusedOre ? stats.oreFocusRadiusMultiplier : 1),
-      focusedOre?.id || null,
+      stats.senseRadius * 0.65 * (focusedOre ? focusedSenseMultiplier(focusedOre) : 1) * chainRangeBonus,
+      focusedOre,
+      beacon,
+      { excludedKeys: visited },
     );
     if (!target) break;
-    state.world.damageCircle(target.x, target.y, Math.max(10, stats.digRadius * 0.55), stats.pickPower * (stats.chainPower || 0.55), (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'chain'));
+    visited.add(`${target.tx}:${target.ty}`);
+    const inTriangle = pointInTriangle(target.x, target.y, triangle);
+    const gadgetBonus = inTriangle ? stats.triangularFixGadgetDamageBonus : 0;
+    if (gadgetBonus > 0 || (triangle && stats.triangularFixRangeBonus > 0)) state.metrics.triangleBuffHits += 1;
+    const power = stats.pickPower * (stats.chainPower || 0.55) * (1 + gadgetBonus);
+    const hpBefore = target.tile.hp || 0;
+    const calibration = focusedDamageMultiplier(target.tile);
+    state.world.damageCircle(target.x, target.y, Math.max(10, stats.digRadius * 0.55), power, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'chain'));
+    if (calibration > 1 && target.tile.kind !== 'air') {
+      state.world.damageTile(target.tx, target.ty, power * (calibration - 1), (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'chain'));
+    }
+    if (target.tile.kind === 'air') {
+      relayCrewOverkill(target, targetOreId, Math.max(0, power * calibration - hpBefore), visited);
+    }
     const beamLife = 0.18 + (stats.shockDuration || 0);
     state.beams.push({ x: fromX, y: fromY, x2: target.x, y2: target.y, color: '#b58cff', life: beamLife, maxLife: beamLife, width: 3 });
     if ((stats.shockDuration || 0) > 0) {
@@ -1475,10 +3497,121 @@ function chainStrike(x, y, nx, ny) {
   sound.tone(520, 0.12, 'sine', 0.025, 260);
 }
 
+function setMicroEventBanner(event, text, triggered = false) {
+  if (!ui.microEventBanner || !event) return;
+  if (ui.microEventIcon) ui.microEventIcon.textContent = event.icon || '◆';
+  if (ui.microEventTitle) ui.microEventTitle.textContent = triggered
+    ? `${event.label || event.type} · СРАБОТАЛО`
+    : `ОБНАРУЖЕНО · ${event.label || event.type}`;
+  if (ui.microEventText) ui.microEventText.textContent = text || event.description || '';
+  ui.microEventBanner.style.setProperty('--event-color', event.color || '#ffd170');
+  ui.microEventBanner.setAttribute('aria-live', triggered ? 'assertive' : 'polite');
+  ui.microEventBanner.classList.toggle('is-triggered', triggered);
+  ui.microEventBanner.classList.toggle('is-preview', !triggered);
+  ui.microEventBanner.classList.remove('hidden');
+  const meter = ui.microEventProgress?.parentElement;
+  meter?.setAttribute('aria-valuemax', triggered ? '3.2' : '1');
+  meter?.setAttribute('aria-valuenow', triggered ? '3.2' : '1');
+}
+
+function applyMicroEvent(event) {
+  if (!event || !state.world || state.mode !== 'run') return false;
+  const triggered = typeof state.world.triggerMicroEvent === 'function'
+    ? state.world.triggerMicroEvent(event.id)
+    : event;
+  if (!triggered) return false;
+  const x = triggered.x;
+  const y = triggered.y;
+  const radius = triggered.radius || triggered.radiusTiles * TILE_SIZE;
+  let effectText = 'Геологическая аномалия изменила участок.';
+
+  if (triggered.type === 'fragile_cavity') {
+    state.world.damageCircle(x, y, radius * 0.82, stats.pickPower * 8, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'event'));
+    effectText = 'Полость обрушилась и расчистила большой круг породы.';
+  } else if (triggered.type === 'gas_pocket') {
+    for (let index = 0; index < 3; index += 1) {
+      const angle = index / 3 * Math.PI * 2 + 0.35;
+      const blastX = x + Math.cos(angle) * radius * 0.32;
+      const blastY = y + Math.sin(angle) * radius * 0.32;
+      state.world.damageCircle(blastX, blastY, radius * 0.55, stats.pickPower * 6.5, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'event'));
+      state.beams.push({ x, y, x2: blastX, y2: blastY, color: triggered.color, life: 0.42, maxLife: 0.42, width: 8 });
+    }
+    effectText = 'Газ вспыхнул тремя волнами и разрушил отмеченную зону.';
+  } else if (triggered.type === 'rich_lens') {
+    state.eventYieldBoostRemaining = Math.max(state.eventYieldBoostRemaining, 5);
+    const point = state.world.worldToTile(x, y);
+    for (const ore of ORE_TYPES) revealVein(point.tx, point.ty, ore.id);
+    effectText = 'Богатая линза открыта: выход всей руды ×1,5 на 5 секунд.';
+  } else if (triggered.type === 'ancient_container') {
+    const tierCap = getHighestUnlockedOreTier();
+    const rewardOre = [...ORE_TYPES]
+      .filter((ore) => (ore.tier || 0) <= tierCap)
+      .sort((left, right) => (right.tier || 0) - (left.tier || 0))[0] || ORE_TYPES[0];
+    const pieces = clamp(3 + Math.floor((triggered.depthTiles || 0) / 22), 3, 8);
+    state.oreCounts[rewardOre.id] = (state.oreCounts[rewardOre.id] || 0) + pieces;
+    state.runOre += pieces;
+    state.discoveredOreIds.add(rewardOre.id);
+    addBonusTime(0.5, x, y - 38, 'КОНТЕЙНЕР');
+    effectText = `Контейнер вскрыт: ${rewardOre.name} ×${pieces} и +0,5 секунды.`;
+  } else if (triggered.type === 'underground_flow') {
+    state.eventMoveBoostRemaining = Math.max(state.eventMoveBoostRemaining, 4);
+    state.pathWaypoint = null;
+    state.pathCooldown = 0;
+    effectText = 'Поток подхватил шахтёра: скорость движения +35% на 4 секунды.';
+  }
+
+  state.metrics.eventCount += 1;
+  state.metrics.microEvents[triggered.type] = (state.metrics.microEvents[triggered.type] || 0) + 1;
+  state.activeMicroEvent = { ...triggered, effectLife: 3.2, effectText };
+  state.previewMicroEventId = null;
+  state.eventBannerTimer = 3.2;
+  if (typeof state.world.consumeMicroEvent === 'function') state.world.consumeMicroEvent(triggered.id);
+  setMicroEventBanner(triggered, effectText, true);
+  state.shocks.push({ x, y, life: 0.9, maxLife: 0.9, tick: Infinity, radius, color: triggered.color });
+  state.floaters.push({ x, y: y - radius * 0.25, text: triggered.label || 'МИКРОСОБЫТИЕ', color: triggered.color, life: 1.8, maxLife: 1.8 });
+  for (let index = 0; index < 34; index += 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 70 + Math.random() * 190;
+    state.particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, size: 2 + Math.random() * 5, color: triggered.color, life: 0.8 + Math.random() * 0.6, maxLife: 1.4, gravity: 25, glow: true });
+  }
+  flash(triggered.color || '#ffffff', 0.5);
+  state.shake = Math.max(state.shake, 18);
+  sound.tone(82, 0.34, 'sawtooth', 0.055, 420);
+  return true;
+}
+
+function checkMicroEventsAt(x, y, fromBreak = false) {
+  if (!state.world || typeof state.world.getMicroEventsNear !== 'function' || !Number.isFinite(x) || !Number.isFinite(y)) return null;
+  if ((state.metrics.eventCount || 0) >= 1) {
+    if (state.eventBannerTimer <= 0) ui.microEventBanner?.classList.add('hidden');
+    return null;
+  }
+  const point = state.world.worldToTile(x, y);
+  const senseTiles = Math.max(2.5, effectiveSenseRadius() / TILE_SIZE * 0.78);
+  const nearby = state.world.getMicroEventsNear(point.tx, point.ty, senseTiles);
+  const closest = nearby[0] || null;
+  if (!closest) {
+    if (state.eventBannerTimer <= 0) {
+      state.activeMicroEvent = null;
+      state.previewMicroEventId = null;
+      ui.microEventBanner?.classList.add('hidden');
+    }
+    return null;
+  }
+  if (state.eventBannerTimer <= 0 && state.previewMicroEventId !== closest.id) {
+    state.activeMicroEvent = closest;
+    state.previewMicroEventId = closest.id;
+    setMicroEventBanner(closest, `${closest.description} Войдите в яркий контур, чтобы активировать событие.`, false);
+  }
+  const triggerMargin = fromBreak ? 1.15 : 0.2;
+  if ((closest.distanceToEdgeTiles || 0) <= triggerMargin) applyMicroEvent(closest);
+  return closest;
+}
+
 function updateRun(delta, now = performance.now()) {
   if (state.paused || !state.player || !state.world) return;
   state.activeWallElapsed = Math.max(0, (now - state.runStartedAt) / 1000);
-  if (state.activeWallElapsed >= MAX_RUN_SECONDS) {
+  if (state.activeWallElapsed >= getBonusRunCap()) {
     state.timeLeft = 0;
     updateHud();
     finishRun();
@@ -1490,8 +3623,19 @@ function updateRun(delta, now = performance.now()) {
   state.ping = Math.max(0, state.ping - delta * 0.8);
   state.player.swing = Math.max(0, state.player.swing - delta * 5.8);
   state.attackCooldown -= delta;
+  state.manualPulseCooldown = Math.max(0, state.manualPulseCooldown - delta);
   state.targetCooldown -= delta;
+  state.pathCooldown -= delta;
   state.droneCooldown -= delta;
+  state.deafKnockCooldown = Math.max(0, state.deafKnockCooldown - delta);
+  state.deafKnockBoostRemaining = Math.max(0, state.deafKnockBoostRemaining - delta);
+  state.eventYieldBoostRemaining = Math.max(0, state.eventYieldBoostRemaining - delta);
+  state.eventMoveBoostRemaining = Math.max(0, state.eventMoveBoostRemaining - delta);
+  state.microEventCheckCooldown -= delta;
+  state.triangleRefreshCooldown -= delta;
+  for (const [key, expires] of state.triangleOreMemory) {
+    if (expires < state.elapsed) state.triangleOreMemory.delete(key);
+  }
 
   if (state.timeLeft <= 0) {
     const availableLastChance = Math.max(0, Math.floor(stats.lastChanceCharges || 0));
@@ -1509,14 +3653,22 @@ function updateRun(delta, now = performance.now()) {
     }
   }
 
+  const focusedOre = getFocusedOre();
   if (state.target) {
     const current = state.world.getTile(state.target.tx, state.target.ty);
     const explorationTarget = state.target.kind === 'exploration';
-    const focusedOre = getFocusedOre();
     const persistence = 1.05 + Math.min(0.65, (stats.sensePersistence || 0) * 0.05);
+    const rememberedUntil = state.triangleOreMemory.get(`${state.target.tx}:${state.target.ty}`) || 0;
+    const rememberedDistance = rememberedUntil >= state.elapsed
+      ? distance(state.player.x, state.player.y, state.target.x, state.target.y) + TILE_SIZE
+      : 0;
     const maxTargetDistance = explorationTarget
       ? EXPLORATION_SCAN_TILES * TILE_SIZE * 1.25
-      : effectiveSenseRadius() * (focusedOre ? stats.oreFocusRadiusMultiplier : 1) * persistence;
+      : Math.max(
+        state.target.lockRadius || 0,
+        effectiveSenseRadius() * focusedSenseMultiplier(focusedOre),
+        rememberedDistance,
+      ) * persistence;
     if (
       !current
       || current.kind === 'air'
@@ -1526,26 +3678,97 @@ function updateRun(delta, now = performance.now()) {
       || distance(state.player.x, state.player.y, state.target.x, state.target.y) > maxTargetDistance
     ) {
       state.target = null;
+      state.pathWaypoint = null;
+      promoteBackupTarget(focusedOre?.id || null);
     }
   }
 
+  const hasFocusedTarget = Boolean(
+    focusedOre
+    && state.target?.kind === 'ore'
+    && state.world.getTile(state.target.tx, state.target.ty)?.oreId === focusedOre.id
+  );
+  if (!focusedOre || hasFocusedTarget) state.focusMissElapsed = 0;
+  else state.focusMissElapsed += delta;
+  const escalationActive = Boolean(
+    focusedOre
+    && (stats.oreFocusEscalationBonus || 0) > 0
+    && state.focusMissElapsed > (stats.oreFocusEscalationDelay || 0)
+  );
+  if (escalationActive && !state.focusEscalationActive) state.metrics.focusEscalations += 1;
+  state.focusEscalationActive = escalationActive;
+
   if (state.targetCooldown <= 0) {
-    const focusedOre = getFocusedOre();
-    const searchRadius = effectiveSenseRadius() * (focusedOre ? stats.oreFocusRadiusMultiplier : 1);
-    const oreTarget = findBestOreTarget(state.player.x, state.player.y, searchRadius, focusedOre?.id || null);
-    if (oreTarget) state.target = oreTarget;
+    const searchRadius = effectiveSenseRadius() * focusedSenseMultiplier(focusedOre);
+    const targets = chooseOreTargets(state.player.x, state.player.y, searchRadius, focusedOre?.id || null);
+    if (targets.primary) {
+      const previousKey = state.target ? `${state.target.tx}:${state.target.ty}` : '';
+      const nextKey = `${targets.primary.tx}:${targets.primary.ty}`;
+      targets.primary.lockRadius = searchRadius;
+      if (targets.backup) targets.backup.lockRadius = searchRadius;
+      state.target = targets.primary;
+      state.backupTarget = targets.backup;
+      noteTargetAcquired(state.target);
+      if (previousKey && previousKey !== nextKey) {
+        state.pathWaypoint = null;
+        state.pathCooldown = 0;
+      }
+      state.focusMissElapsed = 0;
+      refreshCrewBeacon(state.target);
+    }
     else if (!state.target || state.target.kind !== 'exploration') {
       state.target = findExplorationTarget(state.player.x, state.player.y, focusedOre?.id || null);
+      noteTargetAcquired(state.target);
     }
     state.targetCooldown = 0.12 / Math.max(0.4, (stats.targetLockSpeed || 1) * (stats.aimTurnSpeed || 1));
   } else if (!state.target) {
-    const focusedOre = getFocusedOre();
     state.target = findExplorationTarget(state.player.x, state.player.y, focusedOre?.id || null);
+    noteTargetAcquired(state.target);
+  }
+
+  if (stats.triangularFixUnlocked && state.triangleRefreshCooldown <= 0) {
+    refreshTriangleOreMemory();
+    state.triangleRefreshCooldown = 0.12;
+  }
+
+  if (!state.target) {
+    state.metrics.searchingSeconds += delta;
+  } else {
+    const workRange = stats.laserUnlocked ? stats.laserRange * 0.78 : Math.max(stats.digReach, TILE_SIZE * 0.9);
+    if (distance(state.player.x, state.player.y, state.target.x, state.target.y) > workRange) state.metrics.movementSeconds += delta;
+    else state.metrics.miningSeconds += delta;
   }
 
   if (state.target) {
-    const dx = state.target.x - state.player.x;
-    const dy = state.target.y - state.player.y;
+    if (
+      stats.leastResistancePathing
+      && !stats.laserUnlocked
+      && typeof state.world.findLeastResistanceStep === 'function'
+      && (state.pathCooldown <= 0 || !state.pathWaypoint)
+    ) {
+      const focusedCalibration = focusedOre ? focusedDamageMultiplier(focusedOre.id) : 1;
+      const route = state.world.findLeastResistanceStep(state.player, state.target, {
+        moveSpeed: stats.moveSpeed * (stats.mineMoveMultiplier || 1),
+        digPowerPerSecond: stats.pickPower * stats.digSpeed,
+        focusedOreId: focusedOre?.id || null,
+        focusedOreDigMultiplier: focusedCalibration,
+        maxDetourTiles: 9,
+        minimumSavings: 0.08,
+        waypointLookAhead: 4,
+      });
+      state.pathWaypoint = route?.waypoint
+        ? { ...route.waypoint, kind: 'route', usedDetour: route.usedDetour, savedSeconds: route.savedSeconds }
+        : null;
+      if (route?.usedDetour) state.metrics.pathDetours += 1;
+      state.pathCooldown = 0.32;
+    }
+    if (state.pathWaypoint && distance(state.player.x, state.player.y, state.pathWaypoint.x, state.pathWaypoint.y) < TILE_SIZE * 0.45) {
+      state.pathWaypoint = null;
+      state.pathCooldown = 0;
+    }
+    const movementTarget = state.pathWaypoint || state.target;
+    const dx = movementTarget.x - state.player.x;
+    const dy = movementTarget.y - state.player.y;
     const targetDistance = Math.max(0.001, Math.hypot(dx, dy));
     const nx = dx / targetDistance;
     const ny = dy / targetDistance;
@@ -1555,19 +3778,39 @@ function updateRun(delta, now = performance.now()) {
     state.player.angle += angleDelta * clamp(delta * 10 * (stats.aimTurnSpeed || 1), 0, 1);
     state.player.moving = lerp(state.player.moving, 1, clamp(delta * 8, 0, 1));
 
-    const desiredSpeed = stats.moveSpeed * (stats.mineMoveMultiplier || 1);
+    const deafKnockMoveMultiplier = state.deafKnockBoostRemaining > 0 ? 1 + stats.deafKnockMoveSpeedBonus : 1;
+    const eventMoveMultiplier = state.eventMoveBoostRemaining > 0 ? 1.35 : 1;
+    const desiredSpeed = stats.moveSpeed * (stats.mineMoveMultiplier || 1) * deafKnockMoveMultiplier * eventMoveMultiplier;
     const moveDistance = Math.min(targetDistance, desiredSpeed * delta);
     const nextX = clamp(state.player.x + nx * moveDistance, TILE_SIZE, WORLD_CONFIG.WIDTH * TILE_SIZE - TILE_SIZE);
     const nextY = clamp(state.player.y + ny * moveDistance, TILE_SIZE, WORLD_CONFIG.HEIGHT * TILE_SIZE - TILE_SIZE);
-    const probe = state.world.worldToTile(nextX + nx * 7, nextY + ny * 7);
-    const nextTile = state.world.getTile(probe.tx, probe.ty);
-    if (!nextTile || nextTile.kind === 'air') {
+    const perpendicularX = -ny;
+    const perpendicularY = nx;
+    const probeOffsets = [0, -MINER_COLLISION_RADIUS, MINER_COLLISION_RADIUS];
+    const blockedTiles = [];
+    for (const offset of probeOffsets) {
+      const probe = state.world.worldToTile(
+        nextX + nx * 8 + perpendicularX * offset,
+        nextY + ny * 8 + perpendicularY * offset,
+      );
+      const tile = state.world.getTile(probe.tx, probe.ty);
+      if (tile && tile.kind !== 'air') blockedTiles.push({ ...probe, tile, probeOffset: offset });
+    }
+    if (!blockedTiles.length) {
       state.player.x = nextX;
       state.player.y = nextY;
+      state.stuckElapsed = 0;
+    } else {
+      state.stuckElapsed += delta;
+      if (state.stuckElapsed > 0.4) {
+        state.pathWaypoint = null;
+        state.pathCooldown = 0;
+      }
     }
 
     if (state.attackCooldown <= 0) {
-      attack();
+      const contactTarget = !stats.laserUnlocked ? clearanceTarget(blockedTiles, state.player) : null;
+      attack(contactTarget || movementTarget);
       const chargeRate = stats.laserUnlocked ? (stats.laserChargeRate || 1) : 1;
       state.attackCooldown = 1 / Math.max(0.2, stats.digSpeed * chargeRate * temporalOverclockMultiplier());
     }
@@ -1581,9 +3824,12 @@ function updateRun(delta, now = performance.now()) {
     state.droneCooldown = 1 / Math.max(0.25, stats.droneSpeed || 1);
   }
 
-  const horizontalDepth = Math.abs(state.player.x - state.spawn.x) / TILE_SIZE * 0.42;
-  const verticalDepth = Math.max(0, state.player.y - state.spawn.y) / TILE_SIZE;
-  state.deepest = Math.max(state.deepest, horizontalDepth + verticalDepth);
+  if (state.microEventCheckCooldown <= 0) {
+    checkMicroEventsAt(state.player.x, state.player.y, false);
+    state.microEventCheckCooldown = 0.14;
+  }
+
+  state.deepest = Math.max(state.deepest, depthFromOrigin(state.player.x, state.player.y));
   if (state.elapsed > state.comboExpires) state.combo = 0;
   updateHud();
 }
@@ -1603,18 +3849,56 @@ function droneAttack() {
   for (let index = 0; index < count; index += 1) {
     const origin = dronePosition(index);
     const focusedOre = getFocusedOre();
-    const target = findBestOreTarget(
+    const beacon = getCrewBeacon();
+    const targetOreId = beacon?.oreId || focusedOre?.id || null;
+    const triangle = getTriangulationTriangle();
+    const hasRememberedOre = [...state.triangleOreMemory.values()].some((expires) => expires >= state.elapsed);
+    const baseRange = (effectiveSenseRadius() * 0.85 + Math.max(0, (stats.pickupRadius || 46) - 46) * 0.35)
+      * (focusedOre ? focusedSenseMultiplier(focusedOre) : 1)
+      * (triangle ? 1 + stats.triangularFixRangeBonus : 1);
+    const triangleTarget = (triangle || hasRememberedOre) && stats.triangularFixDronePriority
+      ? findBeaconAwareTarget(
+        origin.x,
+        origin.y,
+        baseRange,
+        focusedOre,
+        beacon,
+        {
+          predicate: (candidate) => (
+            pointInTriangle(candidate.x, candidate.y, triangle)
+            || (state.triangleOreMemory.get(`${candidate.tx}:${candidate.ty}`) || 0) >= state.elapsed
+          ),
+        },
+      )
+      : null;
+    const target = triangleTarget || findBeaconAwareTarget(
       origin.x,
       origin.y,
-      (effectiveSenseRadius() * 0.85 + Math.max(0, (stats.pickupRadius || 46) - 46) * 0.35)
-        * (focusedOre ? stats.oreFocusRadiusMultiplier : 1),
-      focusedOre?.id || null,
+      baseRange,
+      focusedOre,
+      beacon,
     );
     if (!target) continue;
-    const power = stats.pickPower * Math.max(0.2, stats.dronePower || 0.35);
+    const inTriangle = pointInTriangle(target.x, target.y, triangle);
+    const gadgetBonus = inTriangle ? stats.triangularFixGadgetDamageBonus : 0;
+    if (triangleTarget || gadgetBonus > 0 || (triangle && stats.triangularFixRangeBonus > 0)) state.metrics.triangleBuffHits += 1;
+    const power = stats.pickPower * Math.max(0.2, stats.dronePower || 0.35) * (1 + gadgetBonus);
+    const hpBefore = target.tile.hp || 0;
+    const calibration = focusedDamageMultiplier(target.tile);
     state.world.damageCircle(target.x, target.y, Math.max(7, stats.digRadius * 0.34), power, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'drone'));
+    if (calibration > 1 && target.tile.kind !== 'air') {
+      state.world.damageTile(target.tx, target.ty, power * (calibration - 1), (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'drone'));
+    }
+    if (target.tile.kind === 'air') {
+      relayCrewOverkill(target, targetOreId, Math.max(0, power * calibration - hpBefore), [`${target.tx}:${target.ty}`]);
+    }
     state.beams.push({ x: origin.x, y: origin.y, x2: target.x, y2: target.y, color: '#76dbff', life: 0.1, maxLife: 0.1, width: 2 });
-    if ((stats.droneBombChance || 0) > 0 && Math.random() < procChance(stats.droneBombChance, 0.12)) detonate(target.x, target.y);
+    if ((stats.droneBombChance || 0) > 0 && Math.random() < procChance(stats.droneBombChance, 0.12)) {
+      const dx = target.x - origin.x;
+      const dy = target.y - origin.y;
+      const length = Math.max(0.001, Math.hypot(dx, dy));
+      detonate(target.x, target.y, dx / length, dy / length);
+    }
   }
 }
 
@@ -1646,6 +3930,7 @@ function spawnSparks(x, y, color, count) {
 }
 
 function updateEffects(delta) {
+  const interfaceDelta = state.mode === 'run' && state.paused ? 0 : delta;
   if (state.floaters.length > 200) state.floaters.splice(0, state.floaters.length - 200);
   if (state.beams.length > 160) state.beams.splice(0, state.beams.length - 160);
   if (state.shocks.length > 80) state.shocks.splice(0, state.shocks.length - 80);
@@ -1676,6 +3961,18 @@ function updateEffects(delta) {
     }
   }
   state.shocks = state.shocks.filter((shock) => shock.life > 0);
+  if (state.activeMicroEvent?.effectLife != null) {
+    state.activeMicroEvent.effectLife -= interfaceDelta;
+    if (state.activeMicroEvent.effectLife <= 0 && state.eventBannerTimer <= 0) state.activeMicroEvent = null;
+  }
+  if (state.eventBannerTimer > 0) {
+    state.eventBannerTimer = Math.max(0, state.eventBannerTimer - interfaceDelta);
+    if (ui.microEventProgress) {
+      ui.microEventProgress.style.transform = `scaleX(${clamp(state.eventBannerTimer / 3.2, 0, 1)})`;
+      ui.microEventProgress.parentElement?.setAttribute('aria-valuenow', state.eventBannerTimer.toFixed(1));
+    }
+    if (state.eventBannerTimer <= 0) ui.microEventBanner?.classList.add('hidden');
+  }
   state.shake = Math.max(0, state.shake - delta * 32);
 }
 
@@ -1981,6 +4278,7 @@ function drawWorld(now) {
   for (const entry of visible) drawTile(entry, now);
 
   drawSenseField(now);
+  drawMicroEvents(now);
   drawTargeting(now);
   drawBeams();
   drawDrones(now);
@@ -1989,6 +4287,69 @@ function drawWorld(now) {
   drawFloaters();
   ctx.restore();
   drawVignette();
+}
+
+function drawMicroEvents(now) {
+  if (!state.world || state.mode !== 'run') return;
+  const events = typeof state.world.getMicroEvents === 'function' ? state.world.getMicroEvents() : [];
+  const active = state.activeMicroEvent?.effectLife > 0 ? state.activeMicroEvent : null;
+  if (active && !events.some((event) => event.id === active.id)) events.push(active);
+  for (const event of events) {
+    const radius = event.radius || event.radiusTiles * TILE_SIZE || TILE_SIZE * 3;
+    const fromPlayer = state.player ? distance(state.player.x, state.player.y, event.x, event.y) : Infinity;
+    const onScreen = event.x + radius >= state.camera.x
+      && event.x - radius <= state.camera.x + state.viewport.width
+      && event.y + radius >= state.camera.y
+      && event.y - radius <= state.camera.y + state.viewport.height;
+    const sensed = fromPlayer <= effectiveSenseRadius() * 1.35 + radius;
+    if (!onScreen && !sensed && event !== active) continue;
+    const pulse = 0.5 + Math.sin(now * 0.012 + event.tx) * 0.5;
+    const triggered = event === active && event.effectLife != null;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = triggered ? 0.24 + pulse * 0.22 : 0.1 + pulse * 0.13;
+    const glow = ctx.createRadialGradient(event.x, event.y, radius * 0.08, event.x, event.y, radius);
+    glow.addColorStop(0, event.color || '#ffd170');
+    glow.addColorStop(0.48, `${event.color || '#ffd170'}55`);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(event.x, event.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = triggered ? 0.88 : 0.52 + pulse * 0.28;
+    ctx.strokeStyle = event.color || '#ffd170';
+    ctx.lineWidth = triggered ? 5 : 3;
+    ctx.setLineDash(triggered ? [] : [12, 8]);
+    ctx.lineDashOffset = -now * 0.025;
+    ctx.beginPath();
+    ctx.arc(event.x, event.y, radius * (0.92 + pulse * 0.06), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (let index = 0; index < 8; index += 1) {
+      const angle = index / 8 * Math.PI * 2 + now * 0.0004;
+      ctx.beginPath();
+      ctx.moveTo(event.x + Math.cos(angle) * radius * 0.66, event.y + Math.sin(angle) * radius * 0.66);
+      ctx.lineTo(event.x + Math.cos(angle) * radius * 0.88, event.y + Math.sin(angle) * radius * 0.88);
+      ctx.stroke();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 0.96;
+    ctx.fillStyle = '#071018';
+    ctx.strokeStyle = event.color || '#ffd170';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(event.x, event.y, 25 + pulse * 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = event.color || '#ffd170';
+    ctx.font = 'bold 24px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(event.icon || '◆', event.x, event.y + 1);
+    ctx.font = '900 11px system-ui, sans-serif';
+    ctx.fillText(event.label || 'АНОМАЛИЯ', event.x, event.y - 38);
+    ctx.restore();
+  }
 }
 
 function drawTile({ tile, tx, ty, x, y }, now) {
@@ -2030,7 +4391,11 @@ function drawTile({ tile, tx, ty, x, y }, now) {
     const ore = oreById.get(tile.oreId);
     const oreDistance = state.player ? distance(state.player.x, state.player.y, x + TILE_SIZE / 2, y + TILE_SIZE / 2) : Infinity;
     const focusedOre = getFocusedOre();
-    const detectionRadius = effectiveSenseRadius() * (focusedOre && focusedOre.id === ore?.id ? stats.oreFocusRadiusMultiplier : 1);
+    const lockedRadius = state.target?.tx === tx && state.target?.ty === ty ? (state.target.lockRadius || 0) : 0;
+    const detectionRadius = Math.max(
+      lockedRadius,
+      effectiveSenseRadius() * (focusedOre && focusedOre.id === ore?.id ? focusedSenseMultiplier(focusedOre) : 1),
+    );
     const sensed = (!focusedOre || focusedOre.id === ore?.id)
       && oreDistance <= detectionRadius * 1.05
       && hasSenseLine(state.player.x, state.player.y, x + TILE_SIZE / 2, y + TILE_SIZE / 2, focusedOre ? 7 : 2);
@@ -2182,7 +4547,7 @@ function drawSenseField(now) {
   const pulse = (now * 0.0004 * (stats.sensePulseSpeed || 1)) % 1;
   const focusedOre = getFocusedOre();
   const baseSenseRadius = effectiveSenseRadius();
-  const senseRadius = baseSenseRadius * (focusedOre ? stats.oreFocusRadiusMultiplier : 1);
+  const senseRadius = baseSenseRadius * focusedSenseMultiplier(focusedOre);
   const radius = senseRadius * (0.82 + pulse * 0.18);
   ctx.save();
   ctx.strokeStyle = focusedOre
@@ -2215,8 +4580,59 @@ function drawSenseField(now) {
 }
 
 function drawTargeting(now) {
-  if (!state.target || !state.player || state.mode !== 'run') return;
+  if (!state.player || state.mode !== 'run') return;
+  if (state.triangleOreMemory?.size) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(116, 244, 223, 0.7)';
+    ctx.lineWidth = 1.5;
+    for (const [key, expires] of state.triangleOreMemory) {
+      if (expires < state.elapsed) continue;
+      const [tx, ty] = key.split(':').map(Number);
+      const x = tx * TILE_SIZE + 4;
+      const y = ty * TILE_SIZE + 4;
+      const size = TILE_SIZE - 8;
+      ctx.globalAlpha = clamp((expires - state.elapsed) / Math.max(0.01, stats.triangularFixOreMemory), 0.18, 0.75);
+      ctx.strokeRect(x, y, size, size);
+    }
+    ctx.restore();
+  }
+  const triangle = getTriangulationTriangle();
+  if (triangle) {
+    const pulse = 0.5 + Math.sin(now * 0.008) * 0.5;
+    ctx.save();
+    ctx.fillStyle = `rgba(91, 226, 211, ${0.055 + pulse * 0.035})`;
+    ctx.strokeStyle = `rgba(117, 246, 226, ${0.45 + pulse * 0.22})`;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 5]);
+    ctx.lineDashOffset = -now * 0.012;
+    ctx.beginPath();
+    ctx.moveTo(triangle[0].x, triangle[0].y);
+    ctx.lineTo(triangle[1].x, triangle[1].y);
+    ctx.lineTo(triangle[2].x, triangle[2].y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.setLineDash([]);
+    const centerX = (triangle[0].x + triangle[1].x + triangle[2].x) / 3;
+    const centerY = (triangle[0].y + triangle[1].y + triangle[2].y) / 3;
+    ctx.fillStyle = '#8affea';
+    ctx.font = '900 10px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ТРИАНГУЛЯЦИЯ', centerX, centerY);
+    ctx.restore();
+  }
+  if (!state.target) return;
   ctx.save();
+  if (state.pathWaypoint) {
+    ctx.strokeStyle = 'rgba(116, 228, 223, 0.55)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([7, 5]);
+    ctx.beginPath();
+    ctx.moveTo(state.player.x, state.player.y);
+    ctx.lineTo(state.pathWaypoint.x, state.pathWaypoint.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
   const exploring = state.target.kind === 'exploration';
   const alpha = 0.36 + Math.sin(now * 0.009) * 0.14;
   ctx.strokeStyle = exploring
@@ -2235,6 +4651,36 @@ function drawTargeting(now) {
   ctx.globalAlpha = exploring ? 0.48 : 0.72;
   ctx.strokeRect(exploring ? -7 : -10, exploring ? -7 : -10, exploring ? 14 : 20, exploring ? 14 : 20);
   ctx.restore();
+
+  if (oreTargetIsValid(state.backupTarget, getFocusedOre()?.id || null)) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(127, 233, 221, 0.62)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 5]);
+    ctx.beginPath();
+    ctx.arc(state.backupTarget.x, state.backupTarget.y, 8 + Math.sin(now * 0.008) * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  const beacon = getCrewBeacon();
+  if (beacon) {
+    ctx.save();
+    ctx.translate(beacon.x, beacon.y);
+    ctx.rotate(-now * 0.002);
+    ctx.strokeStyle = '#ffc95e';
+    ctx.fillStyle = 'rgba(255, 201, 94, 0.18)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, -15);
+    ctx.lineTo(13, 0);
+    ctx.lineTo(0, 15);
+    ctx.lineTo(-13, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 function drawBeams() {
@@ -2260,11 +4706,15 @@ function drawBeams() {
   for (const shock of state.shocks) {
     const alpha = clamp(shock.life / Math.max(0.01, shock.maxLife), 0, 1);
     ctx.save();
-    ctx.strokeStyle = `rgba(181, 140, 255, ${alpha * 0.8})`;
-    ctx.lineWidth = 2;
+    ctx.globalAlpha = alpha * 0.86;
+    ctx.strokeStyle = shock.color || '#b58cff';
+    ctx.lineWidth = shock.radius ? 4 : 2;
     ctx.setLineDash([3, 3]);
     ctx.beginPath();
-    ctx.arc(shock.x, shock.y, 10 + (1 - alpha) * 13, 0, Math.PI * 2);
+    const radius = shock.radius
+      ? shock.radius * (0.35 + (1 - alpha) * 0.75)
+      : 10 + (1 - alpha) * 13;
+    ctx.arc(shock.x, shock.y, radius, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
   }
@@ -2652,21 +5102,66 @@ function togglePause(force) {
 }
 
 function triggerSensePulse() {
-  if (state.mode !== 'run' || state.paused) return;
+  if (state.mode !== 'run' || state.paused || state.manualPulseCooldown > 0) return;
+  state.manualPulseCooldown = 0.18;
   state.ping = 1;
   state.targetCooldown = 0;
-  state.attackCooldown = Math.min(0, state.attackCooldown);
   sound.tone(290, 0.09, 'sine', 0.018, 100);
 }
 
 function bindEvents() {
-  ui.startRun?.addEventListener('click', startRun);
-  ui.retryRun?.addEventListener('click', startRun);
+  ui.startRun?.addEventListener('click', requestRunStart);
+  ui.retryRun?.addEventListener('click', requestRunStart);
   ui.openUpgrades?.addEventListener('click', openUpgradeScreen);
   ui.closeUpgrades?.addEventListener('click', closeUpgradeScreen);
   ui.launchRocket?.addEventListener('click', showEnding);
   ui.endingReplay?.addEventListener('click', replayEnding);
   ui.endingContinue?.addEventListener('click', showTitle);
+  ui.tutorialClose?.addEventListener('click', () => dismissTutorial(true));
+  ui.tutorialNext?.addEventListener('click', () => dismissTutorial(false));
+  ui.replayTutorial?.addEventListener('click', () => startOnboarding(true));
+  ui.sectorChoices?.addEventListener('click', (event) => {
+    const card = event.target.closest('[data-sector-id]');
+    if (!card) return;
+    const sectorId = card.dataset.sectorId;
+    if (!state.sectorChoices.some((sector) => sector.id === sectorId)) return;
+    state.selectedSectorId = sectorId;
+    ui.sectorChoices.querySelectorAll('[data-sector-id]').forEach((choice) => {
+      const selected = choice.dataset.sectorId === sectorId;
+      choice.classList.toggle('is-selected', selected);
+      choice.setAttribute('aria-pressed', String(selected));
+    });
+  });
+  ui.sectorScreen?.querySelector('form')?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    dismissTutorial();
+    startRun({
+      seed: state.pendingRunSeed || getRunSeed(),
+      sectorId: state.selectedSectorId || 'stable_strata',
+    });
+  });
+  ui.sectorSkip?.addEventListener('click', () => {
+    dismissTutorial();
+    startRun({ seed: state.pendingRunSeed || getRunSeed(), sectorId: 'stable_strata' });
+  });
+  for (const button of new Set([...$$('[data-open-journal]'), ui.openJournal].filter(Boolean))) {
+    button.addEventListener('click', openJournalScreen);
+  }
+  for (const button of new Set([...$$('[data-open-balance]'), ui.openBalance].filter(Boolean))) {
+    button.addEventListener('click', openBalanceScreen);
+  }
+  ui.closeJournal?.addEventListener('click', closeAuxiliaryScreen);
+  ui.closeBalance?.addEventListener('click', closeAuxiliaryScreen);
+  const balanceForm = $('#balanceLabForm');
+  if (balanceForm) {
+    balanceForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      runBalanceBench();
+    });
+  } else {
+    ui.runBalance?.addEventListener('click', runBalanceBench);
+  }
+  ui.exportBalance?.addEventListener('click', exportBalanceReport);
   canvas.addEventListener('pointerdown', triggerSensePulse);
 
   ui.upgradeGrid?.addEventListener('click', (event) => {
@@ -2691,6 +5186,14 @@ function bindEvents() {
     renderOreFocusPanel();
     updateFocusHud();
     toast(oreId ? `ФОКУС: ${oreById.get(oreId).name.toUpperCase()}` : 'ОБЫЧНЫЙ ПОИСК', 'success');
+  });
+  $$('[data-journal-filter]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const filter = button.dataset.journalFilter;
+      if (!['all', 'known', 'unknown'].includes(filter)) return;
+      state.journalFilter = filter;
+      renderGeologicalJournal();
+    });
   });
   $$('.filter-btn[data-category]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -2729,6 +5232,45 @@ function bindEvents() {
     if (!window.confirm('Сбросить всю руду, забеги и уровни улучшений? Это действие нельзя отменить.')) return;
     save = createDefaultSave();
     stats = normalizeStats(calculateMetaStats(save.levels));
+    clearTutorialCoach();
+    Object.assign(state, {
+      returnMode: 'title',
+      lastHaul: createOreBag(),
+      lastHaulCount: 0,
+      runOre: 0,
+      oreCounts: createOreBag(),
+      discoveredOreIds: new Set(),
+      metrics: createRunMetrics(),
+      balanceReport: null,
+      upgradeFilter: 'all',
+      upgradeQuery: '',
+      selectedUpgradeId: null,
+      visibleUpgradeIds: new Set(),
+      journalFilter: 'all',
+      sectorChoices: [],
+      selectedSectorId: null,
+      currentSector: null,
+      pendingRunSeed: 0,
+      dryRockBlocks: 0,
+      deafKnockCooldown: 0,
+      deafKnockBoostRemaining: 0,
+      laserShotCount: 0,
+      triangleOreMemory: new Map(),
+      activeMicroEvent: null,
+      eventYieldBoostRemaining: 0,
+      eventMoveBoostRemaining: 0,
+      eventBannerTimer: 0,
+      previewMicroEventId: null,
+    });
+    if (ui.upgradeSearch) ui.upgradeSearch.value = '';
+    $$('.filter-btn[data-category]').forEach((button) => {
+      const selected = button.dataset.category === 'all';
+      button.classList.toggle('active', selected);
+      button.classList.toggle('is-active', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    });
+    if (ui.balanceResults) ui.balanceResults.innerHTML = '<p id="balanceResultsTitle">Задайте профиль и запустите локальную серию.</p>';
+    if (ui.exportBalance) ui.exportBalance.disabled = true;
     persistSave();
     renderUpgrades();
     updatePersistentLabels();
@@ -2743,24 +5285,41 @@ function bindEvents() {
   });
 
   addEventListener('keydown', (event) => {
+    if (trapOverlayFocus(event)) return;
     const tag = document.activeElement?.tagName;
-    const typing = tag === 'INPUT' || tag === 'TEXTAREA';
+    const interactive = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A', 'SUMMARY'].includes(tag)
+      || Boolean(document.activeElement?.isContentEditable);
     if (event.key === 'Escape') {
+      if (state.activeTutorialId) {
+        dismissTutorial();
+        return;
+      }
       if (state.mode === 'upgrades') closeUpgradeScreen();
+      else if (state.mode === 'journal' || state.mode === 'balance') closeAuxiliaryScreen();
+      else if (state.mode === 'sector') {
+        clearTutorialCoach();
+        state.mode = state.returnMode;
+        if (state.returnMode === 'result') {
+          hideAllScreens();
+          ui.resultScreen?.classList.remove('hidden');
+          updateUtilityNavState();
+        } else showTitle();
+        requestAnimationFrame(() => state.lastFocusedElement?.focus?.({ preventScroll: true }));
+      }
       else if (state.mode === 'run') togglePause();
       else if (state.mode === 'ending') showTitle();
       return;
     }
-    if (typing) return;
+    if (interactive) return;
     if (event.key === 'Enter') {
-      if (state.mode === 'title' || state.mode === 'result') startRun();
+      if (state.mode === 'title' || state.mode === 'result') requestRunStart();
     } else if (event.code === 'Space') {
       event.preventDefault();
-      if (state.mode === 'run') triggerSensePulse();
-      else if (state.mode === 'title' || state.mode === 'result') startRun();
+      if (state.mode === 'run' && !event.repeat) triggerSensePulse();
+      else if (state.mode === 'title' || state.mode === 'result') requestRunStart();
     } else if (event.key.toLocaleLowerCase('ru') === 'u' || event.key.toLocaleLowerCase('ru') === 'г') {
       if (state.mode === 'upgrades') closeUpgradeScreen();
-      else if (state.mode !== 'run') openUpgradeScreen();
+      else if (state.mode === 'title' || state.mode === 'result') openUpgradeScreen();
     } else if (event.key === '/' && state.mode === 'upgrades') {
       event.preventDefault();
       ui.upgradeSearch?.focus();
@@ -2783,6 +5342,7 @@ function initialize() {
   $('#pauseOverlay')?.classList.add('hidden');
   $('#fieldGuide')?.classList.add('hidden');
   updatePersistentLabels();
+  requestAnimationFrame(() => startOnboarding(false));
   requestAnimationFrame((now) => {
     state.lastFrame = now;
     requestAnimationFrame(frame);
@@ -2794,18 +5354,116 @@ window.__DEPTH_ZERO__ = {
     mode: state.mode,
     paused: state.paused,
     timeLeft: state.timeLeft,
+    directTimeCap: DIRECT_MAX_RUN_SECONDS,
+    bonusTimeCap: getBonusRunCap(),
+    bonusTimeEarned: state.bonusTimeEarned,
+    activeWallElapsed: state.activeWallElapsed,
     runOre: state.runOre,
+    lastHaul: { ...(state.lastHaul || createOreBag()) },
+    attackCooldown: state.attackCooldown,
+    manualPulseCooldown: state.manualPulseCooldown,
+    discoveredOreTypes: [...(state.discoveredOreIds || [])],
     inventory: { ...save.inventory },
-    target: state.target ? { kind: state.target.kind || 'ore', tx: state.target.tx, ty: state.target.ty, distance: state.target.distance } : null,
+    lifetimeOres: { ...save.lifetimeOres },
+    target: state.target ? {
+      kind: state.target.kind || 'ore',
+      tx: state.target.tx,
+      ty: state.target.ty,
+      oreId: state.world?.getTile(state.target.tx, state.target.ty)?.oreId || null,
+      distance: state.target.distance,
+    } : null,
+    backupTarget: state.backupTarget ? { tx: state.backupTarget.tx, ty: state.backupTarget.ty } : null,
+    pathWaypoint: state.pathWaypoint ? { tx: state.pathWaypoint.tx, ty: state.pathWaypoint.ty, usedDetour: state.pathWaypoint.usedDetour } : null,
+    crewBeacon: state.crewBeacon ? { ...state.crewBeacon } : null,
+    metrics: {
+      ...state.metrics,
+      sourceBreaks: { ...(state.metrics.sourceBreaks || {}) },
+      microEvents: { ...(state.metrics.microEvents || {}) },
+    },
     player: state.player ? { x: state.player.x, y: state.player.y } : null,
+    liftDepth: state.liftDepth,
+    deepest: state.deepest,
     upgrades: UPGRADE_DEFS.length,
     purchasedLevels: countPurchasedLevels(save.levels),
     campaign: getCampaignProgress(),
     focusedOreId: save.focusedOreId,
+    focusedSenseMultiplier: focusedSenseMultiplier(getFocusedOre()),
+    sector: state.currentSector ? { ...state.currentSector } : null,
+    selectedSectorId: state.selectedSectorId,
+    availableSectors: getAvailableSectorChoices(state.seed).map((sector) => sector.id),
+    microEventsRemaining: typeof state.world?.getMicroEvents === 'function' ? state.world.getMicroEvents().length : 0,
+    activeMicroEvent: state.activeMicroEvent ? { ...state.activeMicroEvent } : null,
+    laserShotCount: state.laserShotCount,
+    deafKnockCooldown: state.deafKnockCooldown,
+    deafKnockBoostRemaining: state.deafKnockBoostRemaining,
+    eventYieldBoostRemaining: state.eventYieldBoostRemaining,
+    eventMoveBoostRemaining: state.eventMoveBoostRemaining,
+    triangleActive: Boolean(getTriangulationTriangle()),
+    triangleRememberedOre: [...(state.triangleOreMemory || new Map())]
+      .filter(([, expires]) => expires >= state.elapsed)
+      .map(([key]) => key),
+    tutorialSeen: { ...(save.tutorialSeen || {}) },
+    oreRecords: { ...(save.oreRecords || {}) },
+    lastRunReport: save.lastRunReport ? { ...save.lastRunReport } : null,
+    balanceReport: state.balanceReport ? { ...state.balanceReport } : null,
   }),
+  getStats: () => ({
+    runDuration: stats.runDuration,
+    bonusRunDurationCap: stats.bonusRunDurationCap,
+    pickPower: stats.pickPower,
+    digReach: stats.digReach,
+    backupTargetSlots: stats.backupTargetSlots,
+    oreFocusEscalationBonus: stats.oreFocusEscalationBonus,
+    leastResistancePathing: stats.leastResistancePathing,
+    mineLiftRecordDepthRatio: stats.mineLiftRecordDepthRatio,
+    focusedOreHardnessReduction: stats.focusedOreHardnessReduction,
+    discoveryTimeBonus: stats.discoveryTimeBonus,
+    directionalBombConeTiles: stats.directionalBombConeTiles,
+    crewBeaconUnlocked: stats.crewBeaconUnlocked,
+    laserRicochetCount: stats.laserRicochetCount,
+    oreDiversityBonusPerType: stats.oreDiversityBonusPerType,
+    deafKnockStoneThreshold: stats.deafKnockStoneThreshold,
+    deafKnockSenseRadiusMultiplier: stats.deafKnockSenseRadiusMultiplier,
+    deafKnockMoveSpeedBonus: stats.deafKnockMoveSpeedBonus,
+    deafKnockMoveDuration: stats.deafKnockMoveDuration,
+    deafKnockCooldown: stats.deafKnockCooldown,
+    triangularFixUnlocked: stats.triangularFixUnlocked,
+    triangularFixGadgetDamageBonus: stats.triangularFixGadgetDamageBonus,
+    triangularFixRangeBonus: stats.triangularFixRangeBonus,
+    laserSuperPickEchoEvery: stats.laserSuperPickEchoEvery,
+    laserSuperPickEchoRadiusTiles: stats.laserSuperPickEchoRadiusTiles,
+    laserSuperPickEchoPower: stats.laserSuperPickEchoPower,
+  }),
+  getUpgradeCatalog: () => UPGRADE_DEFS.map((definition) => {
+    const level = getUpgradeLevel(definition);
+    const recipe = level < definition.maxLevel ? getUpgradeRecipe(definition, level) : {};
+    return {
+      id: definition.id,
+      category: definition.category,
+      maxLevel: definition.maxLevel,
+      level,
+      requires: (definition.requires || []).map((requirement) => ({
+        id: typeof requirement === 'string' ? requirement : requirement.id,
+        level: typeof requirement === 'string' ? 1 : (requirement.level || 1),
+      })),
+      available: requirementsMet(definition) && level < definition.maxLevel,
+      affordable: level < definition.maxLevel && canAffordRecipe(save.inventory, recipe),
+      recipe: { ...recipe },
+    };
+  }),
+  buyUpgrade: (upgradeId) => {
+    const before = Number(save.levels[upgradeId]) || 0;
+    buyUpgrade(upgradeId);
+    return (Number(save.levels[upgradeId]) || 0) > before;
+  },
   startRun,
+  triggerSensePulse,
+  requestRunStart,
   finishRun,
   openUpgrades: openUpgradeScreen,
+  openJournal: openJournalScreen,
+  openBalance: openBalanceScreen,
+  runBalanceBench,
   watchEnding: showEnding,
   grantOre: (oreId = 'copper', amount = 1000) => {
     if (!oreById.has(oreId)) return false;
@@ -2814,6 +5472,347 @@ window.__DEPTH_ZERO__ = {
     updatePersistentLabels();
     if (state.mode === 'upgrades') renderUpgrades();
     return true;
+  },
+  setUpgradeLevel: (upgradeId, level = 1) => {
+    const definition = upgradeById.get(upgradeId);
+    if (!definition) return false;
+    save.levels[upgradeId] = clamp(Math.floor(Number(level) || 0), 0, definition.maxLevel);
+    stats = normalizeStats(calculateMetaStats(save.levels));
+    persistSave();
+    updatePersistentLabels();
+    if (state.mode === 'upgrades') renderUpgrades();
+    return true;
+  },
+  setAllUpgrades: (enabled = true) => {
+    for (const definition of UPGRADE_DEFS) save.levels[definition.id] = enabled ? definition.maxLevel : 0;
+    stats = normalizeStats(calculateMetaStats(save.levels));
+    persistSave();
+    updatePersistentLabels();
+    if (state.mode === 'upgrades') renderUpgrades();
+    return true;
+  },
+  setFocusedOre: (oreId = null) => {
+    if (oreId && !oreById.has(oreId)) return false;
+    save.focusedOreId = oreId || null;
+    persistSave();
+    updatePersistentLabels();
+    return true;
+  },
+  setBestDepth: (value = 0) => {
+    save.bestDepth = Math.max(0, Number(value) || 0);
+    persistSave();
+    updatePersistentLabels();
+    return true;
+  },
+  setCompletedRuns: (value = 0) => {
+    save.runs = Math.max(0, Math.floor(Number(value) || 0));
+    persistSave();
+    updatePersistentLabels();
+    return true;
+  },
+  grantBonusTime: (seconds = 1) => addBonusTime(seconds, state.player?.x, (state.player?.y || 0) - 36, 'ТЕСТ'),
+  stepRun: (seconds = 0.1) => {
+    let remaining = clamp(Number(seconds) || 0, 0, BONUS_MAX_RUN_SECONDS + 1);
+    while (remaining > 0 && state.mode === 'run') {
+      const step = Math.min(0.05, remaining);
+      const syntheticNow = state.runStartedAt + (state.activeWallElapsed + step) * 1000;
+      updateRun(step, syntheticNow);
+      updateEffects(step);
+      remaining -= step;
+    }
+    return state.mode;
+  },
+  breakNearestOre: (oreId = null) => {
+    if (state.mode !== 'run' || (oreId && !oreById.has(oreId))) return null;
+    const radius = Math.hypot(WORLD_CONFIG.WIDTH, WORLD_CONFIG.HEIGHT) * TILE_SIZE;
+    const target = findBestOreTarget(state.player.x, state.player.y, radius, oreId || null, { ignoreSenseLine: true });
+    if (!target) return null;
+    const result = state.world.breakTile(target.tx, target.ty, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'debug'));
+    return result ? { tx: target.tx, ty: target.ty, oreId } : null;
+  },
+  forceDetonate: () => {
+    if (state.mode !== 'run' || !state.player) return false;
+    const angle = state.player.angle || 0;
+    detonate(state.player.x, state.player.y, Math.cos(angle), Math.sin(angle));
+    return true;
+  },
+  forceFocusMiss: (seconds = 2) => {
+    state.target = null;
+    state.backupTarget = null;
+    state.focusMissElapsed = Math.max(0, Number(seconds) || 0);
+    state.focusEscalationActive = false;
+    return focusedSenseMultiplier(getFocusedOre());
+  },
+  acquireTargets: () => {
+    if (state.mode !== 'run' || !state.player) return null;
+    const focused = getFocusedOre();
+    const radius = effectiveSenseRadius() * focusedSenseMultiplier(focused);
+    const targets = chooseOreTargets(state.player.x, state.player.y, radius, focused?.id || null);
+    if (!targets.primary) return null;
+    targets.primary.lockRadius = radius;
+    if (targets.backup) targets.backup.lockRadius = radius;
+    state.target = targets.primary;
+    state.backupTarget = targets.backup;
+    refreshCrewBeacon(state.target);
+    return {
+      primary: { tx: targets.primary.tx, ty: targets.primary.ty },
+      backup: targets.backup ? { tx: targets.backup.tx, ty: targets.backup.ty } : null,
+    };
+  },
+  breakCurrentTarget: () => {
+    if (state.mode !== 'run' || !state.target) return false;
+    return Boolean(state.world.breakTile(
+      state.target.tx,
+      state.target.ty,
+      (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'debug'),
+    ));
+  },
+  debugBreakTileWithSource: (tx, ty, source = 'pick') => {
+    if (state.mode !== 'run' || !state.world) return false;
+    const allowedSources = new Set(['pick', 'laser', 'multi', 'bomb', 'chain', 'drone', 'echo', 'event', 'shatter', 'shock', 'beacon', 'debug']);
+    const safeSource = allowedSources.has(source) ? source : 'debug';
+    return Boolean(state.world.breakTile(
+      Math.floor(Number(tx)),
+      Math.floor(Number(ty)),
+      (tile, tileX, tileY) => resolveBrokenTile(tile, tileX, tileY, safeSource),
+    ));
+  },
+  promoteBackup: () => promoteBackupTarget(getFocusedOre()?.id || null),
+  attackNow: () => {
+    if (state.mode !== 'run' || !state.target) return false;
+    attack(state.target);
+    return true;
+  },
+  debugPatchTile: (tx, ty, patch = {}) => {
+    if (!state.world) return null;
+    const tile = state.world.getTile(Math.floor(tx), Math.floor(ty));
+    if (!tile) return null;
+    for (const key of ['kind', 'oreId', 'veinId', 'hp', 'maxHp', 'discovered', 'cracked']) {
+      if (Object.prototype.hasOwnProperty.call(patch, key)) tile[key] = patch[key];
+    }
+    if (typeof state.world._rebuildOreIndex === 'function') state.world._rebuildOreIndex();
+    return { ...tile };
+  },
+  debugGetTile: (tx, ty) => {
+    const tile = state.world?.getTile(Math.floor(tx), Math.floor(ty));
+    return tile ? { ...tile } : null;
+  },
+  debugSetPlayerTile: (tx, ty) => {
+    if (state.mode !== 'run' || !state.player) return false;
+    const tileX = clamp(Math.floor(tx), 0, WORLD_CONFIG.WIDTH - 1);
+    const tileY = clamp(Math.floor(ty), 0, WORLD_CONFIG.HEIGHT - 1);
+    state.player.x = (tileX + 0.5) * TILE_SIZE;
+    state.player.y = (tileY + 0.5) * TILE_SIZE;
+    return true;
+  },
+  debugSetTargetTile: (tx, ty) => {
+    if (state.mode !== 'run' || !state.player || !state.world) return false;
+    const tileX = Math.floor(tx);
+    const tileY = Math.floor(ty);
+    const tile = state.world.getTile(tileX, tileY);
+    if (!tile?.oreId || tile.kind === 'air' || tile.kind === 'bedrock') return false;
+    const x = (tileX + 0.5) * TILE_SIZE;
+    const y = (tileY + 0.5) * TILE_SIZE;
+    state.target = { kind: 'ore', tile, tx: tileX, ty: tileY, x, y, distance: distance(state.player.x, state.player.y, x, y) };
+    state.backupTarget = null;
+    refreshCrewBeacon(state.target);
+    return true;
+  },
+  debugFireRicochetFrom: (tx, ty, damage = 100) => {
+    const tileX = Math.floor(tx);
+    const tileY = Math.floor(ty);
+    const tile = state.world?.getTile(tileX, tileY);
+    if (state.mode !== 'run' || !tile?.oreId) return false;
+    fireLaserRicochets({
+      kind: 'ore', tile, tx: tileX, ty: tileY,
+      x: (tileX + 0.5) * TILE_SIZE,
+      y: (tileY + 0.5) * TILE_SIZE,
+    }, Math.max(0, Number(damage) || 0), () => {});
+    return true;
+  },
+  debugFindOreTargetFromTile: (tx, ty, radius, oreId = null, excludedKeys = []) => {
+    if (!state.world) return null;
+    const target = findBestOreTarget(
+      (Number(tx) + 0.5) * TILE_SIZE,
+      (Number(ty) + 0.5) * TILE_SIZE,
+      Math.max(0, Number(radius) || 0),
+      oreId || null,
+      { excludedKeys: new Set(excludedKeys), ignoreSenseLine: true },
+    );
+    return target ? { tx: target.tx, ty: target.ty, distance: target.distance, score: target.score } : null;
+  },
+  debugCompareIndexedTargetSearch: () => {
+    if (!state.world || !state.player) return null;
+    const focusedOre = getFocusedOre();
+    const radius = effectiveSenseRadius() * focusedSenseMultiplier(focusedOre);
+    const serialize = (targets) => targets.map((target) => `${target.tx}:${target.ty}`);
+    const indexed = serialize(findBestOreTargets(
+      state.player.x,
+      state.player.y,
+      radius,
+      focusedOre?.id || null,
+      {},
+      2,
+    ));
+    const hadOwnEnumerator = Object.prototype.hasOwnProperty.call(state.world, 'forEachOreTileInBounds');
+    const ownEnumerator = state.world.forEachOreTileInBounds;
+    let brute;
+    try {
+      state.world.forEachOreTileInBounds = null;
+      brute = serialize(findBestOreTargets(
+        state.player.x,
+        state.player.y,
+        radius,
+        focusedOre?.id || null,
+        {},
+        2,
+      ));
+    } finally {
+      if (hadOwnEnumerator) state.world.forEachOreTileInBounds = ownEnumerator;
+      else delete state.world.forEachOreTileInBounds;
+    }
+    return { indexed, brute, same: indexed.join('|') === brute.join('|') };
+  },
+  debugGetUpgradeLayout: () => {
+    const layout = getUpgradeLayout();
+    return {
+      width: layout.width,
+      height: layout.height,
+      centerX: layout.centerX,
+      centerY: layout.centerY,
+      positions: Object.fromEntries([...layout.positions].map(([id, point]) => [id, { ...point }])),
+    };
+  },
+  debugSetAttackCooldown: (seconds = 0.42) => {
+    state.attackCooldown = Math.max(0, Number(seconds) || 0);
+    return state.attackCooldown;
+  },
+  debugResetProgress: () => {
+    save = createDefaultSave();
+    stats = normalizeStats(calculateMetaStats(save.levels));
+    Object.assign(state, {
+      mode: 'title',
+      returnMode: 'title',
+      target: null,
+      backupTarget: null,
+      pathWaypoint: null,
+      lastHaul: createOreBag(),
+      lastHaulCount: 0,
+      runOre: 0,
+      oreCounts: createOreBag(),
+      discoveredOreIds: new Set(),
+      visibleUpgradeIds: new Set(),
+      selectedUpgradeId: null,
+      metrics: createRunMetrics(),
+    });
+    persistSave();
+    return true;
+  },
+  debugAutoBuyAffordable: (limit = 200) => {
+    const bought = [];
+    const purchaseLimit = clamp(Math.floor(Number(limit) || 0), 0, 1_000);
+    for (let purchase = 0; purchase < purchaseLimit; purchase += 1) {
+      const categoryLevels = Object.fromEntries(UPGRADE_LANES.map((category) => [category, 0]));
+      for (const definition of UPGRADE_DEFS) {
+        if (categoryLevels[definition.category] != null) categoryLevels[definition.category] += getUpgradeLevel(definition);
+      }
+      const candidates = UPGRADE_DEFS
+        .filter((definition) => {
+          const level = getUpgradeLevel(definition);
+          if (level >= definition.maxLevel || !requirementsMet(definition)) return false;
+          return canAffordRecipe(save.inventory, getUpgradeRecipe(definition, level));
+        })
+        .map((definition) => {
+          const level = getUpgradeLevel(definition);
+          const recipe = getUpgradeRecipe(definition, level);
+          const weightedCost = Object.entries(recipe).reduce((sum, [oreId, amount]) => (
+            sum + amount * (oreById.get(oreId)?.value || 1)
+          ), 0);
+          const depth = getUpgradeLayout().depthById.get(definition.id) || 0;
+          const categoryLoad = categoryLevels[definition.category] || 0;
+          const corePriority = definition.id === 'core_first_descent' ? -1_000_000 : 0;
+          const finalPriority = definition.id === CAMPAIGN.finalUpgrade ? -100_000 : 0;
+          return { definition, level, recipe, score: weightedCost + depth * 4 + categoryLoad * 0.6 + corePriority + finalPriority };
+        })
+        .sort((left, right) => left.score - right.score || UPGRADE_DEFS.indexOf(left.definition) - UPGRADE_DEFS.indexOf(right.definition));
+      const candidate = candidates[0];
+      if (!candidate || !spendRecipe(save.inventory, candidate.recipe)) break;
+      save.levels[candidate.definition.id] = candidate.level + 1;
+      bought.push(candidate.definition.id);
+      stats = normalizeStats(calculateMetaStats(save.levels));
+    }
+    if (!stats.oreFocusUnlocked) {
+      save.focusedOreId = null;
+    } else {
+      const deficits = createOreBag();
+      for (const definition of UPGRADE_DEFS) {
+        const level = getUpgradeLevel(definition);
+        if (level >= definition.maxLevel || !requirementsMet(definition)) continue;
+        const recipe = getUpgradeRecipe(definition, level);
+        for (const [oreId, amount] of Object.entries(recipe)) {
+          deficits[oreId] += Math.max(0, amount - (save.inventory[oreId] || 0));
+        }
+      }
+      const focus = ORE_TYPES
+        .filter((ore) => deficits[ore.id] > 0 && (save.lifetimeOres[ore.id] || 0) > 0)
+        .sort((left, right) => deficits[right.id] * right.value - deficits[left.id] * left.value)[0];
+      save.focusedOreId = focus?.id || null;
+    }
+    persistSave();
+    return { bought, focusedOreId: save.focusedOreId, purchasedLevels: countPurchasedLevels(save.levels) };
+  },
+  debugForceChain: (nx = 1, ny = 0) => {
+    if (state.mode !== 'run' || !state.player) return false;
+    chainStrike(state.player.x, state.player.y, Number(nx) || 0, Number(ny) || 0);
+    return true;
+  },
+  debugForceDrones: () => {
+    if (state.mode !== 'run' || !state.player) return false;
+    droneAttack();
+    return true;
+  },
+  debugTriggerDeafKnock: () => triggerDeafKnock(state.player?.x, state.player?.y),
+  debugTriggerSuperPickEcho: (damage = stats.pickPower) => {
+    if (state.mode !== 'run' || !state.target) return false;
+    return triggerSuperPickEcho(state.target, Math.max(0, Number(damage) || 0));
+  },
+  debugSetBackupTile: (tx, ty) => {
+    if (state.mode !== 'run' || !state.world) return false;
+    const tileX = Math.floor(tx);
+    const tileY = Math.floor(ty);
+    const tile = state.world.getTile(tileX, tileY);
+    if (!tile?.oreId || tile.kind === 'air' || tile.kind === 'bedrock') return false;
+    state.backupTarget = {
+      kind: 'ore', tile, tx: tileX, ty: tileY,
+      x: (tileX + 0.5) * TILE_SIZE,
+      y: (tileY + 0.5) * TILE_SIZE,
+    };
+    refreshTriangleOreMemory();
+    return true;
+  },
+  debugGetTriangle: () => {
+    const triangle = getTriangulationTriangle();
+    return triangle ? triangle.map((point) => ({ ...point })) : null;
+  },
+  debugTriggerMicroEvent: (type = null) => {
+    if (state.mode !== 'run' || typeof state.world?.getMicroEvents !== 'function') return false;
+    const event = state.world.getMicroEvents().find((candidate) => !type || candidate.type === type);
+    return event ? applyMicroEvent(event) : false;
+  },
+  debugGetMicroEvents: () => typeof state.world?.getMicroEvents === 'function' ? state.world.getMicroEvents() : [],
+  debugValidateCrewBeacon: () => Boolean(getCrewBeacon(true)),
+  computeCurrentRoute: () => {
+    if (state.mode !== 'run' || !state.target || typeof state.world.findLeastResistanceStep !== 'function') return null;
+    const focusedOre = getFocusedOre();
+    return state.world.findLeastResistanceStep(state.player, state.target, {
+      moveSpeed: stats.moveSpeed * (stats.mineMoveMultiplier || 1),
+      digPowerPerSecond: stats.pickPower * stats.digSpeed,
+      focusedOreId: focusedOre?.id || null,
+      focusedOreDigMultiplier: focusedOre ? focusedDamageMultiplier(focusedOre.id) : 1,
+      maxDetourTiles: 9,
+      minimumSavings: 0.08,
+      waypointLookAhead: 4,
+    });
   },
 };
 

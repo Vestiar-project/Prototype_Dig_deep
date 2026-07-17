@@ -60,6 +60,7 @@ const ORE_TYPES = Object.freeze(
       id: "copper",
       tier: 0,
       name: "Медь",
+      description: "Тёплые пластичные прожилки, с которых начинается любая шахтёрская смена.",
       color: "#c86f43",
       accent: "#ffd0a8",
       value: 1,
@@ -70,6 +71,7 @@ const ORE_TYPES = Object.freeze(
       id: "coal",
       tier: 1,
       name: "Уголь",
+      description: "Хрупкий тёмный пласт: дешёвый, частый и удобный для ранних механизмов.",
       color: "#343943",
       accent: "#9ba5b4",
       value: 2,
@@ -80,6 +82,7 @@ const ORE_TYPES = Object.freeze(
       id: "iron",
       tier: 2,
       name: "Железо",
+      description: "Плотные серые включения — первая серьёзная проверка силы инструмента.",
       color: "#87949c",
       accent: "#e5f0ef",
       value: 4,
@@ -90,6 +93,7 @@ const ORE_TYPES = Object.freeze(
       id: "amber",
       tier: 3,
       name: "Янтарь",
+      description: "Застывшие золотистые капли светятся в мягкой породе и хорошо заметны издалека.",
       color: "#d88b1f",
       accent: "#fff0a1",
       value: 8,
@@ -100,6 +104,7 @@ const ORE_TYPES = Object.freeze(
       id: "silver",
       tier: 4,
       name: "Серебро",
+      description: "Холодные светлые нити образуют тонкие жилы на границе глубоких слоёв.",
       color: "#aebbd0",
       accent: "#ffffff",
       value: 16,
@@ -110,6 +115,7 @@ const ORE_TYPES = Object.freeze(
       id: "gold",
       tier: 5,
       name: "Золото",
+      description: "Редкие тяжёлые самородки оправдывают долгий путь и прочную кирку.",
       color: "#e0a922",
       accent: "#fff6a6",
       value: 32,
@@ -120,6 +126,7 @@ const ORE_TYPES = Object.freeze(
       id: "amethyst",
       tier: 6,
       name: "Аметист",
+      description: "Фиолетовые кристаллы растут друзами и раскалываются звонкими гранями.",
       color: "#8153c7",
       accent: "#edc7ff",
       value: 68,
@@ -130,6 +137,7 @@ const ORE_TYPES = Object.freeze(
       id: "prism_crystal",
       tier: 7,
       name: "Призмалит",
+      description: "Переломляет свет внутри камня; его жилы мерцают несколькими цветами сразу.",
       color: "#31a9b6",
       accent: "#bffcff",
       value: 145,
@@ -140,6 +148,7 @@ const ORE_TYPES = Object.freeze(
       id: "void_ore",
       tier: 8,
       name: "Пустотная руда",
+      description: "Поглощает окружающее свечение и кажется провалом в толще планеты.",
       color: "#312458",
       accent: "#d56dff",
       value: 310,
@@ -150,6 +159,7 @@ const ORE_TYPES = Object.freeze(
       id: "star_core",
       tier: 9,
       name: "Звёздное ядро",
+      description: "Раскалённая материя глубин — самый плотный и ценный образец этой планеты.",
       color: "#e9586e",
       accent: "#fff4dd",
       value: 700,
@@ -168,6 +178,7 @@ const ORE_BY_TIER = Object.freeze(
 // purchases always compare and spend the exact named ores in their recipe.
 const RECIPE_TIER_FLOORS = Object.freeze([0, 12, 30, 70, 160, 360, 800, 1800, 4000, 9000]);
 const RECIPE_WEIGHTS = Object.freeze([1, 2, 4, 8, 16, 32, 68, 145, 310, 700]);
+const RECIPE_PACING_BY_TIER = Object.freeze([1, 1, 1.2, 1.4, 1.7, 2, 2.4, 2.8, 3.2, 4]);
 const CATEGORY_CATALYST_TIERS = Object.freeze({
   core: Object.freeze([0, 7, 8, 9]),
   sense: Object.freeze([0, 3, 4, 7]),
@@ -285,10 +296,11 @@ function getUpgradeRecipe(definition, level = 0) {
   }
 
   const ingredients = [];
+  const pacingMultiplier = RECIPE_PACING_BY_TIER[tier] || 1;
   const addTier = (oreTier, weightedShare) => {
     const safeTier = clamp(oreTier, 0, ORE_BY_TIER.length - 1);
     const weight = RECIPE_WEIGHTS[safeTier] || 1;
-    ingredients.push([ORE_BY_TIER[safeTier].id, Math.ceil(legacyCost * weightedShare / weight)]);
+    ingredients.push([ORE_BY_TIER[safeTier].id, Math.ceil(legacyCost * weightedShare * pacingMultiplier / weight)]);
   };
 
   addTier(tier, 0.25);
@@ -333,26 +345,14 @@ const senseUpgrades = [
   defineUpgrade({
     id: "sense_instinct_spark",
     name: "Искра инстинкта",
-    description: "Радиус чутья +8 за уровень.",
+    description: "Радиус чутья +22 за уровень. Один понятный многослойный узел заменяет несколько одинаковых прибавок.",
     category: "sense",
     icon: "◉",
-    maxLevel: 10,
+    maxLevel: 18,
     baseCost: 4,
-    growth: 1.32,
+    growth: 1.29,
     requires: ["core_first_descent"],
-    apply: (stats, level) => add(stats, "senseRadius", 8 * level),
-  }),
-  defineUpgrade({
-    id: "sense_ore_scent",
-    name: "Рудный нюх",
-    description: "Радиус чутья +12 за уровень.",
-    category: "sense",
-    icon: "♨",
-    maxLevel: 8,
-    baseCost: 14,
-    growth: 1.37,
-    requires: ["sense_instinct_spark"],
-    apply: (stats, level) => add(stats, "senseRadius", 12 * level),
+    apply: (stats, level) => add(stats, "senseRadius", 22 * level),
   }),
   defineUpgrade({
     id: "sense_echo_pulse",
@@ -375,20 +375,8 @@ const senseUpgrades = [
     maxLevel: 5,
     baseCost: 31,
     growth: 1.43,
-    requires: ["sense_ore_scent"],
+    requires: [{ id: "sense_instinct_spark", level: 4 }],
     apply: (stats, level) => add(stats, "targetLockSpeed", 0.12 * level),
-  }),
-  defineUpgrade({
-    id: "sense_wide_sweep",
-    name: "Широкий охват",
-    description: "Радиус чутья +18 за уровень.",
-    category: "sense",
-    icon: "◌",
-    maxLevel: 8,
-    baseCost: 42,
-    growth: 1.39,
-    requires: ["sense_ore_scent"],
-    apply: (stats, level) => add(stats, "senseRadius", 18 * level),
   }),
   defineUpgrade({
     id: "sense_deep_resonance",
@@ -399,7 +387,7 @@ const senseUpgrades = [
     maxLevel: 5,
     baseCost: 76,
     growth: 1.45,
-    requires: ["sense_wide_sweep"],
+    requires: [{ id: "sense_instinct_spark", level: 8 }],
     apply: (stats, level) => {
       add(stats, "senseRadius", 10 * level);
       add(stats, "deepOreSenseBonus", 0.1 * level);
@@ -410,6 +398,7 @@ const senseUpgrades = [
     name: "Шёпот жил",
     description: "Шанс подсветить соседние куски той же жилы +7% за уровень.",
     category: "sense",
+    layoutLobe: "tools",
     icon: "〰",
     maxLevel: 5,
     baseCost: 58,
@@ -458,12 +447,13 @@ const senseUpgrades = [
     name: "Рудный фокус",
     description: "Открывает выбор одного типа руды и увеличивает радиус её поиска в 2,15 раза.",
     category: "sense",
+    layoutLobe: "tools",
     icon: "⌾",
     maxLevel: 1,
     baseCost: 250,
     growth: 1,
     requires: ["sense_panoramic_intuition"],
-    recipeOverride: { amber: 10, silver: 5 },
+    recipeOverride: { amber: 24, silver: 12 },
     apply: (stats, level) => {
       if (level > 0) {
         stats.oreFocusUnlocked = true;
@@ -525,6 +515,74 @@ const senseUpgrades = [
     },
   }),
   defineUpgrade({
+    id: "sense_second_fix",
+    name: "Вторая засечка",
+    description: "Запоминает одну запасную цель и мгновенно переключается на неё после разрушения текущей. При рудном фокусе обе цели относятся только к выбранной руде.",
+    category: "sense",
+    icon: "◎",
+    maxLevel: 1,
+    baseCost: 520,
+    growth: 1,
+    requires: ["sense_seismic_memory", "sense_priority_tuning"],
+    apply: (stats, level) => add(stats, "backupTargetSlots", level),
+  }),
+  defineUpgrade({
+    id: "sense_frequency_swing",
+    name: "Раскачка частоты",
+    description: "Если рудный фокус не находит цель 1,5 секунды, радиус его поиска увеличивается на 25% за уровень до обнаружения руды.",
+    category: "sense",
+    icon: "≋",
+    maxLevel: 3,
+    baseCost: 720,
+    growth: 1.62,
+    requires: ["sense_ore_focus", { id: "time_capsule", level: 8 }],
+    apply: (stats, level) => {
+      stats.oreFocusEscalationDelay = 1.5;
+      add(stats, "oreFocusEscalationBonus", 0.25 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "sense_deaf_knock",
+    name: "Глухой стук",
+    description: "После 14/11/8 разрушенных блоков обычной породы запускает импульс чутья радиусом 140%. Найденная им цель даёт +20% скорости движения на 1,2 секунды. Перезарядка — 3 секунды; рудный фокус ищет только выбранную руду.",
+    category: "sense",
+    icon: "◫",
+    maxLevel: 3,
+    baseCost: 430,
+    growth: 1.61,
+    requires: ["sense_echo_pulse", "dig_wall_bite"],
+    apply: (stats, level) => {
+      stats.deafKnockStoneThreshold = [0, 14, 11, 8][level] || 14;
+      stats.deafKnockSenseRadiusMultiplier = 1.4;
+      stats.deafKnockMoveSpeedBonus = 0.2;
+      stats.deafKnockMoveDuration = 1.2;
+      stats.deafKnockCooldown = 3;
+      stats.deafKnockFocusOnly = true;
+    },
+  }),
+  defineUpgrade({
+    id: "sense_triangular_fix",
+    name: "Треугольная засечка",
+    description: "Уровень I: руда в секторе шахтёр–основная–запасная цель запоминается на 1,5 секунды и получает приоритет дронов. Уровень II: гаджеты наносят в секторе +25% урона, а дальность цепей и дронов увеличивается на 20%.",
+    category: "sense",
+    icon: "△",
+    maxLevel: 2,
+    baseCost: 1100,
+    growth: 1.7,
+    requires: ["sense_second_fix", "gadgets_scout_drone"],
+    apply: (stats, level) => {
+      if (level > 0) {
+        stats.triangularFixUnlocked = true;
+        stats.triangularFixOreMemory = 1.5;
+        stats.triangularFixDronePriority = true;
+      }
+      if (level >= 2) {
+        stats.triangularFixGadgetDamageBonus = 0.25;
+        stats.triangularFixRangeBonus = 0.2;
+      }
+    },
+  }),
+  defineUpgrade({
     id: "sense_earth_call",
     name: "Зов земли",
     description: "Чутьё проникает сквозь любые стены и получает +25% радиуса.",
@@ -545,26 +603,14 @@ const digUpgrades = [
   defineUpgrade({
     id: "dig_arm_swing",
     name: "Размашистая рука",
-    description: "Дальность удара +4 за уровень.",
+    description: "Дальность удара +5 за уровень. Здесь собрана вся базовая тренировка досягаемости.",
     category: "dig",
     icon: "⛏",
-    maxLevel: 10,
+    maxLevel: 18,
     baseCost: 4,
-    growth: 1.31,
+    growth: 1.29,
     requires: ["core_first_descent"],
-    apply: (stats, level) => add(stats, "digReach", 4 * level),
-  }),
-  defineUpgrade({
-    id: "dig_long_handle",
-    name: "Длинная рукоять",
-    description: "Дальность удара +6 за уровень.",
-    category: "dig",
-    icon: "╱",
-    maxLevel: 8,
-    baseCost: 15,
-    growth: 1.36,
-    requires: ["dig_arm_swing"],
-    apply: (stats, level) => add(stats, "digReach", 6 * level),
+    apply: (stats, level) => add(stats, "digReach", 5 * level),
   }),
   defineUpgrade({
     id: "dig_sweeping_arc",
@@ -583,6 +629,7 @@ const digUpgrades = [
     name: "Лёгкая поступь",
     description: "Скорость перемещения +4% за уровень.",
     category: "dig",
+    layoutLobe: "time",
     icon: "➜",
     maxLevel: 8,
     baseCost: 27,
@@ -623,7 +670,7 @@ const digUpgrades = [
     maxLevel: 5,
     baseCost: 73,
     growth: 1.42,
-    requires: ["dig_long_handle"],
+    requires: [{ id: "dig_arm_swing", level: 6 }],
     apply: (stats, level) => add(stats, "aimTurnSpeed", 0.15 * level),
   }),
   defineUpgrade({
@@ -635,7 +682,7 @@ const digUpgrades = [
     maxLevel: 5,
     baseCost: 92,
     growth: 1.47,
-    requires: ["dig_long_handle"],
+    requires: [{ id: "dig_arm_swing", level: 6 }],
     apply: (stats, level) => add(stats, "digReachMultiplier", 0.05 * level),
   }),
   defineUpgrade({
@@ -656,18 +703,6 @@ const digUpgrades = [
     },
   }),
   defineUpgrade({
-    id: "dig_relentless_rhythm",
-    name: "Неустанный ритм",
-    description: "Скорость ударов +6% за уровень.",
-    category: "dig",
-    icon: "♩",
-    maxLevel: 8,
-    baseCost: 137,
-    growth: 1.43,
-    requires: ["dig_tunnel_step"],
-    apply: (stats, level) => add(stats, "digSpeedMultiplier", 0.06 * level),
-  }),
-  defineUpgrade({
     id: "dig_excavator_stance",
     name: "Стойка экскаватора",
     description: "Дальность +8 и скорость ударов +3% за уровень.",
@@ -676,7 +711,7 @@ const digUpgrades = [
     maxLevel: 5,
     baseCost: 205,
     growth: 1.5,
-    requires: ["dig_reach_training", "dig_relentless_rhythm"],
+    requires: ["dig_reach_training", { id: "tools_balanced_handle", level: 5 }],
     apply: (stats, level) => {
       add(stats, "digReach", 8 * level);
       add(stats, "digSpeedMultiplier", 0.03 * level);
@@ -725,6 +760,34 @@ const digUpgrades = [
     },
   }),
   defineUpgrade({
+    id: "dig_least_resistance",
+    name: "Тропа наименьшего сопротивления",
+    description: "Автомайнер сравнивает время прямого пробивания и обхода плотной породы, затем выбирает более быстрый маршрут.",
+    category: "dig",
+    icon: "⌁",
+    maxLevel: 1,
+    baseCost: 240,
+    growth: 1,
+    requires: ["dig_precision_path", "sense_clear_signal"],
+    apply: (stats, level) => {
+      if (level > 0) stats.leastResistancePathing = true;
+    },
+  }),
+  defineUpgrade({
+    id: "dig_mine_lift",
+    name: "Шахтный лифт",
+    description: "Начинает забег на 15/25/35% от рекордной глубины, но не ниже уже освоенного рудного слоя.",
+    category: "dig",
+    icon: "⇓",
+    maxLevel: 3,
+    baseCost: 520,
+    growth: 1.64,
+    requires: ["dig_tunnel_step", "time_capsule"],
+    apply: (stats, level) => {
+      stats.mineLiftRecordDepthRatio = [0, 0.15, 0.25, 0.35][level] || 0;
+    },
+  }),
+  defineUpgrade({
     id: "dig_quarry_presence",
     name: "Присутствие карьера",
     description: "Дальность копки +25%, скорость ударов +15%, сектор становится шире.",
@@ -746,26 +809,14 @@ const powerUpgrades = [
   defineUpgrade({
     id: "power_sharpened_edge",
     name: "Острое жало",
-    description: "Сила кирки +0,35 за уровень.",
+    description: "Сила кирки +0,45 за уровень. Базовая мощность теперь растёт в одном многослойном узле.",
     category: "power",
     icon: "◆",
-    maxLevel: 10,
+    maxLevel: 18,
     baseCost: 5,
-    growth: 1.33,
+    growth: 1.3,
     requires: ["core_first_descent"],
-    apply: (stats, level) => add(stats, "pickPower", 0.35 * level),
-  }),
-  defineUpgrade({
-    id: "power_weighted_head",
-    name: "Утяжелённый боёк",
-    description: "Сила кирки +0,55 за уровень.",
-    category: "power",
-    icon: "⬟",
-    maxLevel: 8,
-    baseCost: 16,
-    growth: 1.38,
-    requires: ["power_sharpened_edge"],
-    apply: (stats, level) => add(stats, "pickPower", 0.55 * level),
+    apply: (stats, level) => add(stats, "pickPower", 0.45 * level),
   }),
   defineUpgrade({
     id: "power_tempered_steel",
@@ -784,11 +835,12 @@ const powerUpgrades = [
     name: "Яростный взмах",
     description: "Шанс критического удара +2,5% за уровень.",
     category: "power",
+    layoutLobe: "fortune",
     icon: "✦",
     maxLevel: 6,
     baseCost: 37,
     growth: 1.44,
-    requires: ["power_weighted_head"],
+    requires: [{ id: "power_sharpened_edge", level: 5 }],
     apply: (stats, level) => add(stats, "critChance", 0.025 * level),
   }),
   defineUpgrade({
@@ -827,7 +879,7 @@ const powerUpgrades = [
     maxLevel: 6,
     baseCost: 96,
     growth: 1.5,
-    requires: ["power_weighted_head"],
+    requires: [{ id: "power_sharpened_edge", level: 8 }],
     apply: (stats, level) => add(stats, "pickPowerMultiplier", 0.05 * level),
   }),
   defineUpgrade({
@@ -932,6 +984,18 @@ const powerUpgrades = [
     },
   }),
   defineUpgrade({
+    id: "power_sample_calibration",
+    name: "Калибровка по образцу",
+    description: "Эффективная плотность выбранной через рудный фокус руды уменьшается на 8% за уровень; смена фокуса меняет специализацию.",
+    category: "power",
+    icon: "◇",
+    maxLevel: 4,
+    baseCost: 980,
+    growth: 1.65,
+    requires: ["power_geologist_force", "sense_ore_focus"],
+    apply: (stats, level) => add(stats, "focusedOreHardnessReduction", 0.08 * level),
+  }),
+  defineUpgrade({
     id: "power_mountain_splitter",
     name: "Раскалывающий горы",
     description: "Сила кирки +30%, критический шанс +10%.",
@@ -948,7 +1012,9 @@ const powerUpgrades = [
   }),
 ];
 
-const timeUpgrades = [
+// Kept out of the exported catalog only long enough to make save migration
+// readable in game.js. The live tree uses the four condensed nodes below.
+const legacyTimeUpgrades = [
   defineUpgrade({
     id: "time_extra_breath",
     name: "Лишний вдох",
@@ -1130,6 +1196,18 @@ const timeUpgrades = [
     },
   }),
   defineUpgrade({
+    id: "time_discovery_bonus",
+    name: "Премия за открытие",
+    description: "Первый добытый кусок каждого нового типа руды за забег возвращает 0,15 секунды за уровень. Бонусное время ограничено общей отметкой 60 секунд.",
+    category: "time",
+    icon: "◴",
+    maxLevel: 3,
+    baseCost: 680,
+    growth: 1.64,
+    requires: ["time_aftershock_clock", "fortune_glimmer_hunter"],
+    apply: (stats, level) => add(stats, "discoveryTimeBonus", 0.15 * level),
+  }),
+  defineUpgrade({
     id: "time_thirty_second_oath",
     name: "Клятва сорока пяти секунд",
     description: "Доводит таймер до 45 секунд; лишняя хроноэнергия ускоряет инструмент.",
@@ -1152,6 +1230,91 @@ const timeUpgrades = [
         stats.runDuration = stats.maxRunDuration;
         stats.chronoOverclock = true;
       }
+    },
+  }),
+];
+
+const timeUpgrades = [
+  defineUpgrade({
+    id: "time_extra_breath",
+    name: "Запас смены",
+    description: "Начальный таймер +0,5 секунды за уровень. 12 уровней дают первые дополнительные 6 секунд.",
+    category: "time",
+    icon: "◷",
+    maxLevel: 12,
+    baseCost: 4,
+    growth: 1.27,
+    requires: ["core_first_descent"],
+    apply: (stats, level) => add(stats, "runDuration", 0.5 * level),
+  }),
+  defineUpgrade({
+    id: "time_clockwork_heart",
+    name: "Заводное сердце",
+    description: "Таймер +0,75 секунды за уровень. На 4-м уровне даёт стартовую паузу, на 8-м — возврат времени, на 12-м — один аварийный заряд.",
+    category: "time",
+    layoutLobe: "dig",
+    icon: "♥",
+    maxLevel: 12,
+    baseCost: 22,
+    growth: 1.32,
+    requires: [
+      { id: "time_extra_breath", level: 4 },
+      { id: "dig_light_footwork", level: 3 },
+    ],
+    apply: (stats, level) => {
+      add(stats, "runDuration", 0.75 * level);
+      if (level >= 4) add(stats, "startTimeFreeze", 0.5);
+      if (level >= 8) {
+        add(stats, "timeRefundChance", 0.08 + (level - 8) * 0.01);
+        add(stats, "timeRefundAmount", 0.2 + (level - 8) * 0.03);
+      }
+      if (level >= 12) {
+        add(stats, "lastChanceCharges", 1);
+        add(stats, "lastChanceSeconds", 1.25);
+      }
+    },
+  }),
+  defineUpgrade({
+    id: "time_capsule",
+    name: "Капсула времени",
+    description: "Таймер +2 секунды за уровень. Первый образец нового типа руды возвращает до 0,48 секунды; поздние уровни открывают хроноосколки. Бонусы ограничены 60 секундами.",
+    category: "time",
+    layoutLobe: "tools",
+    icon: "⬡",
+    maxLevel: 12,
+    baseCost: 150,
+    growth: 1.38,
+    requires: [
+      { id: "time_clockwork_heart", level: 6 },
+      { id: "tools_balanced_handle", level: 5 },
+    ],
+    apply: (stats, level) => {
+      add(stats, "runDuration", 2 * level);
+      add(stats, "discoveryTimeBonus", 0.04 * level);
+      if (level >= 8) {
+        add(stats, "timeShardChance", 0.04 + (level - 8) * 0.005);
+        add(stats, "timeShardSeconds", 0.24 + (level - 8) * 0.02);
+      }
+    },
+  }),
+  defineUpgrade({
+    id: "time_thirty_second_oath",
+    name: "Клятва сорока пяти секунд",
+    description: "Закрепляет полностью собранный 45-секундный таймер и превращает лишнюю хроноэнергию в ускорение инструмента.",
+    category: "time",
+    layoutLobe: "power",
+    icon: "45",
+    maxLevel: 1,
+    baseCost: 3200,
+    growth: 1,
+    requires: [
+      { id: "time_extra_breath", level: 12 },
+      { id: "time_clockwork_heart", level: 12 },
+      { id: "time_capsule", level: 12 },
+    ],
+    recipeOverride: { prism_crystal: 14, void_ore: 4 },
+    apply: (stats, level) => {
+      if (level > 0) stats.chronoOverclock = true;
     },
   }),
 ];
@@ -1264,6 +1427,7 @@ const gadgetUpgrades = [
     name: "Магнитная мина",
     description: "Магнит стягивает осколки: радиус сбора и поиска дронов +14 за уровень.",
     category: "gadgets",
+    layoutLobe: "fortune",
     icon: "∩",
     maxLevel: 6,
     baseCost: 72,
@@ -1341,6 +1505,38 @@ const gadgetUpgrades = [
     },
   }),
   defineUpgrade({
+    id: "gadgets_geo_charge",
+    name: "Кумулятивный геозаряд",
+    description: "Бомбы взрываются направленным конусом к цели; каждый уровень удлиняет конус на один блок.",
+    category: "gadgets",
+    icon: "◁",
+    maxLevel: 3,
+    baseCost: 920,
+    growth: 1.66,
+    requires: ["gadgets_cluster_shell", "power_tectonic_blow"],
+    apply: (stats, level) => {
+      if (level > 0) stats.directionalBombs = true;
+      add(stats, "directionalBombConeTiles", level);
+    },
+  }),
+  defineUpgrade({
+    id: "gadgets_crew_beacon",
+    name: "Маяк артели",
+    description: "Меченая жила становится общей целью дронов, цепных разрядов и липких бомб; лишний урон переносится на соседний кусок той же жилы.",
+    category: "gadgets",
+    icon: "⌖",
+    maxLevel: 1,
+    baseCost: 1600,
+    growth: 1,
+    requires: ["gadgets_scout_drone", "gadgets_sticky_charge", "sense_ore_focus"],
+    apply: (stats, level) => {
+      if (level > 0) {
+        stats.crewBeaconUnlocked = true;
+        stats.crewBeaconOverkillCarry = 1;
+      }
+    },
+  }),
+  defineUpgrade({
     id: "gadgets_demolition_orchestra",
     name: "Оркестр подрывников",
     description: "Бомбы, цепи и дроны усиливают друг друга на 25%.",
@@ -1363,14 +1559,15 @@ const toolUpgrades = [
   defineUpgrade({
     id: "tools_balanced_handle",
     name: "Сбалансированная рукоять",
-    description: "Скорость ударов +4% за уровень.",
+    description: "Скорость ударов +5% за уровень. Узел объединяет базовый разгон и прежнюю тренировку ритма.",
     category: "tools",
+    layoutLobe: "dig",
     icon: "⚒",
-    maxLevel: 7,
+    maxLevel: 12,
     baseCost: 7,
-    growth: 1.37,
+    growth: 1.32,
     requires: ["core_first_descent"],
-    apply: (stats, level) => add(stats, "digSpeedMultiplier", 0.04 * level),
+    apply: (stats, level) => add(stats, "digSpeedMultiplier", 0.05 * level),
   }),
   defineUpgrade({
     id: "tools_iron_pick",
@@ -1419,7 +1616,7 @@ const toolUpgrades = [
     maxLevel: 1,
     baseCost: 260,
     growth: 1,
-    requires: ["tools_steel_pick", "dig_relentless_rhythm"],
+    requires: ["tools_steel_pick", { id: "tools_balanced_handle", level: 6 }],
     apply: (stats, level) => {
       if (level > 0) {
         stats.tool = "pneumaticPick";
@@ -1488,18 +1685,6 @@ const toolUpgrades = [
     },
   }),
   defineUpgrade({
-    id: "tools_laser_lens",
-    name: "Фокусирующая линза",
-    description: "Готовит лазер: дальность луча +35 за уровень.",
-    category: "tools",
-    icon: "◈",
-    maxLevel: 4,
-    baseCost: 1200,
-    growth: 1.62,
-    requires: ["tools_super_field", "sense_far_echo"],
-    apply: (stats, level) => add(stats, "laserRange", 35 * level),
-  }),
-  defineUpgrade({
     id: "tools_laser_emitter",
     name: "Дальнобойный лазер",
     description: "Инструмент VI ранга: заменяет кирку лучом, достающим далёкую руду.",
@@ -1508,7 +1693,7 @@ const toolUpgrades = [
     maxLevel: 1,
     baseCost: 2400,
     growth: 1,
-    requires: ["tools_laser_lens", "tools_super_pick"],
+    requires: ["tools_super_field", "sense_far_echo", "tools_super_pick"],
     apply: (stats, level) => {
       if (level > 0) {
         stats.tool = "miningLaser";
@@ -1521,14 +1706,14 @@ const toolUpgrades = [
   defineUpgrade({
     id: "tools_laser_range",
     name: "Телескопический луч",
-    description: "Дальность лазера +60 за уровень.",
+    description: "Дальность лазера +50 за уровень. В этом узле объединены линза и телескопическая настройка.",
     category: "tools",
     icon: "⟶",
-    maxLevel: 6,
+    maxLevel: 10,
     baseCost: 2750,
-    growth: 1.58,
+    growth: 1.5,
     requires: ["tools_laser_emitter"],
-    apply: (stats, level) => add(stats, "laserRange", 60 * level),
+    apply: (stats, level) => add(stats, "laserRange", 50 * level),
   }),
   defineUpgrade({
     id: "tools_laser_power",
@@ -1573,6 +1758,39 @@ const toolUpgrades = [
     },
   }),
   defineUpgrade({
+    id: "tools_mirror_crystal",
+    name: "Зеркальный кристалл",
+    description: "Лазер отражается к найденной руде за углом: первое отражение сохраняет 65% мощности, второе — 45%. При фокусе ищет только выбранную руду.",
+    category: "tools",
+    icon: "◈",
+    maxLevel: 2,
+    baseCost: 3600,
+    growth: 1.72,
+    requires: ["tools_laser_emitter", "sense_ore_focus"],
+    apply: (stats, level) => {
+      add(stats, "laserRicochetCount", level);
+      stats.laserFirstRicochetMultiplier = 0.65;
+      stats.laserSecondRicochetMultiplier = 0.45;
+    },
+  }),
+  defineUpgrade({
+    id: "tools_super_pick_echo",
+    name: "Эхо суперкирки",
+    description: "Каждый 6-й/4-й основной выстрел лазера создаёт в точке попадания круговой удар радиусом 1/1,4 блока и силой 60/85% прямого удара. Эхо не вызывает критов и дополнительных срабатываний.",
+    category: "tools",
+    icon: "✹",
+    maxLevel: 2,
+    baseCost: 4600,
+    growth: 1.74,
+    requires: ["tools_laser_emitter", "dig_omni_swing"],
+    apply: (stats, level) => {
+      stats.laserSuperPickEchoEvery = [0, 6, 4][level] || 6;
+      stats.laserSuperPickEchoRadiusTiles = [0, 1, 1.4][level] || 1;
+      stats.laserSuperPickEchoPower = [0, 0.6, 0.85][level] || 0.6;
+      stats.laserSuperPickEchoNoProcs = true;
+    },
+  }),
+  defineUpgrade({
     id: "tools_solar_drill",
     name: "Солнечный бур",
     description: "Лазер становится призмобуром: +35% мощности и быстрее заряжается.",
@@ -1600,26 +1818,15 @@ const fortuneUpgrades = [
   defineUpgrade({
     id: "fortune_prospector_ledger",
     name: "Дневник старателя",
-    description: "Средний выход кусков руды +3% за уровень.",
+    description: "Средний выход кусков руды +4% за уровень. Базовая оценка добычи собрана в одном узле.",
     category: "fortune",
+    layoutLobe: "sense",
     icon: "▤",
-    maxLevel: 10,
+    maxLevel: 18,
     baseCost: 5,
-    growth: 1.34,
+    growth: 1.3,
     requires: ["core_first_descent"],
-    apply: (stats, level) => add(stats, "oreValueMultiplier", 0.03 * level),
-  }),
-  defineUpgrade({
-    id: "fortune_ore_appraisal",
-    name: "Оценка самородка",
-    description: "Средний выход кусков руды +5% за уровень.",
-    category: "fortune",
-    icon: "¤",
-    maxLevel: 8,
-    baseCost: 17,
-    growth: 1.39,
-    requires: ["fortune_prospector_ledger"],
-    apply: (stats, level) => add(stats, "oreValueMultiplier", 0.05 * level),
+    apply: (stats, level) => add(stats, "oreValueMultiplier", 0.04 * level),
   }),
   defineUpgrade({
     id: "fortune_lucky_chip",
@@ -1654,7 +1861,7 @@ const fortuneUpgrades = [
     maxLevel: 6,
     baseCost: 58,
     growth: 1.47,
-    requires: ["fortune_ore_appraisal"],
+    requires: [{ id: "fortune_prospector_ledger", level: 6 }],
     apply: (stats, level) => add(stats, "gemValueMultiplier", 0.09 * level),
   }),
   defineUpgrade({
@@ -1678,7 +1885,7 @@ const fortuneUpgrades = [
     maxLevel: 6,
     baseCost: 112,
     growth: 1.5,
-    requires: ["fortune_ore_appraisal"],
+    requires: [{ id: "fortune_prospector_ledger", level: 6 }],
     apply: (stats, level) => {
       add(stats, "doubleDropChance", 0.03 * level);
       add(stats, "extraYieldChance", 0.03 * level);
@@ -1775,6 +1982,18 @@ const fortuneUpgrades = [
     apply: (stats, level) => add(stats, "fortuneProcChance", 0.02 * level),
   }),
   defineUpgrade({
+    id: "fortune_findings_catalog",
+    name: "Каталог находок",
+    description: "Каждый дополнительный тип руды, добытый в текущем забеге, повышает итоговую добычу на 2% за уровень.",
+    category: "fortune",
+    icon: "▤",
+    maxLevel: 3,
+    baseCost: 550,
+    growth: 1.62,
+    requires: ["fortune_deep_market", "sense_vein_whisper"],
+    apply: (stats, level) => add(stats, "oreDiversityBonusPerType", 0.02 * level),
+  }),
+  defineUpgrade({
     id: "fortune_motherlode_covenant",
     name: "Договор с Материнской жилой",
     description: "Даёт шанс открыть сверхбогатую жилу и повышает выход всей руды на 25%.",
@@ -1810,9 +2029,9 @@ const coreFinalUpgrade = defineUpgrade({
     "fortune_motherlode_covenant",
   ],
   recipeOverride: {
-    prism_crystal: 24,
-    void_ore: 12,
-    star_core: 5,
+    prism_crystal: 500,
+    void_ore: 300,
+    star_core: 500,
   },
   apply: (stats, level) => {
     if (level > 0) stats.bonVoyageUnlocked = true;
@@ -1845,9 +2064,23 @@ function createBaseMetaStats() {
     veinRevealChance: 0,
     targetLockSpeed: 1,
     targetValueBias: 0.12,
+    backupTargetSlots: 0,
     oreOutline: false,
     oreFocusUnlocked: false,
     oreFocusRadiusMultiplier: 1,
+    oreFocusEscalationDelay: 0,
+    oreFocusEscalationBonus: 0,
+    deafKnockStoneThreshold: 0,
+    deafKnockSenseRadiusMultiplier: 1,
+    deafKnockMoveSpeedBonus: 0,
+    deafKnockMoveDuration: 0,
+    deafKnockCooldown: 0,
+    deafKnockFocusOnly: false,
+    triangularFixUnlocked: false,
+    triangularFixOreMemory: 0,
+    triangularFixDronePriority: false,
+    triangularFixGadgetDamageBonus: 0,
+    triangularFixRangeBonus: 0,
     bonVoyageUnlocked: false,
 
     // Movement and mining geometry.
@@ -1866,6 +2099,8 @@ function createBaseMetaStats() {
     multiHitCount: 1,
     splashRadius: 0,
     splashDamage: 0,
+    leastResistancePathing: false,
+    mineLiftRecordDepthRatio: 0,
 
     // Direct mining damage.
     pickPower: 1,
@@ -1883,10 +2118,14 @@ function createBaseMetaStats() {
     rareOreDamageBonus: 0,
     chargedHitPower: 0,
     overkillCarry: 0,
+    focusedOreHardnessReduction: 0,
 
-    // The timer always remains between 6 and 45 seconds.
+    // Permanent upgrades stay between 6 and 45 seconds; in-run bonuses can
+    // extend the live countdown only as far as the separate 60-second cap.
     runDuration: 6,
     maxRunDuration: 45,
+    bonusRunDurationCap: 60,
+    discoveryTimeBonus: 0,
     startTimeFreeze: 0,
     timeRefundChance: 0,
     timeRefundAmount: 0,
@@ -1908,6 +2147,8 @@ function createBaseMetaStats() {
     stickyBombChance: 0,
     volatileBombChance: 0,
     bombValueMultiplier: 1,
+    directionalBombs: false,
+    directionalBombConeTiles: 0,
     chainChance: 0,
     chainCount: 1,
     chainPower: 0.55,
@@ -1919,6 +2160,8 @@ function createBaseMetaStats() {
     droneSpeed: 1,
     droneLifetime: 0.45,
     droneBombChance: 0,
+    crewBeaconUnlocked: false,
+    crewBeaconOverkillCarry: 0,
 
     // Tool progression.
     tool: "pickaxe",
@@ -1931,6 +2174,13 @@ function createBaseMetaStats() {
     laserPierce: 1,
     laserBeams: 1,
     laserChargeRate: 1,
+    laserRicochetCount: 0,
+    laserFirstRicochetMultiplier: 0.65,
+    laserSecondRicochetMultiplier: 0.45,
+    laserSuperPickEchoEvery: 0,
+    laserSuperPickEchoRadiusTiles: 0,
+    laserSuperPickEchoPower: 0,
+    laserSuperPickEchoNoProcs: false,
 
     // Rewards and procedural fortune. Consumers combine `luck` and explicit
     // proc chances; this module does not roll random values itself.
@@ -1948,6 +2198,7 @@ function createBaseMetaStats() {
     relicChance: 0,
     fortuneProcChance: 0,
     motherlodeChance: 0,
+    oreDiversityBonusPerType: 0,
   };
 }
 
@@ -1974,6 +2225,7 @@ const probabilityKeys = [
   "relicChance",
   "fortuneProcChance",
   "motherlodeChance",
+  "focusedOreHardnessReduction",
 ];
 
 function normalizeMetaStats(stats) {
@@ -1985,16 +2237,40 @@ function normalizeMetaStats(stats) {
   stats.digArc = clamp(stats.digArc, Math.PI / 18, Math.PI * 2);
   stats.digSpeed = Math.max(0.1, stats.digSpeed * stats.digSpeedMultiplier);
   stats.pickPower = Math.max(0.1, stats.pickPower * stats.pickPowerMultiplier);
+  stats.maxRunDuration = clamp(stats.maxRunDuration, 6, 45);
   stats.runDuration = clamp(stats.runDuration, 6, stats.maxRunDuration);
+  stats.bonusRunDurationCap = clamp(stats.bonusRunDurationCap, stats.maxRunDuration, 60);
+  stats.discoveryTimeBonus = Math.max(0, stats.discoveryTimeBonus);
   stats.timerDrainReduction = clamp(stats.timerDrainReduction, 0, 0.5);
   stats.timerDrainMultiplier = 1 - stats.timerDrainReduction;
   stats.timeRefundAmount *= stats.timeRefundMultiplier;
   stats.bombPower = Math.max(0, stats.bombPower);
+  stats.directionalBombConeTiles = Math.max(0, Math.floor(stats.directionalBombConeTiles));
+  stats.crewBeaconOverkillCarry = clamp(stats.crewBeaconOverkillCarry, 0, 1);
   stats.chainPower = Math.max(0, stats.chainPower);
   stats.dronePower = Math.max(0, stats.dronePower);
   stats.laserPower = Math.max(0, stats.laserPower);
+  stats.laserRicochetCount = clamp(Math.floor(stats.laserRicochetCount), 0, 2);
+  stats.laserFirstRicochetMultiplier = clamp(stats.laserFirstRicochetMultiplier, 0, 1);
+  stats.laserSecondRicochetMultiplier = clamp(stats.laserSecondRicochetMultiplier, 0, 1);
   stats.oreValueMultiplier = Math.max(0, stats.oreValueMultiplier);
   stats.gemValueMultiplier = Math.max(0, stats.gemValueMultiplier);
+  stats.backupTargetSlots = Math.max(0, Math.floor(stats.backupTargetSlots));
+  stats.oreFocusEscalationDelay = Math.max(0, stats.oreFocusEscalationDelay);
+  stats.oreFocusEscalationBonus = Math.max(0, stats.oreFocusEscalationBonus);
+  stats.deafKnockStoneThreshold = Math.max(0, Math.floor(stats.deafKnockStoneThreshold));
+  stats.deafKnockSenseRadiusMultiplier = Math.max(1, stats.deafKnockSenseRadiusMultiplier);
+  stats.deafKnockMoveSpeedBonus = Math.max(0, stats.deafKnockMoveSpeedBonus);
+  stats.deafKnockMoveDuration = Math.max(0, stats.deafKnockMoveDuration);
+  stats.deafKnockCooldown = Math.max(0, stats.deafKnockCooldown);
+  stats.triangularFixOreMemory = Math.max(0, stats.triangularFixOreMemory);
+  stats.triangularFixGadgetDamageBonus = Math.max(0, stats.triangularFixGadgetDamageBonus);
+  stats.triangularFixRangeBonus = Math.max(0, stats.triangularFixRangeBonus);
+  stats.mineLiftRecordDepthRatio = clamp(stats.mineLiftRecordDepthRatio, 0, 0.9);
+  stats.oreDiversityBonusPerType = Math.max(0, stats.oreDiversityBonusPerType);
+  stats.laserSuperPickEchoEvery = Math.max(0, Math.floor(stats.laserSuperPickEchoEvery));
+  stats.laserSuperPickEchoRadiusTiles = Math.max(0, stats.laserSuperPickEchoRadiusTiles);
+  stats.laserSuperPickEchoPower = clamp(stats.laserSuperPickEchoPower, 0, 1);
 
   for (const key of probabilityKeys) {
     stats[key] = clamp(stats[key], 0, 0.95);
