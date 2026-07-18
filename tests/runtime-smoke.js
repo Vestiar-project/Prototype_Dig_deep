@@ -193,17 +193,34 @@ const radialLayout = api.debugGetUpgradeLayout();
 const radialRoot = radialLayout.positions.core_first_descent;
 assert.equal(radialRoot.x + 31, radialLayout.centerX, "the single root must sit at the horizontal center");
 assert.equal(radialRoot.y + 31, radialLayout.centerY, "the single root must sit at the vertical center");
-const radialNodes = Object.entries(radialLayout.positions).map(([id, point]) => ({ id, x: point.x + 31, y: point.y + 31 }));
-let closestRadialPair = Infinity;
+const radialNodes = Object.entries(radialLayout.positions).map(([id, point]) => ({
+  id,
+  x: point.x,
+  y: point.y,
+  width: radialLayout.sizes[id].width,
+  height: radialLayout.sizes[id].height,
+}));
+let closestRadialBoxGap = Infinity;
+let closestRadialBoxPair = "";
 for (let left = 0; left < radialNodes.length; left += 1) {
   for (let right = left + 1; right < radialNodes.length; right += 1) {
-    closestRadialPair = Math.min(
-      closestRadialPair,
-      Math.hypot(radialNodes[left].x - radialNodes[right].x, radialNodes[left].y - radialNodes[right].y),
-    );
+    const a = radialNodes[left];
+    const b = radialNodes[right];
+    const horizontalGap = Math.abs((a.x + a.width * 0.5) - (b.x + b.width * 0.5))
+      - (a.width + b.width) * 0.5;
+    const verticalGap = Math.abs((a.y + a.height * 0.5) - (b.y + b.height * 0.5))
+      - (a.height + b.height) * 0.5;
+    const boxGap = Math.max(horizontalGap, verticalGap);
+    if (boxGap < closestRadialBoxGap) {
+      closestRadialBoxGap = boxGap;
+      closestRadialBoxPair = `${a.id} <> ${b.id}`;
+    }
   }
 }
-assert.ok(closestRadialPair >= 64, `radial upgrade icons must not overlap (${closestRadialPair})`);
+assert.ok(
+  closestRadialBoxGap >= radialLayout.minimumGap - 0.01,
+  `radial upgrade boxes need ${radialLayout.minimumGap}px of clear space; closest is ${closestRadialBoxGap}px (${closestRadialBoxPair})`,
+);
 
 api.setFocusedOre("copper");
 api.setBestDepth(100);
@@ -222,8 +239,8 @@ assert.ok(targetPair?.primary && targetPair?.backup, "second fix should keep a d
 const cooldownBeforePulse = api.debugSetAttackCooldown(0.42);
 api.triggerSensePulse();
 const pulseSnapshot = api.getSnapshot();
-assert.equal(pulseSnapshot.attackCooldown, cooldownBeforePulse, "Space pulse must not grant a free hit or reset attack cadence");
-assert.ok(pulseSnapshot.manualPulseCooldown > 0, "manual pulse must debounce held Space input");
+assert.equal(pulseSnapshot.attackCooldown, cooldownBeforePulse, "a canvas pulse must not grant a free hit or reset attack cadence");
+assert.ok(pulseSnapshot.manualPulseCooldown > 0, "a canvas pulse must debounce repeated pointer input");
 const targetSearchComparison = api.debugCompareIndexedTargetSearch();
 assert.ok(targetSearchComparison?.same, `indexed target search must match brute force: ${JSON.stringify(targetSearchComparison)}`);
 assert.ok(api.getSnapshot().crewBeacon?.veinId, "crew beacon should mark the primary vein");
@@ -449,17 +466,17 @@ assert.ok(api.debugForceDrones());
 assert.ok(api.debugGetTile(21, 20).hp < rangeFallbackAfterChain, "drones should also fall back without clearing a live beacon");
 api.finishRun();
 
-// Selected complex upgrades and the six game-wide systems expose deterministic
+// Selected complex upgrades and the game-wide systems expose deterministic
 // runtime hooks so their behavior, not merely their stat flags, cannot regress.
 api.setAllUpgrades(true);
 api.setFocusedOre(null);
 api.setCompletedRuns(2);
 api.requestRunStart();
-assert.equal(api.getSnapshot().mode, "sector", "sector choice should appear after the onboarding runs");
+assert.equal(api.getSnapshot().mode, "run", "starting a shift must skip the removed three-sector choice");
+assert.match(api.getSnapshot().sector.id, /^random_strata-/, "normal shifts must roll hidden geology from their seed");
 api.startRun({ seed: "deaf-knock-semantics", sectorId: "ore_ridge" });
 snapshot = api.getSnapshot();
 assert.equal(snapshot.sector.id, "ore_ridge");
-assert.deepEqual(snapshot.availableSectors, ["stable_strata", "cavern_karst", "ore_ridge"]);
 assert.equal(api.debugGetMicroEvents().length, 5);
 
 // Deaf Knock needs eight consecutive main-tool rock breaks at max level. A
@@ -589,37 +606,66 @@ assert.doesNotMatch(reportDetailsHtml, /drone:/);
 assert.ok(Object.keys(snapshot.oreRecords).length > 0, "journal records should persist a mined ore sample");
 
 // Every micro-event gets a natural proximity trigger or an explicit semantic
-// assertion for its large banner and concrete gameplay result.
-api.setAllUpgrades(true);
+// assertion for its compact top-line timer and concrete gameplay result.
+api.setAllUpgrades(false);
 api.startRun({ seed: "micro-event-semantics", sectorId: "stable_strata" });
 let events = api.debugGetMicroEvents();
 assert.equal(events.length, 5);
 const fragile = events.find((event) => event.type === "fragile_cavity");
+const priorityChest = events.find((event) => event.type === "ancient_container");
 assert.ok(fragile);
+assert.ok(priorityChest);
+const chestApproachDirection = priorityChest.tx < 120 ? 1 : -1;
+const chestApproachTx = priorityChest.tx + chestApproachDirection * 2;
+api.debugSetPlayerTile(chestApproachTx, priorityChest.ty);
+placeOre(chestApproachTx + chestApproachDirection, priorityChest.ty, "copper", "chest-priority-decoy", 1_000_000);
+api.stepRun(0.01);
+snapshot = api.getSnapshot();
+assert.equal(snapshot.target?.kind, "micro_event", "a chest entering the scanner must override ordinary ore targets");
+assert.deepEqual([snapshot.target.tx, snapshot.target.ty], [priorityChest.tx, priorityChest.ty]);
 api.debugSetPlayerTile(fragile.tx, fragile.ty);
 api.stepRun(0.2);
 snapshot = api.getSnapshot();
 assert.equal(snapshot.metrics.microEvents.fragile_cavity, 1, "entering the bright event contour must trigger it naturally");
 assert.equal(snapshot.activeMicroEvent.type, "fragile_cavity");
-assert.match(elementFor("#microEventTitle").textContent, /СРАБОТАЛО/);
-assert.ok(elementFor("#microEventBanner").classList.contains("is-triggered"));
+assert.match(elementFor("#microEventTitle").textContent, /МЯГКАЯ ПОРОДА/);
+assert.equal(elementFor("#microEventTimer").textContent, "5,0 С");
+assert.ok(!elementFor("#microEventBanner").classList.contains("hidden"));
+assert.ok(!elementFor("#microEventBanner").classList.contains("is-triggered"));
+assert.ok(!elementFor("#microEventBanner").classList.contains("is-preview"));
+assert.ok(snapshot.eventSoftRockRemaining > 4.7, "fragile cavity must soften rock globally for five seconds");
 
 assert.equal(api.debugTriggerMicroEvent("gas_pocket"), true);
-assert.match(elementFor("#microEventText").textContent, /тремя волнами/);
+assert.ok(api.getSnapshot().eventDigBoostRemaining > 4.9, "gas pocket must grant a five-second dig-speed window");
+assert.match(elementFor("#microEventTitle").textContent, /УСКОРЕНИЕ КОПКИ \+50%/);
 assert.equal(api.debugTriggerMicroEvent("rich_lens"), true);
 assert.ok(api.getSnapshot().eventYieldBoostRemaining > 4.9, "rich lens must visibly grant a five-second yield window");
+assert.match(elementFor("#microEventTitle").textContent, /ВЫХОД РУДЫ ×1,5/);
 const beforeContainer = api.getSnapshot();
 assert.equal(api.debugTriggerMicroEvent("ancient_container"), true);
 snapshot = api.getSnapshot();
-assert.ok(snapshot.runOre >= beforeContainer.runOre + 3, "the ancient container must add an obvious ore reward");
+assert.ok(snapshot.runOre >= beforeContainer.runOre + 1, "the ancient container must add its mixed depth-scaled ore reward");
 assert.ok(snapshot.timeLeft >= beforeContainer.timeLeft + 0.49, "the ancient container must add half a second");
+assert.match(elementFor("#microEventTitle").textContent, /^СУНДУК ·/);
+assert.equal(elementFor("#microEventTimer").textContent, "2,2 С");
 assert.equal(api.debugTriggerMicroEvent("underground_flow"), true);
 snapshot = api.getSnapshot();
-assert.ok(snapshot.eventMoveBoostRemaining > 3.9, "the underground flow must grant four seconds of movement boost");
-assert.match(elementFor("#microEventText").textContent, /\+35%/);
+assert.ok(snapshot.eventMoveBoostRemaining > 4.9, "the underground flow must grant five seconds of movement boost");
+assert.match(elementFor("#microEventTitle").textContent, /СКОРОСТЬ ДВИЖЕНИЯ \+35%/);
+assert.equal(elementFor("#microEventTimer").textContent, "5,0 С");
 assert.equal(snapshot.metrics.eventCount, 5);
 assert.equal(api.debugGetMicroEvents().length, 0, "all five events must remain one-shot");
+api.stepRun(1.05);
+assert.match(elementFor("#microEventTimer").textContent, /^4,[0-9] С$/, "the top-line timer must visibly count down with the active effect");
+api.stepRun(4.05);
+snapshot = api.getSnapshot();
+assert.equal(snapshot.eventSoftRockRemaining, 0, "short event buffs must expire after their five-second window");
+assert.equal(snapshot.eventDigBoostRemaining, 0);
+assert.equal(snapshot.eventYieldBoostRemaining, 0);
+assert.equal(snapshot.eventMoveBoostRemaining, 0);
+assert.ok(elementFor("#microEventBanner").classList.contains("hidden"), "the event line must disappear when its countdown expires");
 api.finishRun();
+assert.ok(elementFor("#microEventBanner").classList.contains("hidden"), "event notices must not leak onto the result screen");
 
 const balanceReport = api.runBalanceBench();
 assert.equal(balanceReport.rows.length, 3);
@@ -676,8 +722,9 @@ console.log(JSON.stringify({
     "deaf-knock",
     "super-pick-echo",
     "triangular-fix",
-    "sector-choice",
-    "micro-events",
+    "random-geology-without-sector-choice",
+    "short-global-micro-events",
+    "priority-depth-scaled-chest",
     "run-diagnostics",
     "geological-journal",
     "local-balance-bench",
