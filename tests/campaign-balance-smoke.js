@@ -28,7 +28,7 @@ function simulateCampaign(seed, maxRuns = 360) {
   let runs = 0;
 
   for (let run = 1; run <= maxRuns; run += 1) {
-    api.startRun({ seed: `campaign-${seed}-${run}`, sectorId: "stable_strata" });
+    api.startRun({ seed: `campaign-${seed}-${run}` });
     api.stepRun(61);
     let snapshot = api.getSnapshot();
     const report = snapshot.lastRunReport;
@@ -76,7 +76,10 @@ for (const campaign of campaigns) {
   assert.ok(campaign.firstOreMinutes.coal <= 0.4, "starter coal must arrive in the first two shifts");
   assert.ok(campaign.firstOreMinutes.iron <= 15, "iron must enter the economy during the opening phase");
   assert.ok(campaign.milestoneMinutes.focus >= campaign.firstOreMinutes.silver, "ore focus must unlock only after T5 ore appears");
-  assert.ok(campaign.milestoneMinutes.focus >= campaign.elapsedMinutes * 0.3, "ore focus should sit beyond the opening 30% of progression");
+  assert.ok(
+    campaign.milestoneMinutes.focus >= campaign.elapsedMinutes * 0.3,
+    `ore focus should sit beyond the opening 30% of progression: ${JSON.stringify(campaign)}`,
+  );
   assert.equal(campaign.completed, true, `campaign ${campaign.seed} must be completable`);
   // This is an optimized bot with only six seconds of surface reading and
   // purchasing per shift; 50+ simulated minutes maps to roughly 1–2 hours for
