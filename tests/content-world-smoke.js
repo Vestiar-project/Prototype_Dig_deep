@@ -23,10 +23,32 @@ for (const definition of UPGRADE_DEFS) {
   }
 }
 
+const forbiddenUpgradeCopy = [
+  /\bуз(?:ел|ла|ле|лом|лы|лов|лам|лами|лах)\b/iu,
+  /\bобъедин(?:яет|яют|ён|ена|ено|ены|еными)\b/iu,
+  /\bпрежн(?:ий|яя|ее|ие|его|ей|их|им|ими|юю)\b/iu,
+  /\b(?:раньше|ранее)\b/iu,
+  /\b(?:техническ|балансировочн|рефакторинг|переработк)\w*/iu,
+  /\bзаменя(?:ет|ют)\s+(?:несколько|стар\w*)\b/iu,
+  /\bстар\w*\s+(?:верси\w*|перк\w*|улучшени\w*|узл\w*)\b/iu,
+];
+for (const definition of UPGRADE_DEFS) {
+  const copy = `${definition.name || ""} ${definition.description || ""}`;
+  for (const pattern of forbiddenUpgradeCopy) {
+    assert.doesNotMatch(
+      copy,
+      pattern,
+      `${definition.id} must use player-facing copy instead of implementation history`,
+    );
+  }
+}
+
 const fullLevels = Object.fromEntries(UPGRADE_DEFS.map((definition) => [definition.id, definition.maxLevel]));
 const fullStats = calculateMetaStats(fullLevels);
 assert.equal(fullStats.runDuration, 45);
 assert.equal(fullStats.bonusRunDurationCap, 60);
+const oreFocus = UPGRADE_DEFS.find((definition) => definition.id === "sense_ore_focus");
+assert.equal(oreFocus?.requiresOreDiscovery, "amethyst", "ore focus must wait for a post-T5 sample");
 
 const timerNodes = UPGRADE_DEFS.filter((definition) => definition.category === "time");
 assert.deepEqual(
@@ -64,11 +86,27 @@ for (const id of removedDuplicateIds) {
 const playerFacingSource = ["index.html", path.join("js", "game.js")]
   .map((file) => fs.readFileSync(path.join(root, file), "utf8"))
   .join("\n");
+const gameSource = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
+const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const stylesSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 assert.doesNotMatch(
   playerFacingSource,
   /Стаж экспедиции/i,
   "expedition tenure must not remain in player-facing UI or campaign logic",
 );
+const spaceGuard = gameSource.match(/if\s*\(event\.code\s*===\s*["']Space["']\)\s*\{([\s\S]*?)\n\s*\}/);
+assert.ok(spaceGuard, "Space must be explicitly neutralized even when a button owns focus");
+assert.match(spaceGuard[1], /event\.preventDefault\(\)/);
+assert.match(spaceGuard[1], /return/);
+assert.doesNotMatch(spaceGuard[1], /(?:triggerSensePulse|requestRunStart|startRun)/, "Space must not trigger any game action");
+assert.doesNotMatch(playerFacingSource, /(?:Пробел|<kbd>\s*Space\s*<\/kbd>)/iu, "Space must not be taught or shown");
+assert.doesNotMatch(indexSource, /id=["']sectorScreen["']/i, "the removed sector picker must not return");
+assert.doesNotMatch(playerFacingSource, /(?:выбери сектор|сравнение секторов|симуляций на сектор)/iu, "random geology must not be presented as a sector choice");
+assert.match(indexSource, /id=["']microEventTitle["']/, "active events need one readable top-line label");
+assert.match(indexSource, /id=["']microEventTimer["']/, "active events need a numeric top-line countdown");
+assert.doesNotMatch(indexSource, /microEvent(?:Icon|Text|Progress)/, "the event line must not grow back into an icon, copy card, or progress bar");
+assert.doesNotMatch(stylesSource, /micro-event-banner__(?:icon|copy|meter)/, "removed event-card chrome must stay removed");
+assert.doesNotMatch(gameSource, /events\.push\(active\)/, "consumed events must not keep a local active glow after triggering");
 
 const routeCalibrationWorld = new MineWorld(ORE_TYPES, "route-calibration-probe");
 let focusedRouteTile = null;
