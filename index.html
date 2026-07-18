@@ -126,31 +126,17 @@
         </div>
       </aside>
 
-      <aside
+      <div
         id="microEventBanner"
         class="micro-event-banner hidden"
         role="status"
         aria-live="polite"
-        aria-atomic="true"
-        aria-labelledby="microEventTitle"
+        aria-atomic="false"
+        aria-label="Активный эффект события"
       >
-        <span id="microEventIcon" class="micro-event-banner__icon" aria-hidden="true">⚠</span>
-        <div class="micro-event-banner__copy">
-          <span class="ui-kicker">ГЕОЛОГИЧЕСКОЕ СОБЫТИЕ</span>
-          <strong id="microEventTitle">ХРУПКИЙ ПЛАСТ</strong>
-          <small id="microEventText">Плотность породы −35% · осталось 5 сек.</small>
-        </div>
-        <div
-          class="micro-event-banner__meter"
-          role="progressbar"
-          aria-label="Оставшееся время геологического события"
-          aria-valuemin="0"
-          aria-valuemax="5"
-          aria-valuenow="5"
-        >
-          <i id="microEventProgress"></i>
-        </div>
-      </aside>
+        <span id="microEventTitle" class="micro-event-banner__title">УСКОРЕНИЕ КОПКИ +50%</span>
+        <strong id="microEventTimer" class="micro-event-banner__timer" aria-hidden="true">5,0 С</strong>
+      </div>
 
       <aside id="fieldGuide" class="field-guide" aria-label="Подсказки и легенда">
         <button
@@ -179,7 +165,6 @@
             <li><span class="legend-swatch swatch--star"></span><span>Звёздное ядро</span><b>T10</b></li>
           </ul>
           <div class="key-hints">
-            <span><kbd>Space</kbd> импульс чутья</span>
             <span><kbd>Esc</kbd> пауза</span>
             <span><kbd>?</kbd> памятка</span>
           </div>
@@ -241,79 +226,6 @@
             <span id="campaignStatus" title="Прогресс основной кампании">РАКЕТА · 0%</span>
           </footer>
         </div>
-      </section>
-
-      <section
-        id="sectorScreen"
-        class="overlay sector-select-screen hidden"
-        aria-labelledby="sectorSelectTitle"
-        aria-describedby="sectorSelectDescription"
-        aria-modal="true"
-        role="dialog"
-      >
-        <div class="overlay-backdrop" aria-hidden="true"></div>
-        <form class="sector-select panel-frame">
-          <header class="feature-header">
-            <div>
-              <p class="eyebrow"><span></span> РАЗВЕДКА ПЕРЕД СМЕНОЙ</p>
-              <h2 id="sectorSelectTitle">ВЫБЕРИТЕ ГЕОЛОГИЧЕСКИЙ СЕКТОР</h2>
-              <p id="sectorSelectDescription">Прогноз показывает состав пласта, риск и ожидаемую добычу. Карта сектора не меняется до конца смены.</p>
-            </div>
-            <button id="sectorSkip" class="icon-btn" type="button" aria-label="Пропустить выбор сектора">
-              <span aria-hidden="true">×</span>
-            </button>
-          </header>
-
-          <fieldset id="sectorChoices" class="sector-options">
-            <legend class="sr-only">Доступные геологические секторы</legend>
-
-            <input class="sector-radio sr-only" type="radio" name="geology-sector" id="sectorStable" value="stable" checked />
-            <label class="sector-card" for="sectorStable">
-              <span class="sector-card__map sector-card__map--stable" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-              <span class="sector-card__heading"><small>СЕКТОР A-17</small><strong>СТАБИЛЬНЫЙ ПЛАСТ</strong></span>
-              <span class="sector-card__tags"><b>БАЛАНС</b><em>НИЗКИЙ РИСК</em></span>
-              <span class="sector-card__forecast">
-                <span><small>ПЛОТНОСТЬ</small><b>НОРМА</b></span>
-                <span><small>РЕДКАЯ РУДА</small><b>×1.00</b></span>
-                <span><small>ПОЛОСТИ</small><b>СРЕДНЕ</b></span>
-              </span>
-              <span class="sector-card__note">Надёжная разведка без модификаторов.</span>
-            </label>
-
-            <input class="sector-radio sr-only" type="radio" name="geology-sector" id="sectorKarst" value="karst" />
-            <label class="sector-card" for="sectorKarst">
-              <span class="sector-card__map sector-card__map--karst" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-              <span class="sector-card__heading"><small>СЕКТОР K-04</small><strong>КАРСТОВЫЙ РАЗЛОМ</strong></span>
-              <span class="sector-card__tags"><b>СКОРОСТЬ</b><em>СРЕДНИЙ РИСК</em></span>
-              <span class="sector-card__forecast">
-                <span><small>ПЛОТНОСТЬ</small><b>−18%</b></span>
-                <span><small>РЕДКАЯ РУДА</small><b>×1.12</b></span>
-                <span><small>ПОЛОСТИ</small><b>МНОГО</b></span>
-              </span>
-              <span class="sector-card__note">Быстрые маршруты, но жилы сильнее разбросаны.</span>
-            </label>
-
-            <input class="sector-radio sr-only" type="radio" name="geology-sector" id="sectorMagma" value="magma" />
-            <label class="sector-card" for="sectorMagma">
-              <span class="sector-card__map sector-card__map--magma" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-              <span class="sector-card__heading"><small>СЕКТОР M-91</small><strong>МАГМАТИЧЕСКАЯ ЛИНЗА</strong></span>
-              <span class="sector-card__tags"><b>ЦЕННОСТЬ</b><em>ВЫСОКИЙ РИСК</em></span>
-              <span class="sector-card__forecast">
-                <span><small>ПЛОТНОСТЬ</small><b>+32%</b></span>
-                <span><small>РЕДКАЯ РУДА</small><b>×1.35</b></span>
-                <span><small>ПОЛОСТИ</small><b>МАЛО</b></span>
-              </span>
-              <span class="sector-card__note">Тяжёлый пласт с богатыми компактными жилами.</span>
-            </label>
-          </fieldset>
-
-          <footer class="sector-select__footer">
-            <p><span aria-hidden="true">◆</span> Прогноз обновится после завершения следующей смены.</p>
-            <button id="sectorConfirm" class="btn btn--primary" type="submit">
-              ПОДТВЕРДИТЬ И КОПАТЬ <span aria-hidden="true">▶</span>
-            </button>
-          </footer>
-        </form>
       </section>
 
       <section
@@ -678,7 +590,7 @@
               <option value="60">60% · продвинутые инструменты</option>
               <option value="90">90% · предфинальная сборка</option>
             </select></label>
-            <label for="balanceRuns"><span>СИМУЛЯЦИЙ НА СЕКТОР</span><input id="balanceRuns" name="simulations" type="number" min="1" max="30" step="1" value="12" inputmode="numeric" /></label>
+            <label for="balanceRuns"><span>ЗАБЕГОВ В СЕРИИ</span><input id="balanceRuns" name="simulations" type="number" min="1" max="30" step="1" value="12" inputmode="numeric" /></label>
             <div class="balance-lab__buttons">
               <button id="runBalance" class="btn btn--primary" type="submit"><span aria-hidden="true">▶</span> ЗАПУСТИТЬ</button>
               <button id="exportBalance" class="btn btn--secondary" type="button" disabled><span aria-hidden="true">⇩</span> ЭКСПОРТ JSON</button>
@@ -686,7 +598,7 @@
           </form>
 
           <section id="balanceResults" class="balance-results" aria-labelledby="balanceResultsTitle" aria-live="polite">
-            <header><div><span class="status-dot"></span><strong id="balanceResultsTitle">ПОСЛЕДНИЙ ПРОГОН</strong></div><small>seed: deep-shift-001 · 12 симуляций на сектор</small></header>
+            <header><div><span class="status-dot"></span><strong id="balanceResultsTitle">ПОСЛЕДНИЙ ПРОГОН</strong></div><small>seed: deep-shift-001 · три случайные серии</small></header>
             <div class="balance-result-cards">
               <article><small>МЕДИАНА ПРОХОЖДЕНИЯ</small><strong>84 мин.</strong><span class="is-good">в коридоре 60–120</span></article>
               <article><small>РУДА / СМЕНУ P50</small><strong>246</strong><span>разброс 181–329</span></article>

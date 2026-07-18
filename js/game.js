@@ -378,6 +378,7 @@ const upgradeById = new Map(UPGRADE_DEFS.map((definition) => [definition.id, def
 const UPGRADE_LANES = Object.freeze(['time', 'dig', 'tools', 'power', 'fortune', 'gadgets', 'sense']);
 const UPGRADE_NODE_WIDTH = 62;
 const UPGRADE_NODE_HEIGHT = 62;
+const UPGRADE_NODE_GAP = 14;
 const UPGRADE_RING_START = 170;
 const UPGRADE_RING_STEP = 118;
 const UPGRADE_MAP_PADDING = 270;
@@ -492,10 +493,6 @@ const ui = {
   tutorialClose: $('#tutorialClose'),
   tutorialNext: $('#tutorialNext'),
   replayTutorial: $('#replayTutorial'),
-  sectorScreen: $('#sectorScreen'),
-  sectorChoices: $('#sectorChoices'),
-  sectorSkip: $('#sectorSkip'),
-  sectorConfirm: $('#sectorConfirm'),
   reportHighlights: $('#reportHighlights'),
   reportDetails: $('#reportDetails'),
   reportPanel: $('#reportPanel'),
@@ -515,10 +512,8 @@ const ui = {
   balanceResults: $('#balanceResults'),
   closeBalance: $('#closeBalance'),
   microEventBanner: $('#microEventBanner'),
-  microEventIcon: $('#microEventIcon'),
   microEventTitle: $('#microEventTitle'),
-  microEventText: $('#microEventText'),
-  microEventProgress: $('#microEventProgress'),
+  microEventTimer: $('#microEventTimer'),
   utilityNav: $('#utilityNav'),
 };
 
@@ -579,10 +574,7 @@ const state = {
   crewBeacon: null,
   focusEscalationActive: false,
   metrics: createRunMetrics(),
-  sectorChoices: [],
-  selectedSectorId: null,
   currentSector: null,
-  pendingRunSeed: 0,
   dryRockBlocks: 0,
   deafKnockCooldown: 0,
   deafKnockBoostRemaining: 0,
@@ -594,13 +586,14 @@ const state = {
   activeMicroEvent: null,
   eventYieldBoostRemaining: 0,
   eventMoveBoostRemaining: 0,
+  eventDigBoostRemaining: 0,
+  eventSoftRockRemaining: 0,
   eventBannerTimer: 0,
   balanceReport: null,
   tutorialQueue: [],
   activeTutorialId: null,
   journalFilter: 'all',
   lastFocusedElement: null,
-  previewMicroEventId: null,
 };
 
 class SoundEngine {
@@ -745,13 +738,7 @@ const ONBOARDING_LESSONS = Object.freeze([
     id: 'onboarding_v2_shift',
     title: 'КОРОТКАЯ СМЕНА',
     text: 'Шахтёр работает сам: чует руду, прокладывает к ней ход и добывает груз. Первая смена длится 6 секунд — это нормально, между сменами ты усиливаешь постоянное оборудование.',
-    hint: 'Нажми «НАЧАТЬ ЗАБЕГ», выбери сектор и наблюдай за целью шахтёра.',
-  }),
-  Object.freeze({
-    id: 'onboarding_v2_pulse',
-    title: 'ИМПУЛЬС ЧУТЬЯ',
-    text: 'Пробел или щелчок по шахте немедленно обновляет поиск цели. Он не ускоряет время и не даёт бесплатных ударов.',
-    hint: 'Используй импульс, если хочешь сразу пересканировать окружение.',
+    hint: 'Нажми «НАЧАТЬ ЗАБЕГ» и наблюдай: форма и состав пластов определятся автоматически.',
   }),
   Object.freeze({
     id: 'onboarding_v2_cargo',
@@ -787,7 +774,6 @@ function clearTutorialCoach() {
 function trapOverlayFocus(event) {
   if (event.key !== 'Tab') return false;
   const modal = ({
-    sector: ui.sectorScreen,
     journal: ui.journalScreen,
     balance: ui.balanceScreen,
     upgrades: ui.upgradeScreen,
@@ -830,76 +816,15 @@ function getRunSeed() {
   return (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
 }
 
-function getAvailableSectorChoices(seed = getRunSeed()) {
-  const choices = typeof worldApi.getSectorChoices === 'function'
-    ? worldApi.getSectorChoices(seed)
-    : typeof MineWorld.getSectorChoices === 'function'
-      ? MineWorld.getSectorChoices(seed)
-      : [];
-  return Array.isArray(choices) ? choices.slice(0, 3) : [];
-}
-
-function renderSectorChoices() {
-  if (!ui.sectorChoices) return;
-  const fragment = document.createDocumentFragment();
-  const legend = document.createElement('legend');
-  legend.className = 'sr-only';
-  legend.textContent = 'Доступные геологические секторы';
-  fragment.append(legend);
-  for (const sector of state.sectorChoices) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = `sector-card${sector.id === save.preferredSectorId ? ' is-preferred' : ''}${sector.id === state.selectedSectorId ? ' is-selected' : ''}`;
-    button.dataset.sectorId = sector.id;
-    button.setAttribute('aria-pressed', String(sector.id === state.selectedSectorId));
-    button.style.setProperty('--sector-color', sector.color || '#68e0c1');
-    const forecast = (sector.forecast || []).slice(0, 3).map((line) => {
-      const [label, ...value] = String(line).split(':');
-      return `<span><small>${label}</small><b>${value.join(':').trim() || '—'}</b></span>`;
-    }).join('');
-    const mapClass = sector.id === 'cavern_karst' ? 'sector-card__map--karst' : sector.id === 'ore_ridge' ? 'sector-card__map--magma' : 'sector-card__map--stable';
-    button.innerHTML = `
-      <span class="sector-card__map ${mapClass}" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-      <span class="sector-card__heading"><small>${sector.icon || '◆'} ГЕОПРОГНОЗ</small><strong>${sector.label || sector.id}</strong></span>
-      <span class="sector-card__tags"><b>${sector.ratings?.abundance || 'обычное'}</b><em>${sector.ratings?.hardness || 'обычная'}</em></span>
-      <span class="sector-card__forecast">${forecast}</span>
-      <span class="sector-card__note">${sector.description || ''}${sector.id === save.preferredSectorId ? ' · Прошлый выбор.' : ''}</span>`;
-    fragment.append(button);
-  }
-  ui.sectorChoices.replaceChildren(fragment);
-}
-
 function requestRunStart() {
   const seed = getRunSeed();
-  const choices = getAvailableSectorChoices(seed);
-  if (save.runs < 2 || choices.length < 3 || !ui.sectorScreen || !ui.sectorChoices) {
-    startRun({ seed, sectorId: choices[0]?.id || 'stable_strata' });
-    return;
-  }
-  state.pendingRunSeed = seed;
-  state.sectorChoices = choices;
-  state.selectedSectorId = choices.some((sector) => sector.id === save.preferredSectorId)
-    ? save.preferredSectorId
-    : choices[0].id;
-  state.returnMode = state.mode === 'result' ? 'result' : 'title';
-  state.mode = 'sector';
-  state.lastFocusedElement = document.activeElement || null;
-  hideAllScreens();
-  renderSectorChoices();
-  ui.sectorScreen.classList.remove('hidden');
-  updateUtilityNavState();
-  requestAnimationFrame(() => ui.sectorChoices?.querySelector?.('[aria-pressed="true"]')?.focus?.({ preventScroll: true }));
-  showTutorial(
-    'sector_choice',
-    'ГЕОЛОГИЧЕСКИЙ ПРОГНОЗ',
-    'Перед сменой выбирай один из трёх участков. У каждого заметно отличаются пещеры, твёрдость и богатство жил.',
-    'Карточки всегда показывают все плюсы и минусы — скрытых штрафов нет.',
-  );
+  startRun({ seed });
 }
 
 function newWorld(seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0, options = {}) {
   state.seed = seed;
-  state.world = new MineWorld(ORE_TYPES, seed, { sectorId: options.sectorId || 'stable_strata' });
+  const worldOptions = options.sectorId ? { sectorId: options.sectorId } : {};
+  state.world = new MineWorld(ORE_TYPES, seed, worldOptions);
   state.currentSector = typeof state.world.getSectorInfo === 'function'
     ? state.world.getSectorInfo()
     : null;
@@ -953,9 +878,8 @@ function startRun(options = {}) {
   stats = normalizeStats(calculateMetaStats(save.levels));
   newWorld(runOptions.seed ?? getRunSeed(), {
     useLift: true,
-    sectorId: runOptions.sectorId || save.preferredSectorId || 'stable_strata',
+    sectorId: runOptions.sectorId || null,
   });
-  save.preferredSectorId = state.currentSector?.id || runOptions.sectorId || 'stable_strata';
   persistSave();
   Object.assign(state, {
     mode: 'run',
@@ -993,7 +917,6 @@ function startRun(options = {}) {
     crewBeacon: null,
     focusEscalationActive: false,
     metrics: createRunMetrics(),
-    selectedSectorId: state.currentSector?.id || runOptions.sectorId || 'stable_strata',
     dryRockBlocks: 0,
     deafKnockCooldown: 0,
     deafKnockBoostRemaining: 0,
@@ -1005,8 +928,9 @@ function startRun(options = {}) {
     activeMicroEvent: null,
     eventYieldBoostRemaining: 0,
     eventMoveBoostRemaining: 0,
+    eventDigBoostRemaining: 0,
+    eventSoftRockRemaining: 0,
     eventBannerTimer: 0,
-    previewMicroEventId: null,
   });
   if (state.liftDepth > 1) state.metrics.liftStarts = 1;
   state.particles.length = 0;
@@ -1018,13 +942,12 @@ function startRun(options = {}) {
   ui.runHud?.classList.remove('hidden');
   $('#fieldGuide')?.classList.remove('hidden');
   updateHud();
-  const sectorLabel = state.currentSector?.label ? ` · ${state.currentSector.label.toUpperCase()}` : '';
-  toast(state.liftDepth > 1 ? `ЛИФТ: СТАРТ С ${Math.floor(state.liftDepth)} М${sectorLabel}` : `ЧУТЬЁ АКТИВНО — ИЩЕМ ЖИЛУ${sectorLabel}`, 'info');
+  toast(state.liftDepth > 1 ? `ЛИФТ: СТАРТ С ${Math.floor(state.liftDepth)} М` : 'ЧУТЬЁ АКТИВНО — ИЩЕМ ЖИЛУ', 'info');
   showTutorial(
     'first_run',
     'СМЕНА НАЧАЛАСЬ',
     'Шахтёр работает сам: чутьё выбирает цель, затем он идёт к ней и копает. Забег короткий — добыча остаётся навсегда.',
-    'Клик по шахте или пробел немедленно обновляет импульс поиска.',
+    'Чутьё само обновляет цель: вмешиваться в поиск не требуется.',
   );
   sound.tone(145, 0.16, 'triangle', 0.04, 180);
 }
@@ -1070,8 +993,8 @@ function buildRunReport(catalog, haul, activeRunSeconds) {
   const report = {
     seed: state.seed,
     run: save.runs + 1,
-    sectorId: state.currentSector?.id || state.selectedSectorId || 'stable_strata',
-    sectorLabel: state.currentSector?.label || 'Стабильные пласты',
+    sectorId: state.currentSector?.id || 'random_strata',
+    sectorLabel: state.currentSector?.label || 'Случайные пласты',
     haul: haulCount,
     rawHaul: catalog.rawCount,
     catalogBonus: catalog.bonusCount,
@@ -1161,6 +1084,7 @@ function finishRun() {
   state.mode = 'result';
   updateUtilityNavState();
   ui.runHud?.classList.add('hidden');
+  ui.microEventBanner?.classList.add('hidden');
   updateFocusHud();
   const activeRunSeconds = clamp(state.activeWallElapsed, 0, getBonusRunCap());
   const catalog = applyCatalogBonus(state.oreCounts);
@@ -1276,7 +1200,6 @@ function hideAllScreens() {
   ui.resultScreen?.classList.add('hidden');
   ui.upgradeScreen?.classList.add('hidden');
   ui.endingScreen?.classList.add('hidden');
-  ui.sectorScreen?.classList.add('hidden');
   ui.journalScreen?.classList.add('hidden');
   ui.balanceScreen?.classList.add('hidden');
 }
@@ -1504,9 +1427,9 @@ function validateProfileLevels(levels) {
   });
 }
 
-function estimateBalanceRun(seed, profilePercent, sectorId, preparedStats = null) {
+function estimateBalanceRun(seed, profilePercent, preparedStats = null) {
   const simulatedStats = preparedStats || normalizeStats(calculateMetaStats(profileLevels(profilePercent)));
-  const world = new MineWorld(ORE_TYPES, seed, { sectorId });
+  const world = new MineWorld(ORE_TYPES, seed);
   const spawn = world.getSpawn();
   const sector = typeof world.getSector === 'function' ? world.getSector() : null;
   const targets = [];
@@ -1716,18 +1639,20 @@ function runBalanceBench() {
   const levels = profileLevels(profile);
   const preparedStats = normalizeStats(calculateMetaStats(levels));
   const invalidRequirements = validateProfileLevels(levels);
-  const sectorChoices = getAvailableSectorChoices(baseSeed);
-  const sectorIds = sectorChoices.map((sector) => sector.id);
-  const sectors = sectorIds.length ? sectorIds : ['stable_strata'];
-  const rows = sectors.map((sectorId) => {
+  const batches = [
+    { id: 'random-a', label: 'Случайная серия A' },
+    { id: 'random-b', label: 'Случайная серия B' },
+    { id: 'random-c', label: 'Случайная серия C' },
+  ];
+  const rows = batches.map((batch, batchIndex) => {
     const samples = [];
     for (let index = 0; index < simulations; index += 1) {
-      samples.push(estimateBalanceRun(`${baseSeed}:${index}`, profile, sectorId, preparedStats));
+      samples.push(estimateBalanceRun(`${baseSeed}:random:${batchIndex}:${index}`, profile, preparedStats));
     }
     const average = (key) => samples.reduce((sum, sample) => sum + sample[key], 0) / samples.length;
     return {
-      sectorId,
-      sectorLabel: sectorChoices.find((sector) => sector.id === sectorId)?.label || sectorId,
+      batchId: batch.id,
+      batchLabel: batch.label,
       averageHaul: Number(average('haul').toFixed(1)),
       averageCargoValue: Number(average('cargoValue').toFixed(1)),
       averageDepth: Number(average('depth').toFixed(1)),
@@ -1762,11 +1687,11 @@ function runBalanceBench() {
     const maxHaul = Math.max(1, ...rows.map((row) => row.averageHaul));
     const safeSeed = escapeHtml(baseSeed);
     ui.balanceResults.innerHTML = `
-      <header><div><span class="status-dot"></span><strong id="balanceResultsTitle">СРАВНЕНИЕ СЕКТОРОВ</strong></div><small>seed: ${safeSeed} · ${simulations} на сектор</small></header>
+      <header><div><span class="status-dot"></span><strong id="balanceResultsTitle">СРАВНЕНИЕ СЛУЧАЙНЫХ СЕРИЙ</strong></div><small>seed: ${safeSeed} · ${simulations} забегов в серии</small></header>
       <div class="balance-result-cards">${rows.map((row) => `
-        <article><small>${escapeHtml(row.sectorLabel.toUpperCase())}</small><strong>${row.averageHaul}</strong><span>кусков · ценность ${formatNumber(row.averageCargoValue)} · ${row.averageDepth} м · ${row.averageBlocks} блок.</span><span>${averageOreBreakdownText(row.averageOreBreakdown)}</span></article>`).join('')}</div>
-      <div class="balance-chart is-sector-comparison" aria-label="Средняя добыча по геологическим секторам">${rows.map((row) => `
-        <span style="--height:${Math.max(12, row.averageHaul / maxHaul * 94)}%"><i>${escapeHtml(row.sectorLabel)}</i><b>${row.averageHaul}</b></span>`).join('')}</div>
+        <article><small>${escapeHtml(row.batchLabel.toUpperCase())}</small><strong>${row.averageHaul}</strong><span>кусков · ценность ${formatNumber(row.averageCargoValue)} · ${row.averageDepth} м · ${row.averageBlocks} блок.</span><span>${averageOreBreakdownText(row.averageOreBreakdown)}</span></article>`).join('')}</div>
+      <div class="balance-chart" aria-label="Средняя добыча в трёх случайных сериях">${rows.map((row) => `
+        <span style="--height:${Math.max(12, row.averageHaul / maxHaul * 94)}%"><i>${escapeHtml(row.batchLabel)}</i><b>${row.averageHaul}</b></span>`).join('')}</div>
       <footer><span><i class="balance-key balance-key--median"></i> ожидаемые куски руды</span><span>профиль ${profile}% · ${escapeHtml(TOOL_NAMES[preparedStats.tool] || preparedStats.tool)} · модель учитывает инструменты, гаджеты и бонусный таймер</span></footer>`;
   }
   ui.exportBalance?.removeAttribute?.('disabled');
@@ -1929,11 +1854,14 @@ function getUpgradeLevel(definition) {
 }
 
 function requirementsMet(definition) {
-  return (definition.requires || []).every((requirement) => {
+  const dependenciesReady = (definition.requires || []).every((requirement) => {
     const id = typeof requirement === 'string' ? requirement : requirement.id;
     const level = typeof requirement === 'string' ? 1 : (requirement.level || 1);
     return (save.levels[id] || 0) >= level;
   });
+  const sampleId = definition.requiresOreDiscovery;
+  const sampleReady = !sampleId || (save.lifetimeOres?.[sampleId] || 0) > 0;
+  return dependenciesReady && sampleReady;
 }
 
 function buyUpgrade(id) {
@@ -1942,7 +1870,7 @@ function buyUpgrade(id) {
   const campaignWasReady = getCampaignProgress().ready;
   const level = getUpgradeLevel(definition);
   if (!requirementsMet(definition)) {
-    toast('СНАЧАЛА ОТКРОЙТЕ ПРЕДЫДУЩИЙ УЗЕЛ', 'warning');
+    toast('УСЛОВИЯ УЛУЧШЕНИЯ ЕЩЁ НЕ ВЫПОЛНЕНЫ', 'warning');
     sound.tone(90, 0.1, 'square', 0.025, -25);
     return;
   }
@@ -1991,12 +1919,17 @@ function categoryLabel(category) {
 }
 
 function requirementNames(definition) {
-  return (definition.requires || []).map((requirement) => {
+  const names = (definition.requires || []).map((requirement) => {
     const id = typeof requirement === 'string' ? requirement : requirement.id;
     const level = typeof requirement === 'string' ? 1 : (requirement.level || 1);
     const parent = UPGRADE_DEFS.find((item) => item.id === id);
     return `${parent?.name || id}${level > 1 ? ` ${level}` : ''}`;
-  }).join(', ');
+  });
+  if (definition.requiresOreDiscovery) {
+    const ore = oreById.get(definition.requiresOreDiscovery);
+    names.push(`образец «${ore?.name || definition.requiresOreDiscovery}»`);
+  }
+  return names.join(', ');
 }
 
 function upgradeIsAvailable(definition) {
@@ -2022,6 +1955,51 @@ function getVisibleUpgradeDefinitions() {
     || upgradeIsAvailable(definition)
     || upgradeIsPreview(definition)
   ));
+}
+
+function separateUpgradeNodeBoxes(positions) {
+  const nodes = UPGRADE_DEFS
+    .map((definition) => ({
+      definition,
+      position: positions.get(definition.id),
+      size: getUpgradeNodeSize(definition),
+      locked: definition.id === 'core_first_descent' || definition.id === CAMPAIGN.finalUpgrade,
+    }))
+    .filter((node) => node.position);
+
+  // The polar slots make the branch silhouette; this short relaxation only
+  // opens the last few pixel-tight contacts between rectangular icon cards.
+  // Moving along the shallower overlap axis preserves each node's radial lobe
+  // much better than increasing every ring and leaving large empty bands.
+  for (let pass = 0; pass < 80; pass += 1) {
+    let adjusted = false;
+    for (let left = 0; left < nodes.length; left += 1) {
+      for (let right = left + 1; right < nodes.length; right += 1) {
+        const a = nodes[left];
+        const b = nodes[right];
+        const deltaX = (b.position.x + b.size.width * 0.5) - (a.position.x + a.size.width * 0.5);
+        const deltaY = (b.position.y + b.size.height * 0.5) - (a.position.y + a.size.height * 0.5);
+        const overlapX = (a.size.width + b.size.width) * 0.5 + UPGRADE_NODE_GAP - Math.abs(deltaX);
+        const overlapY = (a.size.height + b.size.height) * 0.5 + UPGRADE_NODE_GAP - Math.abs(deltaY);
+        if (overlapX <= 0 || overlapY <= 0 || (a.locked && b.locked)) continue;
+
+        const useX = overlapX <= overlapY;
+        const direction = (useX ? deltaX : deltaY) >= 0 ? 1 : -1;
+        const distance = (useX ? overlapX : overlapY) + 0.05;
+        const aShare = a.locked ? 0 : (b.locked ? 1 : 0.5);
+        const bShare = b.locked ? 0 : (a.locked ? 1 : 0.5);
+        if (useX) {
+          a.position.x -= direction * distance * aShare;
+          b.position.x += direction * distance * bShare;
+        } else {
+          a.position.y -= direction * distance * aShare;
+          b.position.y += direction * distance * bShare;
+        }
+        adjusted = true;
+      }
+    }
+    if (!adjusted) break;
+  }
 }
 
 function getUpgradeLayout() {
@@ -2102,6 +2080,7 @@ function getUpgradeLayout() {
     x: centerX - 34,
     y: centerY - finalRadius - 34,
   });
+  separateUpgradeNodeBoxes(positions);
   upgradeLayoutCache = {
     positions,
     depthById,
@@ -3164,7 +3143,8 @@ function attack(aimTarget = state.target) {
   const charged = (stats.chargedHitPower || 0) > 0 && state.attackCount % 8 === 0;
   const chargedBonus = charged ? 1 + stats.chargedHitPower : 1;
   const critical = Math.random() < procChance(stats.critChance, 0.16);
-  const damage = stats.pickPower * streakBonus * densityBonus * oreBonus * rareBonus * chargedBonus * (critical ? stats.critMultiplier : 1);
+  const eventSoftnessBonus = state.eventSoftRockRemaining > 0 && !targetOre ? 1.65 : 1;
+  const damage = stats.pickPower * streakBonus * densityBonus * oreBonus * rareBonus * chargedBonus * (critical ? stats.critMultiplier : 1) * eventSoftnessBonus;
   const aimingAtMainTarget = aimTarget.tx === state.target.tx && aimTarget.ty === state.target.ty;
   const primaryHpBefore = aimingAtMainTarget && aimTile?.oreId ? Math.max(0, aimTile.hp || 0) : 0;
   const primaryOreId = aimingAtMainTarget ? aimTile?.oreId : null;
@@ -3497,21 +3477,36 @@ function chainStrike(x, y, nx, ny) {
   sound.tone(520, 0.12, 'sine', 0.025, 260);
 }
 
-function setMicroEventBanner(event, text, triggered = false) {
-  if (!ui.microEventBanner || !event) return;
-  if (ui.microEventIcon) ui.microEventIcon.textContent = event.icon || '◆';
-  if (ui.microEventTitle) ui.microEventTitle.textContent = triggered
-    ? `${event.label || event.type} · СРАБОТАЛО`
-    : `ОБНАРУЖЕНО · ${event.label || event.type}`;
-  if (ui.microEventText) ui.microEventText.textContent = text || event.description || '';
-  ui.microEventBanner.style.setProperty('--event-color', event.color || '#ffd170');
-  ui.microEventBanner.setAttribute('aria-live', triggered ? 'assertive' : 'polite');
-  ui.microEventBanner.classList.toggle('is-triggered', triggered);
-  ui.microEventBanner.classList.toggle('is-preview', !triggered);
+function microEventIndicatorRemaining(event = state.activeMicroEvent) {
+  if (!event) return 0;
+  if (event.type === 'fragile_cavity') return state.eventSoftRockRemaining;
+  if (event.type === 'gas_pocket') return state.eventDigBoostRemaining;
+  if (event.type === 'rich_lens') return state.eventYieldBoostRemaining;
+  if (event.type === 'underground_flow') return state.eventMoveBoostRemaining;
+  return state.eventBannerTimer;
+}
+
+function formatMicroEventTimer(seconds) {
+  return `${Math.max(0, seconds).toFixed(1).replace('.', ',')} С`;
+}
+
+function updateMicroEventIndicator() {
+  if (!ui.microEventBanner) return;
+  const remaining = microEventIndicatorRemaining();
+  if (state.mode !== 'run' || !state.activeMicroEvent || remaining <= 0) {
+    ui.microEventBanner.classList.add('hidden');
+    if (remaining <= 0) state.activeMicroEvent = null;
+    return;
+  }
+  if (ui.microEventTimer) ui.microEventTimer.textContent = formatMicroEventTimer(remaining);
   ui.microEventBanner.classList.remove('hidden');
-  const meter = ui.microEventProgress?.parentElement;
-  meter?.setAttribute('aria-valuemax', triggered ? '3.2' : '1');
-  meter?.setAttribute('aria-valuenow', triggered ? '3.2' : '1');
+}
+
+function showMicroEventIndicator(event, text) {
+  if (!ui.microEventBanner || !event) return;
+  if (ui.microEventTitle) ui.microEventTitle.textContent = text || event.label || event.type;
+  ui.microEventBanner.style.setProperty('--event-color', event.color || '#ffd170');
+  updateMicroEventIndicator();
 }
 
 function applyMicroEvent(event) {
@@ -3522,87 +3517,84 @@ function applyMicroEvent(event) {
   if (!triggered) return false;
   const x = triggered.x;
   const y = triggered.y;
-  const radius = triggered.radius || triggered.radiusTiles * TILE_SIZE;
-  let effectText = 'Геологическая аномалия изменила участок.';
+  const duration = Math.max(0, Number(triggered.durationSeconds) || 0);
+  let indicatorText = 'УСЛОВИЯ СМЕНЫ ИЗМЕНЕНЫ';
 
   if (triggered.type === 'fragile_cavity') {
-    state.world.damageCircle(x, y, radius * 0.82, stats.pickPower * 8, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'event'));
-    effectText = 'Полость обрушилась и расчистила большой круг породы.';
+    state.eventSoftRockRemaining = Math.max(state.eventSoftRockRemaining, duration || 5);
+    indicatorText = 'МЯГКАЯ ПОРОДА · УРОН ПО ПОРОДЕ +65%';
   } else if (triggered.type === 'gas_pocket') {
-    for (let index = 0; index < 3; index += 1) {
-      const angle = index / 3 * Math.PI * 2 + 0.35;
-      const blastX = x + Math.cos(angle) * radius * 0.32;
-      const blastY = y + Math.sin(angle) * radius * 0.32;
-      state.world.damageCircle(blastX, blastY, radius * 0.55, stats.pickPower * 6.5, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'event'));
-      state.beams.push({ x, y, x2: blastX, y2: blastY, color: triggered.color, life: 0.42, maxLife: 0.42, width: 8 });
-    }
-    effectText = 'Газ вспыхнул тремя волнами и разрушил отмеченную зону.';
+    state.eventDigBoostRemaining = Math.max(state.eventDigBoostRemaining, duration || 5);
+    indicatorText = 'УСКОРЕНИЕ КОПКИ +50%';
   } else if (triggered.type === 'rich_lens') {
-    state.eventYieldBoostRemaining = Math.max(state.eventYieldBoostRemaining, 5);
-    const point = state.world.worldToTile(x, y);
-    for (const ore of ORE_TYPES) revealVein(point.tx, point.ty, ore.id);
-    effectText = 'Богатая линза открыта: выход всей руды ×1,5 на 5 секунд.';
+    state.eventYieldBoostRemaining = Math.max(state.eventYieldBoostRemaining, duration || 5);
+    indicatorText = 'ВЫХОД РУДЫ ×1,5';
   } else if (triggered.type === 'ancient_container') {
-    const tierCap = getHighestUnlockedOreTier();
-    const rewardOre = [...ORE_TYPES]
-      .filter((ore) => (ore.tier || 0) <= tierCap)
-      .sort((left, right) => (right.tier || 0) - (left.tier || 0))[0] || ORE_TYPES[0];
-    const pieces = clamp(3 + Math.floor((triggered.depthTiles || 0) / 22), 3, 8);
-    state.oreCounts[rewardOre.id] = (state.oreCounts[rewardOre.id] || 0) + pieces;
+    const lootEntries = Object.entries(triggered.loot || {})
+      .filter(([oreId, amount]) => oreById.has(oreId) && Number(amount) > 0);
+    let pieces = 0;
+    const labels = [];
+    for (const [oreId, rawAmount] of lootEntries) {
+      const amount = Math.max(1, Math.floor(Number(rawAmount) || 0));
+      const rewardOre = oreById.get(oreId);
+      state.oreCounts[oreId] = (state.oreCounts[oreId] || 0) + amount;
+      state.discoveredOreIds.add(oreId);
+      pieces += amount;
+      labels.push(`${rewardOre.name} ×${amount}`);
+    }
     state.runOre += pieces;
-    state.discoveredOreIds.add(rewardOre.id);
     addBonusTime(0.5, x, y - 38, 'КОНТЕЙНЕР');
-    effectText = `Контейнер вскрыт: ${rewardOre.name} ×${pieces} и +0,5 секунды.`;
+    indicatorText = `СУНДУК · ${labels.join(', ') || 'ПУСТО'}${pieces ? ' · +0,5 С' : ''}`;
   } else if (triggered.type === 'underground_flow') {
-    state.eventMoveBoostRemaining = Math.max(state.eventMoveBoostRemaining, 4);
+    state.eventMoveBoostRemaining = Math.max(state.eventMoveBoostRemaining, duration || 5);
     state.pathWaypoint = null;
     state.pathCooldown = 0;
-    effectText = 'Поток подхватил шахтёра: скорость движения +35% на 4 секунды.';
+    indicatorText = 'СКОРОСТЬ ДВИЖЕНИЯ +35%';
   }
 
   state.metrics.eventCount += 1;
   state.metrics.microEvents[triggered.type] = (state.metrics.microEvents[triggered.type] || 0) + 1;
-  state.activeMicroEvent = { ...triggered, effectLife: 3.2, effectText };
-  state.previewMicroEventId = null;
-  state.eventBannerTimer = 3.2;
+  const bannerDuration = Math.max(2.2, duration);
+  state.activeMicroEvent = { ...triggered, indicatorText };
+  state.eventBannerTimer = bannerDuration;
   if (typeof state.world.consumeMicroEvent === 'function') state.world.consumeMicroEvent(triggered.id);
-  setMicroEventBanner(triggered, effectText, true);
-  state.shocks.push({ x, y, life: 0.9, maxLife: 0.9, tick: Infinity, radius, color: triggered.color });
-  state.floaters.push({ x, y: y - radius * 0.25, text: triggered.label || 'МИКРОСОБЫТИЕ', color: triggered.color, life: 1.8, maxLife: 1.8 });
-  for (let index = 0; index < 34; index += 1) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 70 + Math.random() * 190;
-    state.particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, size: 2 + Math.random() * 5, color: triggered.color, life: 0.8 + Math.random() * 0.6, maxLife: 1.4, gravity: 25, glow: true });
-  }
-  flash(triggered.color || '#ffffff', 0.5);
-  state.shake = Math.max(state.shake, 18);
-  sound.tone(82, 0.34, 'sawtooth', 0.055, 420);
+  showMicroEventIndicator(triggered, indicatorText);
+  sound.tone(180, 0.18, 'triangle', 0.04, 320);
   return true;
+}
+
+function findPriorityChestTarget() {
+  if (!state.player || !state.world || typeof state.world.getMicroEventsNear !== 'function') return null;
+  const point = state.world.worldToTile(state.player.x, state.player.y);
+  const senseTiles = Math.max(1, effectiveSenseRadius() / TILE_SIZE);
+  const chest = state.world.getMicroEventsNear(
+    point.tx,
+    point.ty,
+    senseTiles,
+    { type: 'ancient_container' },
+  ).find((event) => event.distanceTiles <= senseTiles) || null;
+  if (!chest) return null;
+  return {
+    kind: 'micro_event',
+    eventId: chest.id,
+    eventType: chest.type,
+    tx: chest.tx,
+    ty: chest.ty,
+    x: chest.x,
+    y: chest.y,
+    tile: state.world.getTile(chest.tx, chest.ty),
+    distance: distance(state.player.x, state.player.y, chest.x, chest.y),
+    lockRadius: effectiveSenseRadius(),
+  };
 }
 
 function checkMicroEventsAt(x, y, fromBreak = false) {
   if (!state.world || typeof state.world.getMicroEventsNear !== 'function' || !Number.isFinite(x) || !Number.isFinite(y)) return null;
-  if ((state.metrics.eventCount || 0) >= 1) {
-    if (state.eventBannerTimer <= 0) ui.microEventBanner?.classList.add('hidden');
-    return null;
-  }
   const point = state.world.worldToTile(x, y);
   const senseTiles = Math.max(2.5, effectiveSenseRadius() / TILE_SIZE * 0.78);
   const nearby = state.world.getMicroEventsNear(point.tx, point.ty, senseTiles);
   const closest = nearby[0] || null;
-  if (!closest) {
-    if (state.eventBannerTimer <= 0) {
-      state.activeMicroEvent = null;
-      state.previewMicroEventId = null;
-      ui.microEventBanner?.classList.add('hidden');
-    }
-    return null;
-  }
-  if (state.eventBannerTimer <= 0 && state.previewMicroEventId !== closest.id) {
-    state.activeMicroEvent = closest;
-    state.previewMicroEventId = closest.id;
-    setMicroEventBanner(closest, `${closest.description} Войдите в яркий контур, чтобы активировать событие.`, false);
-  }
+  if (!closest) return null;
   const triggerMargin = fromBreak ? 1.15 : 0.2;
   if ((closest.distanceToEdgeTiles || 0) <= triggerMargin) applyMicroEvent(closest);
   return closest;
@@ -3631,6 +3623,8 @@ function updateRun(delta, now = performance.now()) {
   state.deafKnockBoostRemaining = Math.max(0, state.deafKnockBoostRemaining - delta);
   state.eventYieldBoostRemaining = Math.max(0, state.eventYieldBoostRemaining - delta);
   state.eventMoveBoostRemaining = Math.max(0, state.eventMoveBoostRemaining - delta);
+  state.eventDigBoostRemaining = Math.max(0, state.eventDigBoostRemaining - delta);
+  state.eventSoftRockRemaining = Math.max(0, state.eventSoftRockRemaining - delta);
   state.microEventCheckCooldown -= delta;
   state.triangleRefreshCooldown -= delta;
   for (const [key, expires] of state.triangleOreMemory) {
@@ -3657,6 +3651,10 @@ function updateRun(delta, now = performance.now()) {
   if (state.target) {
     const current = state.world.getTile(state.target.tx, state.target.ty);
     const explorationTarget = state.target.kind === 'exploration';
+    const microEventTarget = state.target.kind === 'micro_event';
+    const liveMicroEvent = microEventTarget && typeof state.world.getMicroEvents === 'function'
+      ? state.world.getMicroEvents({ type: state.target.eventType }).find((event) => event.id === state.target.eventId)
+      : null;
     const persistence = 1.05 + Math.min(0.65, (stats.sensePersistence || 0) * 0.05);
     const rememberedUntil = state.triangleOreMemory.get(`${state.target.tx}:${state.target.ty}`) || 0;
     const rememberedDistance = rememberedUntil >= state.elapsed
@@ -3670,11 +3668,12 @@ function updateRun(delta, now = performance.now()) {
         rememberedDistance,
       ) * persistence;
     if (
-      !current
-      || current.kind === 'air'
-      || current.kind === 'bedrock'
-      || (!explorationTarget && !current.oreId)
-      || (!explorationTarget && focusedOre && current.oreId !== focusedOre.id)
+      (microEventTarget && !liveMicroEvent)
+      || (!microEventTarget && !current)
+      || (!microEventTarget && current.kind === 'air')
+      || (!microEventTarget && current.kind === 'bedrock')
+      || (!microEventTarget && !explorationTarget && !current.oreId)
+      || (!microEventTarget && !explorationTarget && focusedOre && current.oreId !== focusedOre.id)
       || distance(state.player.x, state.player.y, state.target.x, state.target.y) > maxTargetDistance
     ) {
       state.target = null;
@@ -3700,7 +3699,10 @@ function updateRun(delta, now = performance.now()) {
 
   if (state.targetCooldown <= 0) {
     const searchRadius = effectiveSenseRadius() * focusedSenseMultiplier(focusedOre);
-    const targets = chooseOreTargets(state.player.x, state.player.y, searchRadius, focusedOre?.id || null);
+    const priorityChest = findPriorityChestTarget();
+    const targets = priorityChest
+      ? { primary: priorityChest, backup: state.target?.kind === 'ore' ? state.target : state.backupTarget }
+      : chooseOreTargets(state.player.x, state.player.y, searchRadius, focusedOre?.id || null);
     if (targets.primary) {
       const previousKey = state.target ? `${state.target.tx}:${state.target.ty}` : '';
       const nextKey = `${targets.primary.tx}:${targets.primary.ty}`;
@@ -3713,8 +3715,10 @@ function updateRun(delta, now = performance.now()) {
         state.pathWaypoint = null;
         state.pathCooldown = 0;
       }
-      state.focusMissElapsed = 0;
-      refreshCrewBeacon(state.target);
+      if (!priorityChest) {
+        state.focusMissElapsed = 0;
+        refreshCrewBeacon(state.target);
+      }
     }
     else if (!state.target || state.target.kind !== 'exploration') {
       state.target = findExplorationTarget(state.player.x, state.player.y, focusedOre?.id || null);
@@ -3812,7 +3816,8 @@ function updateRun(delta, now = performance.now()) {
       const contactTarget = !stats.laserUnlocked ? clearanceTarget(blockedTiles, state.player) : null;
       attack(contactTarget || movementTarget);
       const chargeRate = stats.laserUnlocked ? (stats.laserChargeRate || 1) : 1;
-      state.attackCooldown = 1 / Math.max(0.2, stats.digSpeed * chargeRate * temporalOverclockMultiplier());
+      const eventDigMultiplier = state.eventDigBoostRemaining > 0 ? 1.5 : 1;
+      state.attackCooldown = 1 / Math.max(0.2, stats.digSpeed * chargeRate * temporalOverclockMultiplier() * eventDigMultiplier);
     }
   } else {
     state.player.moving = lerp(state.player.moving, 0, clamp(delta * 5, 0, 1));
@@ -3961,18 +3966,10 @@ function updateEffects(delta) {
     }
   }
   state.shocks = state.shocks.filter((shock) => shock.life > 0);
-  if (state.activeMicroEvent?.effectLife != null) {
-    state.activeMicroEvent.effectLife -= interfaceDelta;
-    if (state.activeMicroEvent.effectLife <= 0 && state.eventBannerTimer <= 0) state.activeMicroEvent = null;
-  }
   if (state.eventBannerTimer > 0) {
     state.eventBannerTimer = Math.max(0, state.eventBannerTimer - interfaceDelta);
-    if (ui.microEventProgress) {
-      ui.microEventProgress.style.transform = `scaleX(${clamp(state.eventBannerTimer / 3.2, 0, 1)})`;
-      ui.microEventProgress.parentElement?.setAttribute('aria-valuenow', state.eventBannerTimer.toFixed(1));
-    }
-    if (state.eventBannerTimer <= 0) ui.microEventBanner?.classList.add('hidden');
   }
+  updateMicroEventIndicator();
   state.shake = Math.max(0, state.shake - delta * 32);
 }
 
@@ -4170,25 +4167,26 @@ function drawTerrainStrata(x, y, tx, ty, kind, palette, openMask) {
 }
 
 function drawVoxelMassTexture(x, y, tx, ty, palette, openMask) {
-  const voxel = 7;
-  for (let microY = 0; microY < 4; microY += 1) {
-    for (let microX = 0; microX < 4; microX += 1) {
+  const voxel = 4;
+  const gridSize = 7;
+  for (let microY = 0; microY < gridSize; microY += 1) {
+    for (let microX = 0; microX < gridSize; microX += 1) {
       if (microX === 0 && (openMask & TERRAIN_OPEN_LEFT)) continue;
-      if (microX === 3 && (openMask & TERRAIN_OPEN_RIGHT)) continue;
+      if (microX === gridSize - 1 && (openMask & TERRAIN_OPEN_RIGHT)) continue;
       if (microY === 0 && (openMask & TERRAIN_OPEN_TOP)) continue;
-      if (microY === 3 && (openMask & TERRAIN_OPEN_BOTTOM)) continue;
-      const globalX = tx * 4 + microX;
-      const globalY = ty * 4 + microY;
-      // Two-by-two world-space clusters cross logical tile borders. This keeps
-      // the collision grid invisible while retaining chunky, earthen voxels.
+      if (microY === gridSize - 1 && (openMask & TERRAIN_OPEN_BOTTOM)) continue;
+      const globalX = tx * gridSize + microX;
+      const globalY = ty * gridSize + microY;
+      // Small clusters cross logical tile borders, hiding the collision grid
+      // while reading as compact pieces of soil instead of full-size blocks.
       const cluster = tileNoise(Math.floor((globalX + 1) / 2), Math.floor((globalY + 1) / 2), 91);
       const detail = tileNoise(globalX, globalY, 97);
-      if (cluster < 0.46 || detail < 0.37) continue;
-      ctx.globalAlpha = 0.15 + cluster * 0.24;
+      if (cluster < 0.42 || detail < 0.4) continue;
+      ctx.globalAlpha = 0.1 + cluster * 0.2;
       ctx.fillStyle = cluster > 0.78 ? palette.light : detail > 0.68 ? palette.side : palette.shadow;
       ctx.fillRect(x + microX * voxel, y + microY * voxel, voxel + 1, voxel + 1);
-      if (detail > 0.88 && microX < 3) {
-        ctx.fillRect(x + microX * voxel + voxel, y + microY * voxel + 3, voxel, 4);
+      if (detail > 0.9 && microX < gridSize - 1) {
+        ctx.fillRect(x + microX * voxel + voxel, y + microY * voxel + 2, voxel, 2);
       }
     }
   }
@@ -4196,30 +4194,34 @@ function drawVoxelMassTexture(x, y, tx, ty, palette, openMask) {
 }
 
 function drawExposedVoxelFaces(x, y, tx, ty, palette, openMask) {
-  const faceA = 2 + Math.floor(tileNoise(tx, ty, 32) * 4);
-  const faceB = 2 + Math.floor(tileNoise(tx, ty, 33) * 4);
+  const faceA = 2 + Math.floor(tileNoise(tx, ty, 32) * 3);
+  const faceB = 2 + Math.floor(tileNoise(tx, ty, 33) * 3);
 
   if (openMask & TERRAIN_OPEN_TOP) {
     ctx.fillStyle = palette.light;
-    ctx.fillRect(x + 4, y + faceA, 7, 3);
-    ctx.fillRect(x + 14, y + faceB, 8, 3);
+    ctx.fillRect(x + 3, y + faceA, 5, 2);
+    ctx.fillRect(x + 10, y + faceB, 4, 2);
+    ctx.fillRect(x + 17, y + faceA, 6, 2);
     ctx.fillStyle = palette.side;
-    ctx.fillRect(x + 8, y + faceA + 3, 6, 1);
+    ctx.fillRect(x + 7, y + faceA + 2, 4, 1);
   }
   if (openMask & TERRAIN_OPEN_LEFT) {
     ctx.fillStyle = palette.side;
-    ctx.fillRect(x + faceB, y + 5, 3, 7);
-    ctx.fillRect(x + faceA, y + 16, 3, 6);
+    ctx.fillRect(x + faceB, y + 4, 2, 5);
+    ctx.fillRect(x + faceA, y + 11, 2, 4);
+    ctx.fillRect(x + faceB, y + 18, 2, 5);
   }
   if (openMask & TERRAIN_OPEN_RIGHT) {
     ctx.fillStyle = palette.shadow;
-    ctx.fillRect(x + TILE_SIZE - faceA - 2, y + 5, 3, 8);
-    ctx.fillRect(x + TILE_SIZE - faceB - 2, y + 16, 3, 6);
+    ctx.fillRect(x + TILE_SIZE - faceA - 1, y + 4, 2, 5);
+    ctx.fillRect(x + TILE_SIZE - faceB - 1, y + 11, 2, 4);
+    ctx.fillRect(x + TILE_SIZE - faceA - 1, y + 18, 2, 5);
   }
   if (openMask & TERRAIN_OPEN_BOTTOM) {
     ctx.fillStyle = palette.shadow;
-    ctx.fillRect(x + 4, y + TILE_SIZE - faceB - 2, 7, 3);
-    ctx.fillRect(x + 14, y + TILE_SIZE - faceA - 2, 8, 3);
+    ctx.fillRect(x + 3, y + TILE_SIZE - faceB - 1, 5, 2);
+    ctx.fillRect(x + 10, y + TILE_SIZE - faceA - 1, 4, 2);
+    ctx.fillRect(x + 17, y + TILE_SIZE - faceB - 1, 6, 2);
   }
 }
 
@@ -4292,8 +4294,6 @@ function drawWorld(now) {
 function drawMicroEvents(now) {
   if (!state.world || state.mode !== 'run') return;
   const events = typeof state.world.getMicroEvents === 'function' ? state.world.getMicroEvents() : [];
-  const active = state.activeMicroEvent?.effectLife > 0 ? state.activeMicroEvent : null;
-  if (active && !events.some((event) => event.id === active.id)) events.push(active);
   for (const event of events) {
     const radius = event.radius || event.radiusTiles * TILE_SIZE || TILE_SIZE * 3;
     const fromPlayer = state.player ? distance(state.player.x, state.player.y, event.x, event.y) : Infinity;
@@ -4302,12 +4302,11 @@ function drawMicroEvents(now) {
       && event.y + radius >= state.camera.y
       && event.y - radius <= state.camera.y + state.viewport.height;
     const sensed = fromPlayer <= effectiveSenseRadius() * 1.35 + radius;
-    if (!onScreen && !sensed && event !== active) continue;
+    if (!onScreen && !sensed) continue;
     const pulse = 0.5 + Math.sin(now * 0.012 + event.tx) * 0.5;
-    const triggered = event === active && event.effectLife != null;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = triggered ? 0.24 + pulse * 0.22 : 0.1 + pulse * 0.13;
+    ctx.globalAlpha = 0.1 + pulse * 0.13;
     const glow = ctx.createRadialGradient(event.x, event.y, radius * 0.08, event.x, event.y, radius);
     glow.addColorStop(0, event.color || '#ffd170');
     glow.addColorStop(0.48, `${event.color || '#ffd170'}55`);
@@ -4316,10 +4315,10 @@ function drawMicroEvents(now) {
     ctx.beginPath();
     ctx.arc(event.x, event.y, radius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = triggered ? 0.88 : 0.52 + pulse * 0.28;
+    ctx.globalAlpha = 0.52 + pulse * 0.28;
     ctx.strokeStyle = event.color || '#ffd170';
-    ctx.lineWidth = triggered ? 5 : 3;
-    ctx.setLineDash(triggered ? [] : [12, 8]);
+    ctx.lineWidth = 3;
+    ctx.setLineDash([12, 8]);
     ctx.lineDashOffset = -now * 0.025;
     ctx.beginPath();
     ctx.arc(event.x, event.y, radius * (0.92 + pulse * 0.06), 0, Math.PI * 2);
@@ -4435,8 +4434,8 @@ function drawOreInTile(x, y, tx, ty, ore, revealed, now) {
   const joinsBottom = hasMatchingOre(tx, ty + 1, ore.id);
 
   ctx.save();
-  ctx.lineCap = 'square';
-  ctx.lineJoin = 'miter';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   ctx.beginPath();
 
   let connectionCount = 0;
@@ -4469,53 +4468,51 @@ function drawOreInTile(x, y, tx, ty, ore, revealed, now) {
     connectionCount += 1;
   }
 
-  // Isolated deposits still read as buried seams rather than loose gems.
-  if (connectionCount === 0 || branchNoise > 0.46) {
+  // An isolated tile is a compact pocket; connected tiles become one broad,
+  // uninterrupted ribbon instead of beads joined by hairline strokes.
+  if (connectionCount === 0) {
     const forkX = branchNoise > 0.5 ? 1 : -1;
-    ctx.moveTo(centerX, centerY);
-    ctx.lineTo(centerX + forkX * 5, centerY - 4);
-    ctx.lineTo(centerX + forkX * 8, centerY - 3 + Math.floor(noise * 5));
-    ctx.moveTo(centerX, centerY + 1);
-    ctx.lineTo(centerX - forkX * 4, centerY + 5);
-    ctx.lineTo(centerX - forkX * 7, centerY + 6);
+    ctx.moveTo(centerX - forkX * 8, centerY + 5);
+    ctx.lineTo(centerX, centerY);
+    ctx.lineTo(centerX + forkX * 9, centerY - 4 + Math.floor(noise * 4));
   }
 
   if (revealed) {
-    ctx.globalAlpha = 0.1 + pulse * 0.1;
+    ctx.globalAlpha = 0.1 + pulse * 0.12;
     ctx.strokeStyle = ore.color;
-    ctx.lineWidth = 9;
+    ctx.lineWidth = 15;
     ctx.stroke();
   }
 
-  ctx.globalAlpha = revealed ? 0.72 : 0.08;
+  ctx.globalAlpha = revealed ? 0.74 : 0.08;
   ctx.strokeStyle = '#071018';
-  ctx.lineWidth = 6;
+  ctx.lineWidth = 12;
   ctx.stroke();
   ctx.globalAlpha = revealed ? 0.9 + pulse * 0.08 : 0.13;
   ctx.strokeStyle = ore.color;
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 8;
   ctx.stroke();
 
-  const nodeWidth = 7 + Math.floor(noise * 4);
-  const nodeHeight = 5 + Math.floor(branchNoise * 4);
+  const nodeWidth = 13 + Math.floor(noise * 4);
+  const nodeHeight = 10 + Math.floor(branchNoise * 4);
   ctx.globalAlpha = revealed ? 0.75 : 0.08;
   ctx.fillStyle = '#071018';
-  ctx.fillRect(centerX - Math.floor(nodeWidth / 2) - 1, centerY - Math.floor(nodeHeight / 2) - 1, nodeWidth + 2, nodeHeight + 2);
-  ctx.fillRect(centerX - 3, centerY - Math.floor(nodeHeight / 2) - 3, 6, nodeHeight + 6);
+  ctx.fillRect(centerX - Math.floor(nodeWidth / 2) - 2, centerY - Math.floor(nodeHeight / 2) - 2, nodeWidth + 4, nodeHeight + 4);
+  ctx.fillRect(centerX - 5, centerY - Math.floor(nodeHeight / 2) - 4, 10, nodeHeight + 8);
 
   ctx.globalAlpha = revealed ? 1 : 0.14;
   ctx.fillStyle = ore.color;
   ctx.fillRect(centerX - Math.floor(nodeWidth / 2), centerY - Math.floor(nodeHeight / 2), nodeWidth, nodeHeight);
-  ctx.fillRect(centerX - 2, centerY - Math.floor(nodeHeight / 2) - 2, 4, nodeHeight + 4);
+  ctx.fillRect(centerX - 4, centerY - Math.floor(nodeHeight / 2) - 2, 8, nodeHeight + 4);
   if (branchNoise > 0.42) {
     const side = branchNoise > 0.7 ? 1 : -1;
-    ctx.fillRect(centerX + side * 5 - 2, centerY + 4, 5, 3);
+    ctx.fillRect(centerX + side * 7 - 3, centerY + 4, 7, 4);
   }
 
   ctx.globalAlpha = revealed ? 0.72 : 0.07;
   ctx.fillStyle = ore.accent || '#fff';
-  ctx.fillRect(centerX - 1, centerY - Math.floor(nodeHeight / 2), 2, Math.max(2, Math.floor(nodeHeight * 0.5)));
-  ctx.fillRect(centerX - Math.floor(nodeWidth / 2) + 2, centerY - 1, 2, 1);
+  ctx.fillRect(centerX - 2, centerY - Math.floor(nodeHeight / 2), 3, Math.max(3, Math.floor(nodeHeight * 0.55)));
+  ctx.fillRect(centerX - Math.floor(nodeWidth / 2) + 2, centerY - 2, Math.max(3, Math.floor(nodeWidth * 0.35)), 2);
   ctx.restore();
 }
 
@@ -5120,30 +5117,6 @@ function bindEvents() {
   ui.tutorialClose?.addEventListener('click', () => dismissTutorial(true));
   ui.tutorialNext?.addEventListener('click', () => dismissTutorial(false));
   ui.replayTutorial?.addEventListener('click', () => startOnboarding(true));
-  ui.sectorChoices?.addEventListener('click', (event) => {
-    const card = event.target.closest('[data-sector-id]');
-    if (!card) return;
-    const sectorId = card.dataset.sectorId;
-    if (!state.sectorChoices.some((sector) => sector.id === sectorId)) return;
-    state.selectedSectorId = sectorId;
-    ui.sectorChoices.querySelectorAll('[data-sector-id]').forEach((choice) => {
-      const selected = choice.dataset.sectorId === sectorId;
-      choice.classList.toggle('is-selected', selected);
-      choice.setAttribute('aria-pressed', String(selected));
-    });
-  });
-  ui.sectorScreen?.querySelector('form')?.addEventListener('submit', (event) => {
-    event.preventDefault();
-    dismissTutorial();
-    startRun({
-      seed: state.pendingRunSeed || getRunSeed(),
-      sectorId: state.selectedSectorId || 'stable_strata',
-    });
-  });
-  ui.sectorSkip?.addEventListener('click', () => {
-    dismissTutorial();
-    startRun({ seed: state.pendingRunSeed || getRunSeed(), sectorId: 'stable_strata' });
-  });
   for (const button of new Set([...$$('[data-open-journal]'), ui.openJournal].filter(Boolean))) {
     button.addEventListener('click', openJournalScreen);
   }
@@ -5247,10 +5220,7 @@ function bindEvents() {
       selectedUpgradeId: null,
       visibleUpgradeIds: new Set(),
       journalFilter: 'all',
-      sectorChoices: [],
-      selectedSectorId: null,
       currentSector: null,
-      pendingRunSeed: 0,
       dryRockBlocks: 0,
       deafKnockCooldown: 0,
       deafKnockBoostRemaining: 0,
@@ -5259,8 +5229,9 @@ function bindEvents() {
       activeMicroEvent: null,
       eventYieldBoostRemaining: 0,
       eventMoveBoostRemaining: 0,
+      eventDigBoostRemaining: 0,
+      eventSoftRockRemaining: 0,
       eventBannerTimer: 0,
-      previewMicroEventId: null,
     });
     if (ui.upgradeSearch) ui.upgradeSearch.value = '';
     $$('.filter-btn[data-category]').forEach((button) => {
@@ -5285,6 +5256,12 @@ function bindEvents() {
   });
 
   addEventListener('keydown', (event) => {
+    // Space is intentionally unbound. Prevent its native button activation so
+    // the former shortcut cannot survive through whichever control has focus.
+    if (event.code === 'Space') {
+      event.preventDefault();
+      return;
+    }
     if (trapOverlayFocus(event)) return;
     const tag = document.activeElement?.tagName;
     const interactive = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A', 'SUMMARY'].includes(tag)
@@ -5296,16 +5273,6 @@ function bindEvents() {
       }
       if (state.mode === 'upgrades') closeUpgradeScreen();
       else if (state.mode === 'journal' || state.mode === 'balance') closeAuxiliaryScreen();
-      else if (state.mode === 'sector') {
-        clearTutorialCoach();
-        state.mode = state.returnMode;
-        if (state.returnMode === 'result') {
-          hideAllScreens();
-          ui.resultScreen?.classList.remove('hidden');
-          updateUtilityNavState();
-        } else showTitle();
-        requestAnimationFrame(() => state.lastFocusedElement?.focus?.({ preventScroll: true }));
-      }
       else if (state.mode === 'run') togglePause();
       else if (state.mode === 'ending') showTitle();
       return;
@@ -5313,10 +5280,6 @@ function bindEvents() {
     if (interactive) return;
     if (event.key === 'Enter') {
       if (state.mode === 'title' || state.mode === 'result') requestRunStart();
-    } else if (event.code === 'Space') {
-      event.preventDefault();
-      if (state.mode === 'run' && !event.repeat) triggerSensePulse();
-      else if (state.mode === 'title' || state.mode === 'result') requestRunStart();
     } else if (event.key.toLocaleLowerCase('ru') === 'u' || event.key.toLocaleLowerCase('ru') === 'г') {
       if (state.mode === 'upgrades') closeUpgradeScreen();
       else if (state.mode === 'title' || state.mode === 'result') openUpgradeScreen();
@@ -5389,8 +5352,6 @@ window.__DEPTH_ZERO__ = {
     focusedOreId: save.focusedOreId,
     focusedSenseMultiplier: focusedSenseMultiplier(getFocusedOre()),
     sector: state.currentSector ? { ...state.currentSector } : null,
-    selectedSectorId: state.selectedSectorId,
-    availableSectors: getAvailableSectorChoices(state.seed).map((sector) => sector.id),
     microEventsRemaining: typeof state.world?.getMicroEvents === 'function' ? state.world.getMicroEvents().length : 0,
     activeMicroEvent: state.activeMicroEvent ? { ...state.activeMicroEvent } : null,
     laserShotCount: state.laserShotCount,
@@ -5398,6 +5359,8 @@ window.__DEPTH_ZERO__ = {
     deafKnockBoostRemaining: state.deafKnockBoostRemaining,
     eventYieldBoostRemaining: state.eventYieldBoostRemaining,
     eventMoveBoostRemaining: state.eventMoveBoostRemaining,
+    eventDigBoostRemaining: state.eventDigBoostRemaining,
+    eventSoftRockRemaining: state.eventSoftRockRemaining,
     triangleActive: Boolean(getTriangulationTriangle()),
     triangleRememberedOre: [...(state.triangleOreMemory || new Map())]
       .filter(([, expires]) => expires >= state.elapsed)
@@ -5681,6 +5644,8 @@ window.__DEPTH_ZERO__ = {
       centerX: layout.centerX,
       centerY: layout.centerY,
       positions: Object.fromEntries([...layout.positions].map(([id, point]) => [id, { ...point }])),
+      sizes: Object.fromEntries(UPGRADE_DEFS.map((definition) => [definition.id, getUpgradeNodeSize(definition)])),
+      minimumGap: UPGRADE_NODE_GAP,
     };
   },
   debugSetAttackCooldown: (seconds = 0.42) => {
