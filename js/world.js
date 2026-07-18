@@ -16,11 +16,11 @@ const DEFAULT_SEED = "deep-shift";
 const UINT32_RANGE = 0x100000000;
 const BEDROCK_HP = 1_000_000_000;
 const DEFAULT_SECTOR_ID = "stable_strata";
+const RANDOM_SECTOR_ID = "random_strata";
 
 /**
- * The three expedition choices deliberately describe the same four axes. UI
- * code can render `forecast` verbatim, while generation consumes `modifiers`.
- * Stable strata is also the backwards-compatible profile for old callers.
+ * Legacy named profiles remain available to deterministic diagnostics. Normal
+ * shifts use a seed-derived hidden profile and never ask the player to choose.
  */
 const GEOLOGICAL_SECTORS = Object.freeze([
   Object.freeze({
@@ -48,83 +48,98 @@ const GEOLOGICAL_SECTORS = Object.freeze([
     label: "Пещерный карст",
     icon: "◌",
     color: "#67d5c4",
-    description: "Мягкий, изрезанный пустотами пласт: двигаться легче, но цельные жилы встречаются реже.",
+    description: "Изрезанный пустотами пласт: двигаться легче, но рудных находок немного меньше.",
     forecast: Object.freeze([
       "Пещеры: очень много",
-      "Твёрдость: ниже на 14%",
-      "Жилы: мельче на 14%",
+      "Твёрдость: обычная",
+      "Жилы: среднего размера",
       "Изобилие: ниже на 10%",
     ]),
     ratings: Object.freeze({
       caves: "очень много",
-      hardness: "мягкая",
-      veins: "мелкие",
+      hardness: "обычная",
+      veins: "средние",
       abundance: "ниже среднего",
     }),
-    modifiers: Object.freeze({ caves: 1.48, hardness: 0.86, veins: 0.86, abundance: 0.9 }),
+    modifiers: Object.freeze({ caves: 1.48, hardness: 1, veins: 1, abundance: 0.9 }),
   }),
   Object.freeze({
     id: "ore_ridge",
     label: "Рудная гряда",
     icon: "⬢",
     color: "#f1c84b",
-    description: "Плотная и тяжёлая порода скрывает крупные, частые рудные жилы.",
+    description: "Пещер меньше, зато при обычной прочности породы встречается больше рудных находок.",
     forecast: Object.freeze([
       "Пещеры: мало",
-      "Твёрдость: выше на 18%",
-      "Жилы: крупнее на 32%",
+      "Твёрдость: обычная",
+      "Жилы: среднего размера",
       "Изобилие: выше на 30%",
     ]),
     ratings: Object.freeze({
       caves: "мало",
-      hardness: "твёрдая",
-      veins: "крупные",
+      hardness: "обычная",
+      veins: "средние",
       abundance: "высокое",
     }),
-    modifiers: Object.freeze({ caves: 0.76, hardness: 1.18, veins: 1.32, abundance: 1.3 }),
+    modifiers: Object.freeze({ caves: 0.76, hardness: 1, veins: 1, abundance: 1.3 }),
   }),
 ]);
 
 const UNDERGROUND_EVENT_TYPES = Object.freeze([
   Object.freeze({
     id: "fragile_cavity",
+    effect: "soft_rock",
+    durationSeconds: 5,
+    effectDescription: "Короткий резонанс на несколько секунд смягчает обычную породу по всей шахте.",
     label: "ХРУПКАЯ ПОЛОСТЬ",
     icon: "✹",
     color: "#ffb45b",
-    radiusTiles: 4.2,
-    description: "По породе бегут яркие трещины: полость готова раскрыться и расчистить круг вокруг центра.",
+    radiusTiles: 1.6,
+    description: "По породе бегут яркие трещины: после активации вся обычная порода на пять секунд станет мягче.",
   }),
   Object.freeze({
     id: "gas_pocket",
+    effect: "dig_speed",
+    durationSeconds: 5,
+    effectDescription: "Вспышка заряжает инструмент и ненадолго ускоряет удары по всей шахте.",
     label: "ГАЗОВЫЙ КАРМАН",
     icon: "☁",
     color: "#a8f06a",
-    radiusTiles: 4.8,
-    description: "Светящееся облако заметно пульсирует: искра вызовет мощную реакцию во всей отмеченной зоне.",
+    radiusTiles: 1.6,
+    description: "Светящееся облако заметно пульсирует: после активации инструмент на пять секунд ускорится по всей шахте.",
   }),
   Object.freeze({
     id: "rich_lens",
+    effect: "ore_yield",
+    durationSeconds: 5,
+    effectDescription: "Рудный импульс на несколько секунд увеличивает выход любой собранной руды.",
     label: "БОГАТАЯ ЛИНЗА",
     icon: "✦",
     color: "#ffe36e",
-    radiusTiles: 3.8,
-    description: "Руда в контуре переливается золотыми всполохами и обещает повышенную добычу.",
+    radiusTiles: 1.5,
+    description: "Руда в контуре переливается золотыми всполохами: на пять секунд выход любой руды станет выше.",
   }),
   Object.freeze({
     id: "ancient_container",
+    effect: "chest",
+    durationSeconds: 0,
+    effectDescription: "Сундук с несколькими видами руды: его содержимое зависит от глубины находки.",
     label: "ДРЕВНИЙ КОНТЕЙНЕР",
     icon: "▣",
     color: "#ff7a68",
-    radiusTiles: 3.2,
-    description: "Из-под земли пробивается красный маяк: внутри находится одноразовая находка старой артели.",
+    radiusTiles: 1.1,
+    description: "Из-под земли пробивается красный маяк: внутри лежат несколько случайных руд старой артели.",
   }),
   Object.freeze({
     id: "underground_flow",
+    effect: "move_speed",
+    durationSeconds: 5,
+    effectDescription: "Подземный поток ненадолго ускоряет движение шахтёра в любой части поля.",
     label: "ПОДЗЕМНЫЙ ПОТОК",
     icon: "≈",
     color: "#58c9ff",
-    radiusTiles: 5.4,
-    description: "Яркий поток рассекает пласт и заметно меняет условия движения и добычи в своём радиусе.",
+    radiusTiles: 1.7,
+    description: "Яркий поток рассекает пласт: после активации шахтёр на пять секунд ускорится в любой части поля.",
   }),
 ]);
 
@@ -222,10 +237,63 @@ function resolveSector(value, fallback = DEFAULT_SECTOR_ID) {
 function publicSector(sector) {
   return {
     ...sector,
-    forecast: [...sector.forecast],
-    ratings: { ...sector.ratings },
-    modifiers: { ...sector.modifiers },
+    forecast: [...(sector.forecast || [])],
+    ratings: { ...(sector.ratings || {}) },
+    modifiers: { ...(sector.modifiers || {}) },
+    oreBias: sector.oreBias ? { ...sector.oreBias } : null,
   };
+}
+
+function createRandomGeologyProfile(seed, oreTypes = []) {
+  const rng = new SeededRandom(`${seed}:hidden-geology`);
+  const traitRoll = rng.next();
+  let caves = rng.range(0.88, 1.13);
+  let abundance = 1;
+  let trait = "mixed";
+
+  if (traitRoll < 0.25) {
+    trait = "cavernous";
+    caves = rng.range(1.28, 1.5);
+  } else if (traitRoll < 0.5) {
+    trait = "compact";
+    caves = rng.range(0.72, 0.86);
+  } else if (traitRoll < 0.75) {
+    trait = "ore_rich";
+    abundance = rng.range(1.22, 1.38);
+  } else {
+    trait = "ore_bias";
+  }
+
+  const candidates = oreTypes.filter((ore) => ore && ore.id);
+  const preferred = candidates.length
+    ? candidates[rng.int(0, candidates.length - 1)]
+    : null;
+  const biasStrength = trait === "ore_bias"
+    ? rng.range(2.35, 2.8)
+    : rng.range(1.35, 1.7);
+  const profileHash = hashSeed(`${seed}:profile`).toString(36);
+
+  return Object.freeze({
+    id: `${RANDOM_SECTOR_ID}-${profileHash}`,
+    label: "Случайные пласты",
+    icon: "◆",
+    color: "#d6a15d",
+    description: "Состав и форма выработки определяются заново для каждой смены.",
+    forecast: Object.freeze([]),
+    ratings: Object.freeze({}),
+    trait,
+    hidden: true,
+    oreBias: preferred
+      ? Object.freeze({ id: String(preferred.id), strength: biasStrength })
+      : null,
+    modifiers: Object.freeze({
+      caves,
+      abundance,
+      // A run profile never changes block/ore HP or individual vein density.
+      hardness: 1,
+      veins: 1,
+    }),
+  });
 }
 
 function getSectorChoices(_seed = DEFAULT_SEED) {
@@ -244,7 +312,13 @@ function normalizeWorldSettings(seedOrOptions, optionsOrSector, fallbackSeed, fa
   }
 
   const seed = settings.seed ?? fallbackSeed ?? DEFAULT_SEED;
-  const sector = resolveSector(settings, fallbackSectorId ?? DEFAULT_SECTOR_ID);
+  const hasExplicitSector = typeof optionsOrSector === "string"
+    || settings.sectorId != null
+    || settings.sector != null
+    || settings.geologicalSectorId != null;
+  const sector = hasExplicitSector
+    ? resolveSector(settings, fallbackSectorId ?? DEFAULT_SECTOR_ID)
+    : null;
   return { seed, sector };
 }
 
@@ -304,6 +378,7 @@ class MineWorld {
     this.tiles = [];
     this.surface = [];
     this._oreDefinitions = [];
+    this._oreCompositionNormalizer = 1;
     this._oreRankByTile = new Int16Array(0);
     this._spawn = { x: 0, y: 0, tx: 0, ty: 0 };
     this._liftStations = [];
@@ -324,10 +399,14 @@ class MineWorld {
   }
 
   getSector() {
-    return publicSector(resolveSector(this.sectorId));
+    return publicSector(this._sector || resolveSector(this.sectorId));
   }
 
   getSectorInfo() {
+    return this.getSector();
+  }
+
+  getGeologyProfile() {
     return this.getSector();
   }
 
@@ -339,9 +418,10 @@ class MineWorld {
       this.sectorId,
     );
     this.seed = settings.seed;
-    this.sectorId = settings.sector.id;
-    this._sector = settings.sector;
-    this.sector = publicSector(settings.sector);
+    const geology = settings.sector || createRandomGeologyProfile(settings.seed, this.oreTypes);
+    this.sectorId = geology.id;
+    this._sector = geology;
+    this.sector = publicSector(geology);
     this._rng = new SeededRandom(this.seed);
     this.surface = this._generateSurface();
     this._spawn = this._makeSpawn();
@@ -349,6 +429,7 @@ class MineWorld {
     this._oreRankByTile = new Int16Array(WORLD_CONFIG.WIDTH * WORLD_CONFIG.HEIGHT);
     this._oreRankByTile.fill(-1);
     this._oreDefinitions = this._normalizeOreTypes();
+    this._oreCompositionNormalizer = this._calculateOreCompositionNormalizer();
     this._nextVeinId = 1;
     this._oreColumnsByRow = [];
     this._oreIndexReady = false;
@@ -415,6 +496,17 @@ class MineWorld {
 
   getSpawn() {
     return { ...this._spawn };
+  }
+
+  getAvailableOreIdsAt(tx, ty) {
+    const progress = this._difficultyAt(tx, ty);
+    return this._oreDefinitions
+      .filter((definition) => (
+        definition.minProgress <= progress + 0.025
+        && definition.maxProgress + 0.025 >= progress
+      ))
+      .sort((left, right) => left.rank - right.rank)
+      .map((definition) => definition.id);
   }
 
   /**
@@ -1171,8 +1263,51 @@ class MineWorld {
     return {
       ...event,
       visual: { ...event.visual },
+      loot: event.loot ? { ...event.loot } : null,
       state: event.consumed ? "consumed" : event.triggered ? "triggered" : "ready",
     };
+  }
+
+  _createContainerLoot(tx, ty, rng) {
+    const availableIds = this.getAvailableOreIdsAt(tx, ty);
+    const progress = this._difficultyAt(tx, ty);
+    // Opening-zone containers tease grounded T1–T5 materials in small
+    // quantities. Once the shaft leaves that early zone, fantastic T6+ ores
+    // join the pool only where they can already occur naturally.
+    const earlyIds = this._oreDefinitions
+      .filter((definition) => (
+        Math.max(0, Math.floor(numericField(definition.source, ["tier"], definition.rank))) <= 4
+      ))
+      .map((definition) => definition.id);
+    const naturallyUnlockedIds = progress >= 0.25
+      ? availableIds
+      : availableIds.filter((oreId) => {
+        const definition = this._oreDefinitions.find((candidate) => candidate.id === oreId);
+        return Math.max(0, Math.floor(numericField(definition?.source, ["tier"], definition?.rank))) <= 4;
+      });
+    const pool = [...new Set([...earlyIds, ...naturallyUnlockedIds])];
+    if (!pool.length) return {};
+    for (let index = pool.length - 1; index > 0; index -= 1) {
+      const swapIndex = rng.int(0, index);
+      [pool[index], pool[swapIndex]] = [pool[swapIndex], pool[index]];
+    }
+    const typeCount = clamp(
+      2 + Math.floor(progress * 2.5) + rng.int(0, 1),
+      1,
+      Math.min(5, pool.length),
+    );
+    const selected = pool.slice(0, typeCount);
+    const highestAvailable = naturallyUnlockedIds[naturallyUnlockedIds.length - 1];
+    if (highestAvailable && !selected.includes(highestAvailable)) {
+      selected[selected.length - 1] = highestAvailable;
+    }
+
+    return Object.fromEntries(selected.map((oreId) => {
+      const source = this.oreTypes.find((ore) => String(ore?.id) === oreId) || {};
+      const tier = Math.max(0, Math.floor(numericField(source, ["tier"], 0)));
+      const maximum = clamp(4 + Math.floor(progress * 2) - Math.floor(tier / 3), 1, 6);
+      return [oreId, rng.int(1, maximum)];
+    }));
   }
 
   _generateUndergroundEvents() {
@@ -1194,7 +1329,7 @@ class MineWorld {
         const localMinimumTy = Math.max(minimumTy, this.surface[tx] + 7);
         const ty = eventRng.int(localMinimumTy, maximumTy);
         const tile = this.getTile(tx, ty);
-        if (!tile || tile.kind === "bedrock") continue;
+        if (!tile || tile.kind === "air" || tile.kind === "bedrock") continue;
         if (Math.hypot(tx - this._spawn.tx, ty - this._spawn.ty) < 12) continue;
 
         const overlaps = placed.some((other) => (
@@ -1213,7 +1348,7 @@ class MineWorld {
             const tx = (rowOffset + offset) % WORLD_CONFIG.WIDTH;
             if (tx < 7 || tx >= WORLD_CONFIG.WIDTH - 7 || ty <= this.surface[tx] + 6) continue;
             const tile = this.getTile(tx, ty);
-            if (!tile || tile.kind === "bedrock") continue;
+            if (!tile || tile.kind === "air" || tile.kind === "bedrock") continue;
             const overlaps = placed.some((other) => (
               Math.hypot(tx - other.tx, ty - other.ty)
                 < definition.radiusTiles + other.radiusTiles + 2
@@ -1229,10 +1364,12 @@ class MineWorld {
         id: `micro-${definition.id}-${hashSeed(`${this.seed}:${this.sectorId}:${definition.id}`).toString(36)}`,
         type: definition.id,
         typeId: definition.id,
+        effect: definition.effect,
+        durationSeconds: definition.durationSeconds,
         label: definition.label,
         icon: definition.icon,
         color: definition.color,
-        description: definition.description,
+        description: definition.effectDescription || definition.description,
         radius,
         radiusTiles: definition.radiusTiles,
         tx: location.tx,
@@ -1243,11 +1380,14 @@ class MineWorld {
         announcement: `${definition.icon} ${definition.label}`,
         noticeLevel: "high",
         visual: {
-          pulse: "strong",
+          pulse: "local",
           ringWidth: 3,
           color: definition.color,
           radius,
         },
+        loot: definition.effect === "chest"
+          ? this._createContainerLoot(location.tx, location.ty, eventRng)
+          : null,
         triggered: false,
         consumed: false,
       };
@@ -1590,12 +1730,9 @@ class MineWorld {
     });
   }
 
-  _oreVeinCount(definition) {
+  _oreBasePropensity(definition) {
     const explicit = numericField(definition.source, ["veinCount", "veins", "clusters"], null);
-    const sectorAbundance = Math.max(0, asFinite(this._sector?.modifiers?.abundance, 1));
-    if (Number.isFinite(explicit)) {
-      return Math.max(0, Math.round(explicit * sectorAbundance));
-    }
+    if (Number.isFinite(explicit)) return Math.max(0, explicit);
 
     let multiplier = 1;
     const abundance = numericField(definition.source, ["frequency", "abundance", "spawnRate", "density"], null);
@@ -1606,16 +1743,67 @@ class MineWorld {
       multiplier = rarity <= 1 ? 0.35 + rarity : 1 / Math.sqrt(rarity);
     }
 
-    const base = 54 / (1 + definition.rank * 1.8);
-    return clamp(Math.round(base * multiplier * sectorAbundance), 3, 120);
+    return 54 / (1 + definition.rank * 1.8) * multiplier;
   }
 
-  _oreVeinSize(definition) {
+  _oreVeinSizeRange(definition) {
     const source = definition.source;
     const fixed = numericField(source, ["veinSize", "clusterSize"], null);
     const fallback = Math.max(2, Math.round(7 - definition.rank * 3));
     const min = Math.max(1, Math.round(numericField(source, ["veinMin", "minVeinSize"], fixed ?? fallback - 2)));
     const max = Math.max(min, Math.round(numericField(source, ["veinMax", "maxVeinSize"], fixed ?? fallback + 2)));
+    return { min, max };
+  }
+
+  _oreExpectedVeinSize(definition) {
+    const { min, max } = this._oreVeinSizeRange(definition);
+    const sectorVeins = Math.max(0.1, asFinite(this._sector?.modifiers?.veins, 1));
+    let total = 0;
+    for (let size = min; size <= max; size += 1) {
+      total += Math.max(1, Math.round(size * sectorVeins));
+    }
+    return total / Math.max(1, max - min + 1);
+  }
+
+  _oreRawCompositionWeight(definition) {
+    const bias = this._sector?.oreBias;
+    if (!bias?.id) return 1;
+    return definition.id === bias.id ? Math.max(1, asFinite(bias.strength, 1)) : 1;
+  }
+
+  _calculateOreCompositionNormalizer() {
+    if (!this._sector?.oreBias?.id || !this._oreDefinitions.length) return 1;
+    // Early ores form larger veins than late ores. Normalize by expected tile
+    // count so a composition bias redistributes the same node budget instead
+    // of silently adding nodes for copper or removing them for deep ores.
+    let baseTotal = 0;
+    let weightedTotal = 0;
+    for (const definition of this._oreDefinitions) {
+      const propensity = this._oreBasePropensity(definition);
+      const expectedNodesPerVein = this._oreExpectedVeinSize(definition);
+      baseTotal += propensity * expectedNodesPerVein;
+      weightedTotal += propensity * this._oreRawCompositionWeight(definition) * expectedNodesPerVein;
+    }
+    return weightedTotal > 0 ? baseTotal / weightedTotal : 1;
+  }
+
+  _oreCompositionMultiplier(definition) {
+    return this._oreRawCompositionWeight(definition) * this._oreCompositionNormalizer;
+  }
+
+  _oreVeinCount(definition) {
+    const explicit = numericField(definition.source, ["veinCount", "veins", "clusters"], null);
+    const sectorAbundance = Math.max(0, asFinite(this._sector?.modifiers?.abundance, 1));
+    const composition = this._oreCompositionMultiplier(definition);
+    const base = this._oreBasePropensity(definition);
+    if (Number.isFinite(explicit)) {
+      return Math.max(0, Math.round(base * sectorAbundance * composition));
+    }
+    return clamp(Math.round(base * sectorAbundance * composition), 3, 120);
+  }
+
+  _oreVeinSize(definition) {
+    const { min, max } = this._oreVeinSizeRange(definition);
     const sectorVeins = Math.max(0.1, asFinite(this._sector?.modifiers?.veins, 1));
     return Math.max(1, Math.round(this._rng.int(min, max) * sectorVeins));
   }
@@ -1864,6 +2052,7 @@ window.DepthZeroWorld = Object.freeze({
   WORLD_CONFIG,
   GEOLOGICAL_SECTORS,
   UNDERGROUND_EVENT_TYPES,
+  createRandomGeologyProfile,
   getSectorChoices,
   MineWorld,
 });
