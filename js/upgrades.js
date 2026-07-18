@@ -345,7 +345,7 @@ const senseUpgrades = [
   defineUpgrade({
     id: "sense_instinct_spark",
     name: "Искра инстинкта",
-    description: "Радиус чутья +22 за уровень. Один понятный многослойный узел заменяет несколько одинаковых прибавок.",
+    description: "Радиус чутья +22 за уровень.",
     category: "sense",
     icon: "◉",
     maxLevel: 18,
@@ -453,6 +453,7 @@ const senseUpgrades = [
     baseCost: 250,
     growth: 1,
     requires: ["sense_panoramic_intuition"],
+    requiresOreDiscovery: "amethyst",
     recipeOverride: { amber: 24, silver: 12 },
     apply: (stats, level) => {
       if (level > 0) {
@@ -603,7 +604,7 @@ const digUpgrades = [
   defineUpgrade({
     id: "dig_arm_swing",
     name: "Размашистая рука",
-    description: "Дальность удара +5 за уровень. Здесь собрана вся базовая тренировка досягаемости.",
+    description: "Дальность удара киркой +5 за уровень.",
     category: "dig",
     icon: "⛏",
     maxLevel: 18,
@@ -809,7 +810,7 @@ const powerUpgrades = [
   defineUpgrade({
     id: "power_sharpened_edge",
     name: "Острое жало",
-    description: "Сила кирки +0,45 за уровень. Базовая мощность теперь растёт в одном многослойном узле.",
+    description: "Сила кирки +0,45 за уровень.",
     category: "power",
     icon: "◆",
     maxLevel: 18,
@@ -1300,7 +1301,7 @@ const timeUpgrades = [
   defineUpgrade({
     id: "time_thirty_second_oath",
     name: "Клятва сорока пяти секунд",
-    description: "Закрепляет полностью собранный 45-секундный таймер и превращает лишнюю хроноэнергию в ускорение инструмента.",
+    description: "Максимальный таймер становится 45 секунд; лишняя хроноэнергия ускоряет инструмент.",
     category: "time",
     layoutLobe: "power",
     icon: "45",
@@ -1559,7 +1560,7 @@ const toolUpgrades = [
   defineUpgrade({
     id: "tools_balanced_handle",
     name: "Сбалансированная рукоять",
-    description: "Скорость ударов +5% за уровень. Узел объединяет базовый разгон и прежнюю тренировку ритма.",
+    description: "Скорость ударов +5% за уровень.",
     category: "tools",
     layoutLobe: "dig",
     icon: "⚒",
@@ -1706,7 +1707,7 @@ const toolUpgrades = [
   defineUpgrade({
     id: "tools_laser_range",
     name: "Телескопический луч",
-    description: "Дальность лазера +50 за уровень. В этом узле объединены линза и телескопическая настройка.",
+    description: "Дальность лазера +50 за уровень.",
     category: "tools",
     icon: "⟶",
     maxLevel: 10,
@@ -1818,7 +1819,7 @@ const fortuneUpgrades = [
   defineUpgrade({
     id: "fortune_prospector_ledger",
     name: "Дневник старателя",
-    description: "Средний выход кусков руды +4% за уровень. Базовая оценка добычи собрана в одном узле.",
+    description: "Средний выход кусков руды +4% за уровень.",
     category: "fortune",
     layoutLobe: "sense",
     icon: "▤",
