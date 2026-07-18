@@ -14,6 +14,7 @@ const {
   UNDERGROUND_EVENT_TYPES,
   MineWorld,
   WORLD_CONFIG,
+  createRandomGeologyProfile,
   getSectorChoices,
 } = global.DepthZeroWorld;
 
@@ -63,63 +64,116 @@ function tileFingerprint(world) {
   return hash >>> 0;
 }
 
-const choices = getSectorChoices("menu-preview-seed");
-assert.equal(choices.length, 3, "exactly three geological sectors must be offered");
+const legacyProfiles = getSectorChoices("unused-menu-seed");
+assert.equal(legacyProfiles.length, 3, "legacy profiles remain available only for diagnostics");
 assert.equal(GEOLOGICAL_SECTORS.length, 3);
-assert.equal(new Set(choices.map((sector) => sector.id)).size, choices.length);
-assert.deepEqual(choices, getSectorChoices("menu-preview-seed"), "sector menu must be deterministic");
-assert.deepEqual(choices, MineWorld.getSectorChoices());
 
-for (const sector of choices) {
-  assert.ok(sector.label.length >= 5, `${sector.id} needs an obvious name`);
-  assert.ok(sector.description.length >= 30, `${sector.id} needs a readable description`);
-  assert.match(sector.color, /^#[0-9a-f]{6}$/i);
-  assert.ok(sector.icon);
-  assert.equal(sector.forecast.length, 4, `${sector.id} must forecast all four generation axes`);
-  assert.deepEqual(Object.keys(sector.modifiers).sort(), ["abundance", "caves", "hardness", "veins"]);
-  for (const value of Object.values(sector.modifiers)) assert.ok(Number.isFinite(value) && value > 0);
+// A normal run no longer selects a sector. Its hidden geology is deterministic
+// for a seed and rerolled when the seed changes.
+const randomA = new MineWorld(ORE_TYPES, "random-geology-probe");
+const randomB = new MineWorld(ORE_TYPES, "random-geology-probe");
+const randomProfile = randomA.getGeologyProfile();
+assert.match(randomProfile.id, /^random_strata-/);
+assert.equal(randomProfile.hidden, true);
+assert.equal(randomProfile.modifiers.hardness, 1, "run variance must not change block HP");
+assert.equal(randomProfile.modifiers.veins, 1, "run variance must not change individual vein density");
+assert.ok(randomProfile.oreBias?.id, "every run may redistribute its ore composition");
+assert.equal(tileFingerprint(randomA), tileFingerprint(randomB));
+assert.deepEqual(randomA.getMicroEvents(), randomB.getMicroEvents());
+assert.deepEqual(randomProfile, randomB.getGeologyProfile());
+assert.notEqual(
+  randomProfile.id,
+  new MineWorld(ORE_TYPES, "another-random-geology-probe").getGeologyProfile().id,
+);
+
+function findProfileSeed(predicate) {
+  for (let index = 0; index < 10_000; index += 1) {
+    const seed = `profile-search-${index}`;
+    const profile = createRandomGeologyProfile(seed, ORE_TYPES);
+    if (predicate(profile)) return seed;
+  }
+  throw new Error("could not find deterministic geology fixture");
 }
 
-// Old constructor/reset forms remain deterministic and select the neutral
-// profile, while object and third-argument sector forms select a real profile.
-const legacyA = new MineWorld(ORE_TYPES, "legacy-sector-probe");
-const legacyB = new MineWorld(ORE_TYPES, "legacy-sector-probe");
-assert.equal(legacyA.getSectorInfo().id, "stable_strata");
-assert.equal(tileFingerprint(legacyA), tileFingerprint(legacyB));
-assert.deepEqual(legacyA.getMicroEvents(), legacyB.getMicroEvents());
-
-const constructorOption = new MineWorld(ORE_TYPES, "constructor-sector-probe", {
-  sectorId: "ore_ridge",
-});
-assert.equal(constructorOption.getSectorInfo().id, "ore_ridge");
-const constructorObject = new MineWorld(ORE_TYPES, {
-  seed: "constructor-object-probe",
-  sector: "cavern_karst",
-});
-assert.equal(constructorObject.seed, "constructor-object-probe");
-assert.equal(constructorObject.getSectorInfo().id, "cavern_karst");
-
-const resetProbe = new MineWorld(ORE_TYPES, "reset-before");
-assert.equal(resetProbe.reset("reset-after", { sector: "ore_ridge" }), resetProbe);
-assert.equal(resetProbe.seed, "reset-after");
-assert.equal(resetProbe.getSectorInfo().id, "ore_ridge");
-resetProbe.reset({ seed: "reset-object", sectorId: "cavern_karst" });
-assert.equal(resetProbe.seed, "reset-object");
-assert.equal(resetProbe.getSectorInfo().id, "cavern_karst");
-
-// Every advertised forecast is backed by measurable generation differences.
-const differenceSeed = "sector-difference-probe";
-const cavernWorld = new MineWorld(ORE_TYPES, differenceSeed, { sectorId: "cavern_karst" });
-const ridgeWorld = new MineWorld(ORE_TYPES, differenceSeed, { sectorId: "ore_ridge" });
+const cavernSeed = findProfileSeed((profile) => profile.trait === "cavernous");
+const compactSeed = findProfileSeed((profile) => profile.trait === "compact");
+const richSeed = findProfileSeed((profile) => profile.trait === "ore_rich");
+const ironSeed = findProfileSeed((profile) => profile.trait === "ore_bias" && profile.oreBias?.id === "iron");
+for (const seed of [cavernSeed, compactSeed, ironSeed]) {
+  const profile = createRandomGeologyProfile(seed, ORE_TYPES);
+  assert.equal(
+    profile.modifiers.abundance,
+    1,
+    `${profile.trait} must redistribute ore without changing the node budget`,
+  );
+}
+const cavernWorld = new MineWorld(ORE_TYPES, cavernSeed);
+const compactWorld = new MineWorld(ORE_TYPES, compactSeed);
+const richWorld = new MineWorld(ORE_TYPES, richSeed);
+const richControl = new MineWorld(ORE_TYPES, richSeed, { sectorId: "stable_strata" });
+const ironWorld = new MineWorld(ORE_TYPES, ironSeed);
+const ironControl = new MineWorld(ORE_TYPES, ironSeed, { sectorId: "stable_strata" });
 const cavern = worldMetrics(cavernWorld);
-const ridge = worldMetrics(ridgeWorld);
-const cavernRock = worldMetrics(new MineWorld([], differenceSeed, { sectorId: "cavern_karst" }));
-const ridgeRock = worldMetrics(new MineWorld([], differenceSeed, { sectorId: "ore_ridge" }));
-assert.ok(cavern.undergroundAir > ridge.undergroundAir, "cavern sector must carve more caves");
-assert.ok(cavernRock.averageSolidHp < ridgeRock.averageSolidHp, "cavern sector must be softer");
-assert.ok(cavern.oreTiles < ridge.oreTiles, "ore ridge must contain more ore");
-assert.ok(cavern.averageVeinSize < ridge.averageVeinSize, "ore ridge must grow larger veins");
-assert.notEqual(tileFingerprint(cavernWorld), tileFingerprint(ridgeWorld));
+const ridge = worldMetrics(compactWorld);
+assert.ok(cavern.undergroundAir > ridge.undergroundAir, "hidden cave-heavy runs must visibly contain more caves");
+assert.ok(worldMetrics(richWorld).oreTiles > worldMetrics(richControl).oreTiles, "ore-rich runs must add ore overall");
+
+function oreCounts(world) {
+  const counts = {};
+  world.forEachOreTileInBounds(0, 0, WORLD_CONFIG.WIDTH - 1, WORLD_CONFIG.HEIGHT - 1, (tile) => {
+    counts[tile.oreId] = (counts[tile.oreId] || 0) + 1;
+  });
+  return counts;
+}
+const biasedIron = oreCounts(ironWorld).iron || 0;
+const neutralIron = oreCounts(ironControl).iron || 0;
+assert.ok(biasedIron > neutralIron * 1.35, "an iron-biased run must substantially redistribute veins toward iron");
+
+// Composition bias must preserve expected ore tiles, not merely the number of
+// veins: early ores have larger veins than late ores. Check every possible
+// preferred ore so a future normalizer cannot silently grow copper-heavy maps
+// or shrink deep-ore maps. Actual generated totals get a slightly wider bound
+// because each profile may also change cave topology.
+let maxExpectedNodeBudgetDrift = 0;
+let maxGeneratedNodeBudgetDrift = 0;
+for (const preferredOre of ORE_TYPES) {
+  const seed = findProfileSeed((profile) => (
+    profile.trait === "ore_bias" && profile.oreBias?.id === preferredOre.id
+  ));
+  const profile = createRandomGeologyProfile(seed, ORE_TYPES);
+  assert.equal(profile.modifiers.abundance, 1);
+
+  const biasedWorld = new MineWorld(ORE_TYPES, seed);
+  const neutralWorld = new MineWorld(ORE_TYPES, seed, { sectorId: "stable_strata" });
+  const neutralNodeBudget = biasedWorld._oreDefinitions.reduce((total, definition) => (
+    total + biasedWorld._oreBasePropensity(definition) * biasedWorld._oreExpectedVeinSize(definition)
+  ), 0);
+  const biasedNodeBudget = biasedWorld._oreDefinitions.reduce((total, definition) => (
+    total + biasedWorld._oreVeinCount(definition) * biasedWorld._oreExpectedVeinSize(definition)
+  ), 0);
+  const expectedDrift = Math.abs(biasedNodeBudget / Math.max(1, neutralNodeBudget) - 1);
+  const generatedDrift = Math.abs(
+    worldMetrics(biasedWorld).oreTiles / Math.max(1, worldMetrics(neutralWorld).oreTiles) - 1,
+  );
+  maxExpectedNodeBudgetDrift = Math.max(maxExpectedNodeBudgetDrift, expectedDrift);
+  maxGeneratedNodeBudgetDrift = Math.max(maxGeneratedNodeBudgetDrift, generatedDrift);
+
+  assert.ok(
+    expectedDrift <= 0.015,
+    `${preferredOre.id} bias changed the expected ore-node budget by ${(expectedDrift * 100).toFixed(2)}%`,
+  );
+  assert.ok(
+    generatedDrift <= 0.06,
+    `${preferredOre.id} bias changed generated ore nodes by ${(generatedDrift * 100).toFixed(2)}%`,
+  );
+}
+
+// Explicit diagnostic profiles also keep hardness and individual vein size
+// neutral; only cave count and total abundance may vary.
+for (const profile of legacyProfiles) {
+  assert.equal(profile.modifiers.hardness, 1);
+  assert.equal(profile.modifiers.veins, 1);
+}
 
 assert.equal(UNDERGROUND_EVENT_TYPES.length, 5);
 const eventWorld = new MineWorld(ORE_TYPES, "micro-event-probe", { sectorId: "ore_ridge" });
@@ -129,13 +183,33 @@ assert.equal(events.length, 5, "all five readable micro-event types must be gene
 assert.equal(new Set(events.map((event) => event.type)).size, 5);
 assert.deepEqual(events, eventTwin.getMicroEvents(), "micro-events must be deterministic");
 
+function assertContainerLoot(world, event) {
+  const available = new Set(world.getAvailableOreIdsAt(event.tx, event.ty));
+  assert.ok(Object.keys(event.loot || {}).length >= 2, "the chest must carry several depth-scaled ore types");
+  for (const [oreId, amount] of Object.entries(event.loot)) {
+    const ore = ORE_TYPES.find((candidate) => candidate.id === oreId);
+    assert.ok(ore, `${oreId} must be a known resource`);
+    assert.ok(
+      ore.tier <= 4 || available.has(oreId),
+      `${oreId} above T5 must naturally exist at the chest depth`,
+    );
+    assert.ok(Number.isInteger(amount) && amount >= 1 && amount <= 6);
+  }
+}
+
 for (let seed = 1; seed <= 12; seed += 1) {
-  for (const sector of choices) {
+  for (const sector of legacyProfiles) {
     const stressWorld = new MineWorld(ORE_TYPES, `micro-stress-${seed}`, { sectorId: sector.id });
     const stressEvents = stressWorld.getMicroEvents();
     assert.equal(stressEvents.length, UNDERGROUND_EVENT_TYPES.length);
     assert.ok(stressEvents.every((event) => event.depthTiles >= 12));
+    assertContainerLoot(stressWorld, stressEvents.find((event) => event.type === "ancient_container"));
   }
+  const randomStressWorld = new MineWorld(ORE_TYPES, `random-micro-stress-${seed}`);
+  const randomStressEvents = randomStressWorld.getMicroEvents();
+  assert.equal(randomStressEvents.length, UNDERGROUND_EVENT_TYPES.length);
+  assert.ok(randomStressEvents.every((event) => event.depthTiles >= 12));
+  assertContainerLoot(randomStressWorld, randomStressEvents.find((event) => event.type === "ancient_container"));
 }
 
 for (const event of events) {
@@ -143,17 +217,37 @@ for (const event of events) {
   assert.ok(event.label.length >= 8);
   assert.ok(event.icon);
   assert.match(event.color, /^#[0-9a-f]{6}$/i);
-  assert.ok(event.radius >= WORLD_CONFIG.TILE_SIZE * 3);
-  assert.ok(event.radiusTiles >= 3);
+  assert.ok(event.radius >= WORLD_CONFIG.TILE_SIZE);
+  assert.ok(event.radiusTiles >= 1 && event.radiusTiles <= 2, "events must use local markers, not field-wide visuals");
   assert.ok(event.description.length >= 40);
   assert.equal(event.noticeLevel, "high");
-  assert.equal(event.visual.pulse, "strong");
+  assert.equal(event.visual.pulse, "local");
   assert.equal(event.visual.color, event.color);
   assert.ok(event.announcement.includes(event.label));
   assert.equal(event.triggered, false);
   assert.equal(event.consumed, false);
   assert.equal(event.state, "ready");
+  if (event.type === "ancient_container") {
+    assertContainerLoot(eventWorld, event);
+  } else {
+    assert.equal(event.durationSeconds, 5, `${event.type} must be a short five-second global effect`);
+    assert.equal(event.loot, null);
+  }
 }
+
+const fixedLootRng = { int: (minimum) => minimum };
+const eventSpawn = eventWorld.getSpawn();
+const earlyLoot = eventWorld._createContainerLoot(eventSpawn.tx, eventSpawn.ty + 12, fixedLootRng);
+assert.ok(Object.keys(earlyLoot).length >= 2);
+assert.ok(Object.keys(earlyLoot).every((oreId) => ORE_TYPES.find((ore) => ore.id === oreId)?.tier <= 4));
+const deepLootTy = WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 8;
+const deepAvailable = eventWorld.getAvailableOreIdsAt(eventSpawn.tx, deepLootTy);
+const deepLoot = eventWorld._createContainerLoot(eventSpawn.tx, deepLootTy, fixedLootRng);
+assert.ok(deepAvailable.length > 0);
+assert.ok(
+  Object.hasOwn(deepLoot, deepAvailable[deepAvailable.length - 1]),
+  "a deep chest must include the highest ore that naturally exists there",
+);
 
 const first = events[0];
 const tileSearch = eventWorld.getMicroEventsNear(first.tx, first.ty, 0);
@@ -168,6 +262,14 @@ copiedEvents[0].label = "mutated";
 copiedEvents[0].visual.color = "#000000";
 assert.notEqual(eventWorld.getMicroEvents()[0].label, "mutated");
 assert.notEqual(eventWorld.getMicroEvents()[0].visual.color, "#000000");
+const copiedChest = copiedEvents.find((event) => event.type === "ancient_container");
+const copiedLootId = Object.keys(copiedChest.loot || {})[0];
+if (copiedLootId) copiedChest.loot[copiedLootId] = 999;
+assert.notEqual(
+  eventWorld.getMicroEvents({ type: "ancient_container" })[0]?.loot?.[copiedLootId],
+  999,
+  "chest loot must also be returned as a defensive copy",
+);
 
 const triggered = eventWorld.triggerMicroEvent(first.id);
 assert.equal(triggered.id, first.id);
@@ -306,9 +408,11 @@ assert.equal(eventWorld.getTile(firstOre.tx, firstOre.ty).hp, hpBeforeRoute, "ro
 
 console.log(JSON.stringify({
   ok: true,
-  sectors: choices.length,
+  diagnosticProfiles: legacyProfiles.length,
   microEventTypes: events.length,
   checkedStarterSeams,
+  maxExpectedNodeBudgetDrift: Number(maxExpectedNodeBudgetDrift.toFixed(4)),
+  maxGeneratedNodeBudgetDrift: Number(maxGeneratedNodeBudgetDrift.toFixed(4)),
   cavernAir: cavern.undergroundAir,
   ridgeAir: ridge.undergroundAir,
   cavernOre: cavern.oreTiles,
