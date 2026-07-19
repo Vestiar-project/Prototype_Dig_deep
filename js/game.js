@@ -52,7 +52,6 @@ const BONUS_MAX_RUN_SECONDS = 60;
 const EXPLORATION_SCAN_TILES = 18;
 const STORAGE_KEY = 'depth-zero-save-v1';
 const CAMPAIGN = Object.freeze({
-  requiredLevels: 110,
   requiredLifetimeChunks: 4_000,
   finalUpgrade: 'core_bon_voyage',
   capstones: Object.freeze([
@@ -64,6 +63,46 @@ const CAMPAIGN = Object.freeze({
     'tools_solar_drill',
     'fortune_motherlode_covenant',
   ]),
+});
+// The headless campaign buyer represents a player who deliberately works
+// toward transformative tool tiers instead of exhausting every cheap flat
+// level first. Target levels cover only the prerequisites needed for the next
+// tool; later levels return to the ordinary cost/depth ordering.
+const CAMPAIGN_AUTOBUY_TARGETS = Object.freeze({
+  tools_iron_pick: 1,
+  tools_steel_pick: 1,
+  tools_pneumatic_pick: 1,
+  gadgets_scout_drone: 1,
+  power_diamond_tip: 1,
+  tools_super_pick: 1,
+  tools_super_motor: 1,
+  tools_super_teeth: 1,
+  tools_super_field: 1,
+  tools_laser_emitter: 1,
+  tools_laser_range: 1,
+  tools_laser_power: 1,
+  tools_laser_width: 1,
+  tools_laser_splitter: 2,
+  power_corebreaker: 2,
+  tools_solar_drill: 1,
+});
+const CAMPAIGN_AUTOBUY_WEIGHTS = Object.freeze({
+  tools_iron_pick: 0.18,
+  tools_steel_pick: 0.18,
+  tools_pneumatic_pick: 0.16,
+  gadgets_scout_drone: 0.16,
+  power_diamond_tip: 0.24,
+  tools_super_pick: 0.14,
+  tools_super_motor: 0.24,
+  tools_super_teeth: 0.24,
+  tools_super_field: 0.2,
+  tools_laser_emitter: 0.12,
+  tools_laser_range: 0.24,
+  tools_laser_power: 0.24,
+  tools_laser_width: 0.22,
+  tools_laser_splitter: 0.18,
+  power_corebreaker: 0.22,
+  tools_solar_drill: 0.12,
 });
 const DEFAULT_SAVE = Object.freeze({
   version: 7,
@@ -337,6 +376,87 @@ function normalizeStats(source = {}) {
     laserSuperPickEchoRadiusTiles: Math.max(0, source.laserSuperPickEchoRadiusTiles || 0),
     laserSuperPickEchoPower: clamp(source.laserSuperPickEchoPower || 0, 0, 1),
     laserSuperPickEchoNoProcs: Boolean(source.laserSuperPickEchoNoProcs),
+    echoPingCooldown: Math.max(0, source.echoPingCooldown || 0),
+    echoPingRadiusMultiplier: Math.max(1, source.echoPingRadiusMultiplier || 1),
+    echoPingTargetHold: Math.max(0, source.echoPingTargetHold || 0),
+    veinTrailRangeMultiplier: Math.max(1, source.veinTrailRangeMultiplier || 1),
+    veinTrailMoveSpeedBonus: Math.max(0, source.veinTrailMoveSpeedBonus || 0),
+    seismicRouteSlots: clamp(Math.floor(source.seismicRouteSlots || 0), 0, 6),
+    ghostTrailDuration: Math.max(0, source.ghostTrailDuration || 0),
+    ghostTrailThroughWalls: Boolean(source.ghostTrailThroughWalls || source.ghostTrailMaxLayers > 0),
+    ghostTrailMaxLayers: Math.max(0, Math.floor(source.ghostTrailMaxLayers || 0)),
+    veinLockEnabled: Boolean(source.veinLockEnabled),
+    veinLockRangeMultiplier: Math.max(1, source.veinLockRangeMultiplier || 1),
+    veinLockMoveSpeedBonus: Math.max(0, source.veinLockMoveSpeedBonus || 0),
+    approachStrikeTravelTime: Math.max(0, source.approachStrikeTravelTime || 0),
+    approachStrikePower: Math.max(0, source.approachStrikePower || 0),
+    approachStrikeSideChip: Math.max(0, Number(source.approachStrikeSideChip ?? source.approachStrikeSideChipPower) || 0),
+    focusVeinSizeBias: Math.max(0, source.focusVeinSizeBias || 0),
+    focusMoveSpeedPerNode: Math.max(0, source.focusMoveSpeedPerNode ?? source.focusVeinMoveSpeedPerNode ?? 0),
+    sideChipEvery: Math.max(0, Math.floor(source.sideChipEvery || 0)),
+    sideChipHits: clamp(Math.floor(source.sideChipHits ?? source.sideChipTargets ?? 0), 0, 8),
+    sideChipPower: Math.max(0, source.sideChipPower || 0),
+    impactWaveEvery: Math.max(0, Math.floor(source.impactWaveEvery || 0)),
+    impactWaveRadiusTiles: Math.max(0, source.impactWaveRadiusTiles || 0),
+    impactWavePower: Math.max(0, source.impactWavePower || 0),
+    quarryModeRequiredBreaks: Math.max(0, Math.floor(source.quarryModeRequiredBreaks || 0)),
+    quarryModeWindow: Math.max(0, source.quarryModeWindow || 0),
+    quarryModeDuration: Math.max(0, source.quarryModeDuration || 0),
+    quarryModeMoveSpeedBonus: Math.max(0, source.quarryModeMoveSpeedBonus || 0),
+    quarryModeDigSpeedBonus: Math.max(0, source.quarryModeDigSpeedBonus || 0),
+    quarryModeSideFracturePower: Math.max(0, source.quarryModeSideFracturePower || 0),
+    faultLineMaxBlocks: clamp(Math.floor(source.faultLineMaxBlocks || 0), 0, 12),
+    faultLinePower: Math.max(0, source.faultLinePower || 0),
+    faultLineExtendOnBreak: Boolean(source.faultLineExtendOnBreak),
+    trueOverkillEnabled: Boolean(source.trueOverkillEnabled),
+    overkillReservoirRatio: clamp(source.overkillReservoirRatio || 0, 0, 1),
+    overkillReservoirYieldThreshold: Math.max(0, source.overkillReservoirYieldThreshold || 0),
+    chronoOverdrive: Boolean(source.chronoOverdrive),
+    chronoOverflowThreshold: clamp(source.chronoOverflowThreshold || DIRECT_MAX_RUN_SECONDS, DIRECT_MAX_RUN_SECONDS, BONUS_MAX_RUN_SECONDS),
+    chronoOverflowSpeedBonus: Math.max(0, source.chronoOverflowSpeedBonus || 0),
+    chronoOverflowProcEvery: Math.max(0, Math.floor(source.chronoOverflowProcEvery ?? source.chronoOverflowRepeatEvery ?? 0)),
+    superFieldEnabled: Boolean(source.superFieldEnabled),
+    superFieldRadiusTiles: Math.max(0, source.superFieldRadiusTiles || 0),
+    superFieldPower: Math.max(0, source.superFieldPower || 0),
+    superFieldDuration: Math.max(0, source.superFieldDuration || 0),
+    superFieldLaserPersistent: Boolean(source.superFieldLaserPersistent),
+    laserHeatEdgePower: Math.max(0, source.laserHeatEdgePower || 0),
+    laserHeatDuration: Math.max(0, source.laserHeatDuration || 0),
+    laserHeatNextHitBonus: Math.max(0, source.laserHeatNextHitBonus || 0),
+    rareOreAdditiveChance: clamp(source.rareOreAdditiveChance || 0, 0, 0.95),
+    goldenOreAdditiveChance: clamp(source.goldenOreAdditiveChance || 0, 0, 0.95),
+    magneticFieldEnabled: Boolean(source.magneticFieldEnabled),
+    magneticFieldDuration: Math.max(0, source.magneticFieldDuration || 0),
+    magneticFieldRadiusTiles: Math.max(0, source.magneticFieldRadiusTiles || source.magneticFieldRadius || 0),
+    magneticFieldTargetingBonus: Math.max(0, source.magneticFieldTargetingBonus || 0),
+    relicEffectChance: clamp(source.relicEffectChance || 0, 0, 0.95),
+    relicEffectDuration: Math.max(0, source.relicEffectDuration || 0),
+    relicEffectPower: Math.max(0, source.relicEffectPower || 0),
+    fortuneWheelEnabled: Boolean(source.fortuneWheelEnabled),
+    fortunePityThreshold: Math.max(0, Math.floor(source.fortunePityThreshold || 0)),
+    fortuneWheelCycleLength: Math.max(0, Math.floor(source.fortuneWheelCycleLength || 0)),
+    richVeinWholeChance: clamp(source.richVeinWholeChance || 0, 0, 0.95),
+    richVeinYieldBonus: Math.max(0, source.richVeinYieldBonus || 0),
+    richVeinCompletionBonus: Math.max(0, source.richVeinCompletionBonus || 0),
+    tripleSampleEvery: Math.max(0, Math.floor(source.tripleSampleEvery || 0)),
+    tripleSampleBonusYield: Math.max(0, Math.floor(source.tripleSampleBonusYield || 0)),
+    tripleSampleNextNodeDamage: clamp(source.tripleSampleNextNodeDamage || 0, 0, 1),
+    depthContractStep: Math.max(0, source.depthContractStep || 0),
+    depthContractBonusPerStack: Math.max(0, source.depthContractBonusPerStack || 0),
+    depthContractMaxStacks: Math.max(0, Math.floor(source.depthContractMaxStacks || 0)),
+    motherlodeGuaranteed: Boolean(source.motherlodeGuaranteed),
+    motherlodeTriggerBreaks: Math.max(1, Math.floor(source.motherlodeTriggerBreaks || 8)),
+    motherlodeYieldMultiplier: Math.max(1, source.motherlodeYieldMultiplier || 1),
+    motherlodeCompletionCache: Math.max(0, Math.floor(source.motherlodeCompletionCache || 0)),
+    motherlodeCompletionTimeBonus: Math.max(0, source.motherlodeCompletionTimeBonus || 0),
+    demolitionComboEnabled: Boolean(source.demolitionComboEnabled),
+    demolitionComboMarkDuration: Math.max(0.5, source.demolitionComboMarkDuration || 3),
+    demolitionComboFinishPower: Math.max(0, source.demolitionComboFinishPower || 0),
+    demolitionComboVeinRadiusTiles: Math.max(0, source.demolitionComboVeinRadiusTiles || 2),
+    solarDrillEnabled: Boolean(source.solarDrillEnabled),
+    solarDrillProcEvery: Math.max(0, Math.floor(source.solarDrillProcEvery || 0)),
+    solarDrillBeamDuration: Math.max(0, source.solarDrillBeamDuration || source.solarDrillDuration || 0),
+    solarDrillFinalBurstPower: Math.max(0, source.solarDrillFinalBurstPower || 0),
   };
 }
 
@@ -346,12 +466,10 @@ function getCampaignProgress() {
   const finalInstalled = (save.levels[CAMPAIGN.finalUpgrade] || 0) >= 1;
   const capstoneFraction = completedCapstones / CAMPAIGN.capstones.length;
   const finalFraction = finalInstalled ? 1 : 0;
-  const levelFraction = clamp(purchasedLevels / CAMPAIGN.requiredLevels, 0, 1);
   const oreFraction = clamp(save.lifetimeChunks / CAMPAIGN.requiredLifetimeChunks, 0, 1);
   const ready = Boolean(save.campaignComplete) || (
     finalInstalled
     && completedCapstones === CAMPAIGN.capstones.length
-    && purchasedLevels >= CAMPAIGN.requiredLevels
     && save.lifetimeChunks >= CAMPAIGN.requiredLifetimeChunks
   );
 
@@ -359,15 +477,13 @@ function getCampaignProgress() {
     ready,
     percent: ready ? 100 : Math.min(99, Math.floor((
       finalFraction * 0.2
-      + capstoneFraction * 0.35
-      + levelFraction * 0.2
-      + oreFraction * 0.25
+      + capstoneFraction * 0.5
+      + oreFraction * 0.3
     ) * 100)),
     finalInstalled,
     completedCapstones,
     totalCapstones: CAMPAIGN.capstones.length,
     purchasedLevels,
-    requiredLevels: CAMPAIGN.requiredLevels,
     lifetimeChunks: save.lifetimeChunks,
     requiredLifetimeChunks: CAMPAIGN.requiredLifetimeChunks,
   };
@@ -382,11 +498,13 @@ const UPGRADE_NODE_GAP = 14;
 const UPGRADE_RING_START = 170;
 const UPGRADE_RING_STEP = 118;
 const UPGRADE_MAP_PADDING = 270;
+const LASER_CORE_WIDTH = 8;
 let upgradeLayoutCache = null;
 
 const BREAK_SOURCE_LABELS = Object.freeze({
   pick: 'Кирка',
   laser: 'Лазер',
+  'laser-heat': 'Термический след',
   multi: 'Дополнительные удары',
   bomb: 'Бомбы',
   chain: 'Разряды',
@@ -397,8 +515,33 @@ const BREAK_SOURCE_LABELS = Object.freeze({
   shock: 'Шок-волны',
   beacon: 'Маяк артели',
   clearance: 'Расчистка прохода',
+  'side-chip': 'Боковой скол',
+  'approach-chip': 'Удар сближения',
+  'impact-wave': 'Ударная волна',
+  'quarry-fracture': 'Карьерный темп',
+  'fault-line': 'Линия разлома',
+  'chrono-overdrive': 'Хронофорсаж',
+  fortune: 'Колесо фортуны',
+  orchestra: 'Оркестр подрывников',
+  solar: 'Солнечный бур',
+  super_field: 'Поле инструмента',
   debug: 'Отладочное разрушение',
 });
+const DIRECT_TOOL_BREAK_SOURCES = new Set(['pick', 'laser', 'multi', 'clearance']);
+const SECONDARY_NO_PROC_SOURCES = new Set([
+  'side-chip',
+  'approach-chip',
+  'impact-wave',
+  'quarry-fracture',
+  'fault-line',
+  'chrono-overdrive',
+  'fortune',
+  'orchestra',
+  'solar',
+  'super_field',
+  'laser-heat',
+  'triple-sample',
+]);
 const TOOL_NAMES = Object.freeze({
   pickaxe: 'КИРКА',
   ironPick: 'ЖЕЛЕЗНАЯ КИРКА',
@@ -438,6 +581,14 @@ function createRunMetrics() {
     triangleBuffHits: 0,
     microEvents: {},
     eventCount: 0,
+    magneticFields: 0,
+    relicEffects: 0,
+    fortuneWheelProcs: 0,
+    richVeins: 0,
+    motherlodes: 0,
+    demolitionCombos: 0,
+    solarDrillBursts: 0,
+    laserHeatStrikes: 0,
   };
 }
 
@@ -514,6 +665,7 @@ const ui = {
   microEventBanner: $('#microEventBanner'),
   microEventTitle: $('#microEventTitle'),
   microEventTimer: $('#microEventTimer'),
+  perkStatusRail: $('#perkStatusRail'),
   utilityNav: $('#utilityNav'),
 };
 
@@ -581,6 +733,28 @@ const state = {
   laserShotCount: 0,
   triangleOreMemory: new Map(),
   triangleRefreshCooldown: 0,
+  echoPingCooldownRemaining: 0,
+  rememberedVeins: [],
+  ghostTarget: null,
+  lockedVeinId: null,
+  lockedVeinOreId: null,
+  veinRemainingCounts: new Map(),
+  lastBrokenVeinId: null,
+  veinBreakStreak: 0,
+  approachTravelElapsed: 0,
+  approachTargetKey: '',
+  impactWaveProgress: 0,
+  quarryVeinId: null,
+  quarryBreakStreak: 0,
+  quarryStreakExpires: 0,
+  quarryModeRemaining: 0,
+  quarryModeActive: false,
+  overkillReservoir: 0,
+  overkillReservoirVeinId: null,
+  overkillYieldTargetKey: null,
+  overkillYieldReady: false,
+  chronoOverflowRemaining: 0,
+  chronoOverdriveHitCount: 0,
   lastMetricTargetKey: '',
   microEventCheckCooldown: 0,
   activeMicroEvent: null,
@@ -589,6 +763,28 @@ const state = {
   eventDigBoostRemaining: 0,
   eventSoftRockRemaining: 0,
   eventBannerTimer: 0,
+  magneticField: null,
+  relicEffectIndex: 0,
+  relicDigBoostRemaining: 0,
+  relicYieldBoostRemaining: 0,
+  relicGadgetBoostRemaining: 0,
+  relicSecondBeamRemaining: 0,
+  relicSoftRockRemaining: 0,
+  relicChestBoostCharges: 0,
+  fortunePityCounter: 0,
+  fortuneWheelIndex: 0,
+  veinRuntime: new Map(),
+  motherlodeBreaks: 0,
+  motherlodeTriggered: false,
+  motherlodeVeinId: null,
+  demolitionComboStage: 0,
+  demolitionComboExpires: 0,
+  demolitionComboCooldownRemaining: 0,
+  demolitionComboVeinId: null,
+  laserHeatMarks: new Map(),
+  solarDrillBursts: [],
+  superFields: [],
+  tripleSampleVeins: new Map(),
   balanceReport: null,
   tutorialQueue: [],
   activeTutorialId: null,
@@ -666,10 +862,20 @@ function addBonusTime(seconds, x, y, label = 'БОНУС') {
   const amount = Math.max(0, Number(seconds) || 0);
   if (amount <= 0 || state.mode !== 'run') return 0;
   const before = state.timeLeft;
-  state.timeLeft = Math.min(getBonusRunCap(), state.timeLeft + amount);
+  const absoluteCap = getBonusRunCap();
+  const remainingWallTime = Math.max(0, absoluteCap - state.activeWallElapsed);
+  const projectedEndBefore = Math.min(absoluteCap, state.activeWallElapsed + before);
+  state.timeLeft = Math.min(remainingWallTime, state.timeLeft + amount);
   const granted = Math.max(0, state.timeLeft - before);
   if (granted <= 0) return 0;
   state.bonusTimeEarned += granted;
+  if (stats.chronoOverdrive) {
+    const overflowThreshold = stats.chronoOverflowThreshold || DIRECT_MAX_RUN_SECONDS;
+    const projectedEndAfter = Math.min(absoluteCap, state.activeWallElapsed + state.timeLeft);
+    const overflowAdded = Math.max(0, projectedEndAfter - overflowThreshold)
+      - Math.max(0, projectedEndBefore - overflowThreshold);
+    state.chronoOverflowRemaining += Math.max(0, overflowAdded);
+  }
   if (label === 'ОТКРЫТИЕ') state.metrics.discoveryBonuses += 1;
   if (Number.isFinite(x) && Number.isFinite(y)) {
     state.floaters.push({
@@ -923,6 +1129,28 @@ function startRun(options = {}) {
     laserShotCount: 0,
     triangleOreMemory: new Map(),
     triangleRefreshCooldown: 0,
+    echoPingCooldownRemaining: 0,
+    rememberedVeins: [],
+    ghostTarget: null,
+    lockedVeinId: null,
+    lockedVeinOreId: null,
+    veinRemainingCounts: collectVeinRemainingCounts(),
+    lastBrokenVeinId: null,
+    veinBreakStreak: 0,
+    approachTravelElapsed: 0,
+    approachTargetKey: '',
+    impactWaveProgress: 0,
+    quarryVeinId: null,
+    quarryBreakStreak: 0,
+    quarryStreakExpires: 0,
+    quarryModeRemaining: 0,
+    quarryModeActive: false,
+    overkillReservoir: 0,
+    overkillReservoirVeinId: null,
+    overkillYieldTargetKey: null,
+    overkillYieldReady: false,
+    chronoOverflowRemaining: 0,
+    chronoOverdriveHitCount: 0,
     lastMetricTargetKey: '',
     microEventCheckCooldown: 0,
     activeMicroEvent: null,
@@ -931,6 +1159,28 @@ function startRun(options = {}) {
     eventDigBoostRemaining: 0,
     eventSoftRockRemaining: 0,
     eventBannerTimer: 0,
+    magneticField: null,
+    relicEffectIndex: 0,
+    relicDigBoostRemaining: 0,
+    relicYieldBoostRemaining: 0,
+    relicGadgetBoostRemaining: 0,
+    relicSecondBeamRemaining: 0,
+    relicSoftRockRemaining: 0,
+    relicChestBoostCharges: 0,
+    fortunePityCounter: 0,
+    fortuneWheelIndex: 0,
+    veinRuntime: new Map(),
+    motherlodeBreaks: 0,
+    motherlodeTriggered: false,
+    motherlodeVeinId: null,
+    demolitionComboStage: 0,
+    demolitionComboExpires: 0,
+    demolitionComboCooldownRemaining: 0,
+    demolitionComboVeinId: null,
+    laserHeatMarks: new Map(),
+    solarDrillBursts: [],
+    superFields: [],
+    tripleSampleVeins: new Map(),
   });
   if (state.liftDepth > 1) state.metrics.liftStarts = 1;
   state.particles.length = 0;
@@ -1152,8 +1402,8 @@ function refreshCampaignUI() {
   if (ui.campaignStatus) {
     ui.campaignStatus.textContent = progress.ready
       ? (save.endingSeen ? 'ФИНАЛ ОТКРЫТ' : 'РАКЕТА ГОТОВА')
-      : `РАКЕТА · ${progress.percent}% · УР. ${progress.purchasedLevels}/${progress.requiredLevels} · РУДА ${formatNumber(progress.lifetimeChunks)}/${formatNumber(progress.requiredLifetimeChunks)}`;
-    ui.campaignStatus.title = `Верхушки веток ${progress.completedCapstones}/${progress.totalCapstones} · «В добрый путь» ${progress.finalInstalled ? 'установлен' : 'не установлен'} · уровни ${progress.purchasedLevels}/${progress.requiredLevels} · добыто ${formatNumber(progress.lifetimeChunks)}/${formatNumber(progress.requiredLifetimeChunks)} кусков`;
+      : `РАКЕТА · ${progress.percent}% · ВЕРШИНЫ ${progress.completedCapstones}/${progress.totalCapstones} · РУДА ${formatNumber(progress.lifetimeChunks)}/${formatNumber(progress.requiredLifetimeChunks)}`;
+    ui.campaignStatus.title = `Верхушки веток ${progress.completedCapstones}/${progress.totalCapstones} · «В добрый путь» ${progress.finalInstalled ? 'установлен' : 'не установлен'} · добыто ${formatNumber(progress.lifetimeChunks)}/${formatNumber(progress.requiredLifetimeChunks)} кусков`;
   }
   ui.launchRocket?.classList.toggle('hidden', !progress.ready);
   if (ui.launchLabel) ui.launchLabel.textContent = save.endingSeen ? 'СМОТРЕТЬ ФИНАЛ' : 'ЗАПУСТИТЬ РАКЕТУ';
@@ -1464,9 +1714,15 @@ function estimateBalanceRun(seed, profilePercent, preparedStats = null) {
       + (simulatedStats.timeShardChance || 0) * 0.18
       + (simulatedStats.lastChanceCharges || 0) * 0.03
     : 1;
+  const chronoOverdriveEstimate = simulatedStats.chronoOverdrive
+    ? 1
+      + (simulatedStats.chronoOverflowSpeedBonus || 0) * 0.45
+      + ((simulatedStats.chronoOverflowProcEvery || 0) > 0 ? 0.45 / simulatedStats.chronoOverflowProcEvery : 0)
+    : 1;
   const attackRate = simulatedStats.digSpeed
     * (simulatedStats.laserUnlocked ? (simulatedStats.laserChargeRate || 1) : 1)
-    * overclock;
+    * overclock
+    * chronoOverdriveEstimate;
   const densityPower = 1 + Math.max(0, simulatedStats.hardnessPierce || 0) * 0.07;
   const directDps = simulatedStats.pickPower * attackRate * densityPower
     * (1 + Math.max(0, simulatedStats.oreDamageBonus || 0))
@@ -1495,23 +1751,64 @@ function estimateBalanceRun(seed, profilePercent, preparedStats = null) {
     : 0);
   const fragmentFactor = 1 + Math.min(6, simulatedStats.bombFragments || 0)
     * Math.max(0, simulatedStats.bombFragmentPower || 0.3) * 0.2;
+  const magneticFieldUptime = simulatedStats.magneticFieldEnabled && bombChance > 0
+    ? clamp(attackRate * bombChance * Math.max(0, simulatedStats.magneticFieldDuration || 0), 0, 1)
+    : 0;
+  const magneticBonus = simulatedStats.magneticFieldEnabled
+    ? Math.max(0, simulatedStats.magneticFieldTargetingBonus || 0)
+    : 0;
+  const primaryBombFieldFactor = 1 + magneticBonus;
+  const sustainedMagneticFactor = 1 + magneticBonus * magneticFieldUptime;
   const bombDps = attackRate * bombChance * simulatedStats.pickPower
     * Math.max(0, simulatedStats.bombPower || 1) * 1.8 * bombArea
-    * volatileFactor * stickyFactor * fragmentFactor;
+    * volatileFactor * stickyFactor * fragmentFactor * primaryBombFieldFactor;
   const chainDps = attackRate * chainChance
     * Math.max(1, simulatedStats.chainCount || 1) * simulatedStats.pickPower
     * Math.max(0, simulatedStats.chainPower || 0.55)
-    * (1 + (simulatedStats.triangularFixGadgetDamageBonus || 0) * 0.35);
+    * (1 + (simulatedStats.triangularFixGadgetDamageBonus || 0) * 0.35)
+    * sustainedMagneticFactor;
   const droneDps = Math.max(0, simulatedStats.droneCount || 0)
     * Math.max(0, simulatedStats.droneSpeed || 1)
     * simulatedStats.pickPower * Math.max(0, simulatedStats.dronePower || 0.35)
-    * clamp(simulatedStats.droneLifetime || 0, 0, 1);
+    * clamp(simulatedStats.droneLifetime || 0, 0, 1)
+    * sustainedMagneticFactor;
   const echoDps = simulatedStats.laserUnlocked && simulatedStats.laserSuperPickEchoEvery > 0
     ? attackRate / simulatedStats.laserSuperPickEchoEvery
       * simulatedStats.pickPower * simulatedStats.laserSuperPickEchoPower
       * Math.max(1, Math.PI * simulatedStats.laserSuperPickEchoRadiusTiles ** 2 * 0.28)
     : 0;
-  const effectiveDps = Math.max(0.1, directDps + bombDps + chainDps + droneDps + echoDps);
+  const sideChipDps = (simulatedStats.sideChipEvery || 0) > 0
+    ? directDps * (simulatedStats.sideChipPower || 0) * Math.max(1, simulatedStats.sideChipHits || 0)
+      / simulatedStats.sideChipEvery * 0.32
+    : 0;
+  const impactWaveDps = (simulatedStats.impactWaveEvery || 0) > 0
+    ? directDps * (simulatedStats.impactWavePower || 0)
+      * Math.max(1, Math.PI * (simulatedStats.impactWaveRadiusTiles || 0) ** 2 * 0.16)
+      / simulatedStats.impactWaveEvery
+    : 0;
+  const persistentFieldDps = simulatedStats.superFieldEnabled
+    ? directDps * (simulatedStats.superFieldPower || 0)
+      * Math.max(1, (simulatedStats.superFieldRadiusTiles || 0) ** 2 * 0.16)
+    : 0;
+  const laserHeatDps = simulatedStats.laserUnlocked && simulatedStats.laserHeatEdgePower > 0
+    ? directDps * (
+      Math.max(0, simulatedStats.laserHeatEdgePower || 0) * 0.35
+      + Math.max(0, simulatedStats.laserHeatNextHitBonus || 0) * 0.12
+    )
+    : 0;
+  const tripleSampleDps = (simulatedStats.tripleSampleEvery || 0) > 0
+    ? directDps * Math.max(0, simulatedStats.tripleSampleNextNodeDamage || 0)
+      / simulatedStats.tripleSampleEvery * 0.7
+    : 0;
+  const solarDps = simulatedStats.solarDrillEnabled && simulatedStats.solarDrillProcEvery > 0
+    ? directDps * (1 + Math.max(0, simulatedStats.solarDrillFinalBurstPower || 0))
+      / simulatedStats.solarDrillProcEvery
+    : 0;
+  const effectiveDps = Math.max(
+    0.1,
+    directDps + bombDps + chainDps + droneDps + echoDps + sideChipDps + impactWaveDps
+      + persistentFieldDps + laserHeatDps + tripleSampleDps + solarDps,
+  );
   const workRange = simulatedStats.laserUnlocked
     ? simulatedStats.laserRange * 0.78
     : Math.max(simulatedStats.digReach, TILE_SIZE * 0.9);
@@ -1556,6 +1853,9 @@ function estimateBalanceRun(seed, profilePercent, preparedStats = null) {
   let previousX = originX;
   let previousY = originY;
   const foundTypes = new Set();
+  let motherlodeEstimateTriggered = false;
+  let motherlodeEstimateNodesRemaining = 0;
+  const estimatedVeinNodes = 5;
   const collateralPerTarget = clamp(
     1
       + Math.max(0, toolSweep - 1) * 0.18
@@ -1573,18 +1873,51 @@ function estimateBalanceRun(seed, profilePercent, preparedStats = null) {
     previousX = target.x;
     previousY = target.y;
     const collateral = Math.min(collateralPerTarget, targets.length - oreBlocks);
+    const oreBlocksBefore = oreBlocks;
     oreBlocks += collateral;
     mined += collateral * (1 + Math.max(0, toolSweep - 1) * 0.65)
       + legDistance / TILE_SIZE * 0.18;
     depth = Math.max(depth, target.ty - spawn.ty);
     const firstOfType = !foundTypes.has(target.ore.id);
     foundTypes.add(target.ore.id);
-    const dropMultiplier = 1
+    const richVeinChance = expectedChance(simulatedStats.richVeinWholeChance, 0.18);
+    const richVeinMultiplier = 1 + richVeinChance * Math.max(0, simulatedStats.richVeinYieldBonus || 0);
+    const richCompletionExpected = richVeinChance
+      * Math.max(0, simulatedStats.richVeinCompletionBonus || 0) / estimatedVeinNodes;
+    let motherlodeAffectedBlocks = 0;
+    let motherlodeCompletedHere = false;
+    if (simulatedStats.motherlodeGuaranteed) {
+      const trigger = Math.max(1, simulatedStats.motherlodeTriggerBreaks || 20);
+      let eligibleBlocks = motherlodeEstimateTriggered
+        ? collateral
+        : Math.max(0, oreBlocks - Math.max(trigger, oreBlocksBefore));
+      if (!motherlodeEstimateTriggered && oreBlocks >= trigger) {
+        motherlodeEstimateTriggered = true;
+        motherlodeEstimateNodesRemaining = estimatedVeinNodes;
+      }
+      if (motherlodeEstimateTriggered && motherlodeEstimateNodesRemaining > 0 && eligibleBlocks > 0) {
+        motherlodeAffectedBlocks = Math.min(eligibleBlocks, motherlodeEstimateNodesRemaining);
+        motherlodeEstimateNodesRemaining -= motherlodeAffectedBlocks;
+        motherlodeCompletedHere = motherlodeEstimateNodesRemaining <= 0;
+      }
+    }
+    const tripleSampleExpected = (simulatedStats.tripleSampleEvery || 0) > 0
+      ? Math.max(0, simulatedStats.tripleSampleBonusYield || 0) / simulatedStats.tripleSampleEvery
+      : 0;
+    const wheelExpected = simulatedStats.fortuneWheelEnabled && simulatedStats.fortunePityThreshold > 0
+      ? 0.42 / simulatedStats.fortunePityThreshold
+      : 0;
+    const baseDropPieces = 1
       + expectedChance(simulatedStats.extraYieldChance, 0.24)
       + expectedChance(simulatedStats.doubleDropChance, 0.18)
       + expectedChance(simulatedStats.tripleDropChance, 0.12) * 2
-      + expectedChance(simulatedStats.richVeinChance, 0.18)
-      + expectedChance(simulatedStats.motherlodeChance, 0.08) * 4;
+      + tripleSampleExpected
+      + wheelExpected;
+    const ordinaryDropPieces = baseDropPieces * richVeinMultiplier + richCompletionExpected;
+    const motherlodeShare = collateral > 0 ? motherlodeAffectedBlocks / collateral : 0;
+    const motherlodeDropPieces = baseDropPieces * Math.max(1, simulatedStats.motherlodeYieldMultiplier || 1);
+    const dropMultiplier = ordinaryDropPieces * (1 - motherlodeShare)
+      + motherlodeDropPieces * motherlodeShare;
     const comboMultiplier = 1 + Math.min(
       1.1,
       Math.max(0, attackRate - 2) * 0.018 * Math.max(1, simulatedStats.comboMultiplier || 1),
@@ -1593,21 +1926,63 @@ function estimateBalanceRun(seed, profilePercent, preparedStats = null) {
     const gemMultiplier = (target.ore.tier || 0) >= 6 ? (simulatedStats.gemValueMultiplier || 1) : 1;
     const diversityMultiplier = 1 + Math.max(0, foundTypes.size - 1)
       * Math.max(0, simulatedStats.oreDiversityBonusPerType || 0);
+    const targetDepth = Math.abs(target.x - originX) / TILE_SIZE * 0.42
+      + Math.max(0, target.y - originY) / TILE_SIZE;
+    const contractStacks = simulatedStats.depthContractStep > 0
+      ? Math.min(
+        simulatedStats.depthContractMaxStacks || 0,
+        Math.floor(targetDepth / simulatedStats.depthContractStep),
+      )
+      : 0;
     const yieldPerBlock = Math.max(1,
       (simulatedStats.oreValueMultiplier || 1)
         * dropMultiplier
         * comboMultiplier
         * gemMultiplier
         * (1 + depthProgress * Math.max(0, simulatedStats.depthValueBonus || 0))
+        * (1 + contractStacks * Math.max(0, simulatedStats.depthContractBonusPerStack || 0))
         * diversityMultiplier);
-    const relicPieces = expectedChance(simulatedStats.relicChance, 0.08) * (1 + depth / 45);
-    const pieces = collateral * yieldPerBlock + relicPieces;
+    const pieces = collateral * yieldPerBlock;
     oreBreakdown[target.ore.id] = (oreBreakdown[target.ore.id] || 0) + pieces;
-    const upgradedValue = (target.ore.value || 1)
-      * (1 + expectedChance(simulatedStats.rareOreChance, 0.2))
-      * (1 + expectedChance(simulatedStats.goldenOreChance, 0.12) * 0.35);
-    haul += pieces;
-    cargoValue += pieces * upgradedValue;
+    const nextOre = ORE_TYPES
+      .filter((ore) => ore.tier > target.ore.tier && foundTypes.has(ore.id))
+      .sort((left, right) => left.tier - right.tier)[0] || null;
+    const rareAdditive = nextOre ? expectedChance(simulatedStats.rareOreAdditiveChance, 0.2) : 0;
+    const goldOre = oreById.get('gold') || null;
+    const goldIsKnown = Boolean(
+      goldOre
+      && (
+        foundTypes.has(goldOre.id)
+        || (save.lifetimeOres?.[goldOre.id] || 0) > 0
+        || (save.inventory?.[goldOre.id] || 0) > 0
+      )
+    );
+    const goldAdditive = goldIsKnown ? expectedChance(simulatedStats.goldenOreAdditiveChance, 0.12) : 0;
+    const additivePieces = collateral * (rareAdditive + goldAdditive);
+    if (nextOre) oreBreakdown[nextOre.id] = (oreBreakdown[nextOre.id] || 0) + collateral * rareAdditive;
+    if (goldOre) oreBreakdown[goldOre.id] = (oreBreakdown[goldOre.id] || 0) + collateral * goldAdditive;
+    const motherlodeCachePieces = motherlodeCompletedHere
+      ? Math.max(0, simulatedStats.motherlodeCompletionCache || 0)
+      : 0;
+    const motherlodeRichCompletionPieces = motherlodeCompletedHere
+      ? Math.max(0, simulatedStats.richVeinCompletionBonus || 0)
+      : 0;
+    const cacheOre = [...foundTypes]
+      .map((oreId) => oreById.get(oreId))
+      .filter(Boolean)
+      .sort((left, right) => right.tier - left.tier)[0] || target.ore;
+    if (motherlodeCachePieces > 0) {
+      oreBreakdown[cacheOre.id] = (oreBreakdown[cacheOre.id] || 0) + motherlodeCachePieces;
+    }
+    if (motherlodeRichCompletionPieces > 0) {
+      oreBreakdown[target.ore.id] += motherlodeRichCompletionPieces;
+    }
+    haul += pieces + additivePieces + motherlodeCachePieces + motherlodeRichCompletionPieces;
+    cargoValue += pieces * (target.ore.value || 1)
+      + collateral * rareAdditive * (nextOre?.value || target.ore.value || 1)
+      + collateral * goldAdditive * (goldOre?.value || target.ore.value || 1)
+      + motherlodeCachePieces * (cacheOre.value || target.ore.value || 1)
+      + motherlodeRichCompletionPieces * (target.ore.value || 1);
     const expectedTimeBonus = collateral * (
       ((simulatedStats.timeRefundChance || 0) > 0
         ? expectedChance(simulatedStats.timeRefundChance, 0.1) * Math.max(0, simulatedStats.timeRefundAmount || 0)
@@ -1615,7 +1990,16 @@ function estimateBalanceRun(seed, profilePercent, preparedStats = null) {
       + ((simulatedStats.timeShardChance || 0) > 0
         ? expectedChance(simulatedStats.timeShardChance, 0.08) * Math.max(0, simulatedStats.timeShardSeconds || 0)
         : 0)
-    ) + (firstOfType ? Math.max(0, simulatedStats.discoveryTimeBonus || 0) : 0);
+      + ((simulatedStats.relicEffectChance || 0) > 0
+        ? expectedChance(simulatedStats.relicEffectChance, 0.08)
+          * 0.25 * (0.4 + Math.min(0.4, simulatedStats.relicEffectPower || 0))
+        : 0)
+      + (simulatedStats.fortuneWheelEnabled && simulatedStats.fortunePityThreshold > 0
+        ? 0.25 / (simulatedStats.fortunePityThreshold * Math.max(1, simulatedStats.fortuneWheelCycleLength || 4))
+        : 0)
+    )
+      + (firstOfType ? Math.max(0, simulatedStats.discoveryTimeBonus || 0) : 0)
+      + (motherlodeCompletedHere ? Math.max(0, simulatedStats.motherlodeCompletionTimeBonus || 0) : 0);
     duration = Math.min(bonusCap, duration + expectedTimeBonus);
     if (oreBlocks >= targets.length || mined >= 2_500) break;
   }
@@ -2294,12 +2678,17 @@ function scrollUpgradeIntoView(definition, smooth = true) {
 function updateHud() {
   const duration = Math.max(0.01, stats.runDuration);
   const displayedTime = Math.max(0, Math.min(state.timeLeft, getBonusRunCap() - state.activeWallElapsed));
-  if (ui.timerValue) ui.timerValue.textContent = displayedTime.toFixed(1);
+  const chronoOverflow = stats.chronoOverdrive ? Math.max(0, state.chronoOverflowRemaining || 0) : 0;
+  if (ui.timerValue) {
+    ui.timerValue.textContent = `${displayedTime.toFixed(1)}${chronoOverflow > 0 ? ' ⚡' : ''}`;
+    ui.timerValue.title = chronoOverflow > 0 ? `Хронофорсаж: ${chronoOverflow.toFixed(1)} с` : '';
+  }
   if (ui.timerFill) {
     const fraction = clamp(displayedTime / duration, 0, 1);
     ui.timerFill.style.transform = `scaleX(${fraction})`;
     ui.timerFill.classList.toggle('is-danger', fraction < 0.28);
     ui.timerFill.classList.toggle('is-bonus', state.bonusTimeEarned > 0 && displayedTime > Math.max(0, duration - state.activeWallElapsed));
+    ui.timerFill.classList.toggle('is-overdrive', chronoOverflow > 0);
   }
   const timerTrack = ui.timerFill?.parentElement;
   timerTrack?.setAttribute('aria-valuemax', String(getBonusRunCap()));
@@ -2328,14 +2717,95 @@ function procChance(baseChance = 0, luckWeight = 0.22) {
   return clamp((baseChance || 0) + (stats.luck || 0) * luckWeight + (stats.fortuneProcChance || 0), 0, 0.95);
 }
 
+function relicDigMultiplier() {
+  return state.relicDigBoostRemaining > 0 ? 1 + Math.max(0.12, stats.relicEffectPower || 0) : 1;
+}
+
+function relicYieldMultiplier() {
+  return state.relicYieldBoostRemaining > 0 ? 1 + Math.max(0.12, stats.relicEffectPower || 0) : 1;
+}
+
+function relicGadgetMultiplier() {
+  return state.relicGadgetBoostRemaining > 0 ? 1 + Math.max(0.12, stats.relicEffectPower || 0) : 1;
+}
+
+function activateRelicEffect(x, y, fromChest = false) {
+  if (!(stats.relicEffectChance > 0)) return false;
+  const baseDuration = Math.max(3, stats.relicEffectDuration || 6);
+  const duration = fromChest ? baseDuration + 2 : baseDuration;
+  const labels = ['РЕЛИКВИЯ: ВТОРОЙ ЛУЧ', 'РЕЛИКВИЯ: МЯГКАЯ ПОРОДА', 'РЕЛИКВИЯ: ХРОНОЗАРЯД', 'РЕЛИКВИЯ: УСИЛЕННЫЙ СУНДУК'];
+  const colors = ['#8ff8ef', '#ffbb77', '#ffe58d', '#92eaff'];
+  const effectIndex = state.relicEffectIndex % labels.length;
+  state.relicEffectIndex = (state.relicEffectIndex + 1) % labels.length;
+  if (fromChest) {
+    state.relicSecondBeamRemaining = Math.max(state.relicSecondBeamRemaining, duration);
+    state.eventSoftRockRemaining = Math.max(state.eventSoftRockRemaining, duration);
+    state.relicSoftRockRemaining = Math.max(state.relicSoftRockRemaining, duration);
+    state.relicYieldBoostRemaining = Math.max(state.relicYieldBoostRemaining, duration);
+  } else if (effectIndex === 0) {
+    state.relicSecondBeamRemaining = Math.max(state.relicSecondBeamRemaining, duration);
+  } else if (effectIndex === 1) {
+    state.eventSoftRockRemaining = Math.max(state.eventSoftRockRemaining, duration);
+    state.relicSoftRockRemaining = Math.max(state.relicSoftRockRemaining, duration);
+  } else if (effectIndex === 2) {
+    addBonusTime(0.4 + Math.min(0.4, stats.relicEffectPower || 0), x, y - 36, 'РЕЛИКВИЯ');
+  } else {
+    state.relicChestBoostCharges = Math.min(2, state.relicChestBoostCharges + 1);
+  }
+  state.metrics.relicEffects += 1;
+  const label = fromChest ? 'РЕЛИКВИЯ ИЗ СУНДУКА · ВСЕ БОНУСЫ' : labels[effectIndex];
+  state.floaters.push({ x, y: y - 34, text: label, color: fromChest ? '#fff2a6' : colors[effectIndex], life: 1.2, maxLife: 1.2 });
+  toast(label, 'success');
+  sound.tone(fromChest ? 520 : 410 + effectIndex * 80, 0.18, 'sine', 0.035, 180);
+  return true;
+}
+
+function activeMagneticField() {
+  const field = state.magneticField;
+  if (!field || field.remaining <= 0 || field.radius <= 0) return null;
+  return field;
+}
+
+function revealMagneticFieldOres(field) {
+  if (!field || !state.world) return 0;
+  const min = state.world.worldToTile(field.x - field.radius, field.y - field.radius);
+  const max = state.world.worldToTile(field.x + field.radius, field.y + field.radius);
+  let revealed = 0;
+  for (let ty = Math.max(0, min.ty); ty <= Math.min(WORLD_CONFIG.HEIGHT - 1, max.ty); ty += 1) {
+    for (let tx = Math.max(0, min.tx); tx <= Math.min(WORLD_CONFIG.WIDTH - 1, max.tx); tx += 1) {
+      const tile = state.world.getTile(tx, ty);
+      if (!tile?.oreId || tile.kind === 'air') continue;
+      const x = (tx + 0.5) * TILE_SIZE;
+      const y = (ty + 0.5) * TILE_SIZE;
+      if (distance(x, y, field.x, field.y) > field.radius) continue;
+      tile.discovered = true;
+      tile.sensedUntil = Math.max(tile.sensedUntil || 0, state.elapsed + field.maxDuration);
+      revealed += 1;
+    }
+  }
+  if (revealed > 0) state.ping = 1;
+  return revealed;
+}
+
+function magneticGadgetMultiplier(x, y) {
+  const field = activeMagneticField();
+  const inside = field && distance(x, y, field.x, field.y) <= field.radius + TILE_SIZE;
+  return relicGadgetMultiplier() * (inside ? 1 + stats.magneticFieldTargetingBonus : 1);
+}
+
 function temporalOverclockMultiplier() {
-  if (!stats.chronoOverclock) return 1;
-  return 1
-    + (stats.startTimeFreeze || 0) * 0.025
-    + (stats.timerDrainReduction || 0) * 0.28
-    + (stats.timeRefundChance || 0) * 0.25
-    + (stats.timeShardChance || 0) * 0.18
-    + (stats.lastChanceCharges || 0) * 0.03;
+  let multiplier = 1;
+  if (stats.chronoOverclock) {
+    multiplier += (stats.startTimeFreeze || 0) * 0.025
+      + (stats.timerDrainReduction || 0) * 0.28
+      + (stats.timeRefundChance || 0) * 0.25
+      + (stats.timeShardChance || 0) * 0.18
+      + (stats.lastChanceCharges || 0) * 0.03;
+  }
+  if (stats.chronoOverdrive && state.chronoOverflowRemaining > 0) {
+    multiplier += stats.chronoOverflowSpeedBonus || 0;
+  }
+  return multiplier;
 }
 
 function dronesAreActive() {
@@ -2346,6 +2816,119 @@ function dronesAreActive() {
 
 function oreRank(ore) {
   return Math.max(0, ORE_TYPES.findIndex((item) => item.id === ore?.id));
+}
+
+function collectVeinRemainingCounts() {
+  const counts = new Map();
+  if (!state.world) return counts;
+  const countTile = (tile) => {
+    if (!tile?.oreId || !tile.veinId || tile.kind === 'air' || tile.kind === 'bedrock') return;
+    counts.set(tile.veinId, (counts.get(tile.veinId) || 0) + 1);
+  };
+  if (typeof state.world.forEachOreTileInBounds === 'function') {
+    state.world.forEachOreTileInBounds(0, 0, WORLD_CONFIG.WIDTH - 1, WORLD_CONFIG.HEIGHT - 1, countTile);
+  } else {
+    for (let ty = 0; ty < WORLD_CONFIG.HEIGHT; ty += 1) {
+      for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) countTile(state.world.getTile(tx, ty));
+    }
+  }
+  return counts;
+}
+
+function remainingVeinNodes(veinId) {
+  if (!veinId) return 0;
+  return Math.max(0, state.veinRemainingCounts?.get(veinId) || 0);
+}
+
+function decorateRememberedTarget(target, options = {}) {
+  if (!target || target.kind !== 'ore') return target;
+  if ((stats.ghostTrailDuration || 0) > 0) {
+    target.ghostUntil = Math.max(target.ghostUntil || 0, state.elapsed + stats.ghostTrailDuration);
+    state.ghostTarget = {
+      kind: 'ore',
+      tx: target.tx,
+      ty: target.ty,
+      x: target.x,
+      y: target.y,
+      ghostUntil: target.ghostUntil,
+      lockRadius: target.lockRadius || 0,
+    };
+  }
+  if ((options.echoHold || 0) > 0) {
+    target.echoHoldUntil = Math.max(target.echoHoldUntil || 0, state.elapsed + options.echoHold);
+  }
+  return target;
+}
+
+function pruneRememberedVeins(focusedOreId = null) {
+  const slots = stats.seismicRouteSlots || 0;
+  if (slots <= 0) {
+    state.rememberedVeins.length = 0;
+    return;
+  }
+  const seenVeins = new Set();
+  state.rememberedVeins = state.rememberedVeins.filter((target) => {
+    if (!oreTargetIsValid(target, focusedOreId)) return false;
+    const veinId = target.tile?.veinId;
+    if (!veinId || seenVeins.has(veinId)) return false;
+    seenVeins.add(veinId);
+    return true;
+  }).slice(0, slots);
+}
+
+function rememberSeismicRoutes(targets, primary, focusedOreId = null) {
+  const slots = stats.seismicRouteSlots || 0;
+  if (slots <= 0) return;
+  pruneRememberedVeins(focusedOreId);
+  const primaryVeinId = primary?.tile?.veinId || null;
+  const merged = [...state.rememberedVeins];
+  const known = new Set(merged.map((target) => target.tile?.veinId).filter(Boolean));
+  for (const target of targets) {
+    const veinId = target?.tile?.veinId;
+    if (!veinId || veinId === primaryVeinId || known.has(veinId)) continue;
+    known.add(veinId);
+    merged.push({ ...target, rememberedRoute: true });
+  }
+  merged.sort((left, right) => (left.score || Infinity) - (right.score || Infinity));
+  state.rememberedVeins = merged.slice(0, slots);
+}
+
+function takeRememberedVeinTarget(focusedOreId = null) {
+  pruneRememberedVeins(focusedOreId);
+  const target = state.rememberedVeins.shift() || null;
+  if (!target) return null;
+  target.rememberedRoute = true;
+  target.lockRadius = Math.max(
+    target.lockRadius || 0,
+    distance(state.player.x, state.player.y, target.x, target.y) + TILE_SIZE,
+  );
+  return decorateRememberedTarget(target);
+}
+
+function takeGhostTrailTarget(focusedOreId = null) {
+  const ghost = state.ghostTarget;
+  if (
+    !stats.ghostTrailThroughWalls
+    || !ghost
+    || ghost.ghostUntil < state.elapsed
+    || !oreTargetIsValid(ghost, focusedOreId)
+  ) return null;
+  if (
+    (stats.ghostTrailMaxLayers || 0) > 0
+    && !hasSenseLine(
+      state.player.x,
+      state.player.y,
+      ghost.x,
+      ghost.y,
+      stats.ghostTrailMaxLayers,
+    )
+  ) return null;
+  const target = { ...ghost, ghostTrail: true };
+  target.lockRadius = Math.max(
+    target.lockRadius || 0,
+    distance(state.player.x, state.player.y, target.x, target.y) + TILE_SIZE,
+  );
+  return target;
 }
 
 function effectiveSenseRadius() {
@@ -2396,7 +2979,7 @@ function findBestOreTargets(x, y, radius, focusedOreId = null, options = {}, lim
   const center = state.world.worldToTile(x, y);
   const reach = Math.ceil(radius / TILE_SIZE);
   const radiusSquared = radius * radius;
-  const resultLimit = clamp(Math.floor(Number(limit) || 1), 1, 4);
+  const resultLimit = clamp(Math.floor(Number(limit) || 1), 1, 12);
   const ranked = [];
   const minTx = Math.max(0, center.tx - reach);
   const maxTx = Math.min(WORLD_CONFIG.WIDTH - 1, center.tx + reach);
@@ -2417,6 +3000,9 @@ function findBestOreTargets(x, y, radius, focusedOreId = null, options = {}, lim
     if (distanceSquared > radiusSquared) return;
     const ore = oreById.get(tile.oreId);
     const valueWeight = 1 + Math.log2(1 + (ore?.value || 1)) * bias;
+    const veinSizeWeight = focusedOreId && (stats.focusVeinSizeBias || 0) > 0
+      ? 1 + Math.log2(1 + remainingVeinNodes(tile.veinId)) * stats.focusVeinSizeBias
+      : 1;
     const distanceToTarget = Math.sqrt(distanceSquared);
     const travelSeconds = distanceToTarget / Math.max(1, stats.moveSpeed * (stats.mineMoveMultiplier || 1));
     const expectedCritical = 1 + procChance(stats.critChance, 0.16) * Math.max(0, stats.critMultiplier - 1);
@@ -2426,7 +3012,7 @@ function findBestOreTargets(x, y, radius, focusedOreId = null, options = {}, lim
     const focusedCalibration = focusedOreId ? focusedDamageMultiplier(tile) : 1;
     const effectivePower = stats.pickPower * (1 + (stats.hardnessPierce || 0) * 0.07) * (1 + (stats.oreDamageBonus || 0)) * expectedCritical * expectedMulti * rarePower * laserPower * focusedCalibration;
     const miningSeconds = (tile.hp || 1) / Math.max(0.1, effectivePower * stats.digSpeed);
-    const score = (travelSeconds + miningSeconds) / valueWeight;
+    const score = (travelSeconds + miningSeconds) / (valueWeight * veinSizeWeight);
     const threshold = ranked.length >= resultLimit ? ranked[ranked.length - 1].score : Infinity;
     if (score >= threshold) return;
     if (!options.ignoreSenseLine && !hasSenseLine(x, y, targetX, targetY, focusedOreId ? 7 : 2)) return;
@@ -2466,16 +3052,59 @@ function oreTargetIsValid(target, focusedOreId = null) {
 }
 
 function chooseOreTargets(x, y, radius, focusedOreId = null) {
+  const lockedVeinId = stats.veinLockEnabled && remainingVeinNodes(state.lockedVeinId) > 0
+    ? state.lockedVeinId
+    : null;
+  const trailVeinId = remainingVeinNodes(state.lastBrokenVeinId) > 0
+    ? state.lastBrokenVeinId
+    : null;
+  const preferredVeinId = lockedVeinId || trailVeinId;
+  if (preferredVeinId) {
+    const rangeMultiplier = lockedVeinId
+      ? Math.max(stats.veinLockRangeMultiplier || 1, stats.veinTrailRangeMultiplier || 1)
+      : stats.veinTrailRangeMultiplier || 1;
+    const veinTargets = findBestOreTargets(
+      x,
+      y,
+      radius * rangeMultiplier,
+      focusedOreId,
+      { veinId: preferredVeinId, ignoreSenseLine: true },
+      (stats.backupTargetSlots || 0) > 0 ? 2 : 1,
+    );
+    if (veinTargets[0]) {
+      const [primary, backup = null] = veinTargets;
+      return { primary: decorateRememberedTarget(primary), backup };
+    }
+    if (lockedVeinId) {
+      state.lockedVeinId = null;
+      state.lockedVeinOreId = null;
+    }
+  }
+
+  const routeSampleSize = Math.max(
+    (stats.backupTargetSlots || 0) > 0 ? 2 : 1,
+    1 + (stats.seismicRouteSlots || 0) * 4,
+  );
   const targets = findBestOreTargets(
     x,
     y,
     radius,
     focusedOreId,
     {},
-    (stats.backupTargetSlots || 0) > 0 ? 2 : 1,
+    routeSampleSize,
   );
   const [primary = null, backup = null] = targets;
-  return { primary, backup };
+  if (primary) {
+    rememberSeismicRoutes(targets.slice(1), primary, focusedOreId);
+    return {
+      primary: decorateRememberedTarget(primary),
+      backup: (stats.backupTargetSlots || 0) > 0 ? backup : null,
+    };
+  }
+  return {
+    primary: takeGhostTrailTarget(focusedOreId) || takeRememberedVeinTarget(focusedOreId),
+    backup: null,
+  };
 }
 
 function getTriangulationTriangle() {
@@ -2542,8 +3171,16 @@ function noteTargetAcquired(target) {
   if (!target) return;
   const key = `${target.kind || 'ore'}:${target.tx}:${target.ty}`;
   if (state.lastMetricTargetKey && state.lastMetricTargetKey !== key) state.metrics.targetSwitches += 1;
+  if (state.approachTargetKey && state.approachTargetKey !== key) state.approachTravelElapsed = 0;
+  state.approachTargetKey = key;
   state.lastMetricTargetKey = key;
   if (target.kind === 'ore') {
+    decorateRememberedTarget(target);
+    const veinId = target.tile?.veinId || null;
+    if (stats.veinLockEnabled && veinId && (!state.lockedVeinId || remainingVeinNodes(state.lockedVeinId) <= 0)) {
+      state.lockedVeinId = veinId;
+      state.lockedVeinOreId = target.tile?.oreId || null;
+    }
     showTutorial(
       'sense_target',
       'ЧУТЬЁ ВЗЯЛО СЛЕД',
@@ -2654,6 +3291,48 @@ function findBeaconAwareTarget(x, y, radius, focusedOre, beacon, options = {}) {
     focusedOre?.id || null,
     { ...options, ignoreSenseLine: false, veinId: null },
   );
+}
+
+function findValuableOreInField(field, focusedOre = null, excludedKeys = []) {
+  if (!field || !state.world) return null;
+  const excluded = excludedKeys instanceof Set ? excludedKeys : new Set(excludedKeys || []);
+  const min = state.world.worldToTile(field.x - field.radius, field.y - field.radius);
+  const max = state.world.worldToTile(field.x + field.radius, field.y + field.radius);
+  let best = null;
+  let bestScore = -Infinity;
+  const consider = (tile, tx, ty) => {
+    if (!tile?.oreId || tile.kind === 'air' || excluded.has(`${tx}:${ty}`)) return;
+    if (focusedOre?.id && tile.oreId !== focusedOre.id) return;
+    const x = (tx + 0.5) * TILE_SIZE;
+    const y = (ty + 0.5) * TILE_SIZE;
+    const fromCenter = distance(x, y, field.x, field.y);
+    if (fromCenter > field.radius) return;
+    const ore = oreById.get(tile.oreId);
+    const score = (ore?.value || 1) * 1000 - fromCenter - (tile.hp || 0) * 0.03;
+    if (score <= bestScore) return;
+    bestScore = score;
+    best = { kind: 'ore', tile, tx, ty, x, y, distance: fromCenter, score: -score };
+  };
+  if (typeof state.world.forEachOreTileInBounds === 'function') {
+    state.world.forEachOreTileInBounds(
+      Math.max(0, min.tx),
+      Math.max(0, min.ty),
+      Math.min(WORLD_CONFIG.WIDTH - 1, max.tx),
+      Math.min(WORLD_CONFIG.HEIGHT - 1, max.ty),
+      consider,
+    );
+  } else {
+    for (let ty = Math.max(0, min.ty); ty <= Math.min(WORLD_CONFIG.HEIGHT - 1, max.ty); ty += 1) {
+      for (let tx = Math.max(0, min.tx); tx <= Math.min(WORLD_CONFIG.WIDTH - 1, max.tx); tx += 1) {
+        consider(state.world.getTile(tx, ty), tx, ty);
+      }
+    }
+  }
+  return best;
+}
+
+function findMagneticFieldTarget(focusedOre = null, excludedKeys = []) {
+  return findValuableOreInField(activeMagneticField(), focusedOre, excludedKeys);
 }
 
 function findCrewVeinTarget(x, y, oreId, excludedKeys = []) {
@@ -2796,6 +3475,58 @@ function triggerDeafKnock(x = state.player?.x, y = state.player?.y) {
   return false;
 }
 
+function triggerEchoPing(focusedOre = getFocusedOre()) {
+  if (
+    !state.player
+    || !state.world
+    || !(stats.echoPingCooldown > 0)
+    || state.echoPingCooldownRemaining > 0
+  ) return false;
+  state.echoPingCooldownRemaining = stats.echoPingCooldown;
+  const radius = effectiveSenseRadius()
+    * (stats.echoPingRadiusMultiplier || 1)
+    * focusedSenseMultiplier(focusedOre);
+  const targets = findBestOreTargets(
+    state.player.x,
+    state.player.y,
+    radius,
+    focusedOre?.id || null,
+    { ignoreSenseLine: true },
+    (stats.backupTargetSlots || 0) > 0 ? 2 : 1,
+  );
+  state.ping = 1;
+  state.shocks.push({
+    x: state.player.x,
+    y: state.player.y,
+    life: 0.5,
+    maxLife: 0.5,
+    tick: Infinity,
+    radius,
+    color: '#80ebff',
+  });
+  if (!targets[0]) return false;
+  targets[0].lockRadius = radius;
+  decorateRememberedTarget(targets[0], { echoHold: stats.echoPingTargetHold });
+  if (targets[1]) {
+    targets[1].lockRadius = radius;
+    decorateRememberedTarget(targets[1], { echoHold: stats.echoPingTargetHold });
+  }
+  state.target = targets[0];
+  state.backupTarget = targets[1] || null;
+  state.pathWaypoint = null;
+  noteTargetAcquired(state.target);
+  state.floaters.push({
+    x: state.player.x,
+    y: state.player.y - 42,
+    text: 'РЕЗОНАНСНЫЙ ПИНГ',
+    color: '#8cf4ff',
+    life: 0.9,
+    maxLife: 0.9,
+  });
+  sound.tone(165, 0.15, 'sine', 0.03, 330);
+  return true;
+}
+
 function triggerSuperPickEcho(aimTarget, baseDamage) {
   if (!aimTarget || !(baseDamage > 0) || !(stats.laserSuperPickEchoEvery > 0)) return false;
   const radius = Math.max(TILE_SIZE * 0.75, stats.laserSuperPickEchoRadiusTiles * TILE_SIZE);
@@ -2824,6 +3555,361 @@ function triggerSuperPickEcho(aimTarget, baseDamage) {
   return true;
 }
 
+function countLiveVeinNodes(veinId) {
+  return veinId ? Math.max(0, state.veinRemainingCounts?.get(veinId) || 0) : 0;
+}
+
+function findNearestLiveVeinNode(veinId, x, y) {
+  if (!veinId || !state.world) return null;
+  let best = null;
+  let bestDistance = Infinity;
+  const consider = (tile, tx, ty) => {
+    if (!tile?.oreId || tile.veinId !== veinId || tile.kind === 'air') return;
+    const targetX = (tx + 0.5) * TILE_SIZE;
+    const targetY = (ty + 0.5) * TILE_SIZE;
+    const fromBreak = distance(x, y, targetX, targetY);
+    if (fromBreak >= bestDistance) return;
+    bestDistance = fromBreak;
+    best = { tile, tx, ty, x: targetX, y: targetY };
+  };
+  if (typeof state.world.forEachOreTileInBounds === 'function') {
+    state.world.forEachOreTileInBounds(0, 0, WORLD_CONFIG.WIDTH - 1, WORLD_CONFIG.HEIGHT - 1, consider);
+  } else {
+    for (let ty = 0; ty < WORLD_CONFIG.HEIGHT; ty += 1) {
+      for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) consider(state.world.getTile(tx, ty), tx, ty);
+    }
+  }
+  return best;
+}
+
+function findMotherlodePriorityTarget() {
+  if (!state.motherlodeTriggered || !state.motherlodeVeinId || !state.player) return null;
+  const runtime = state.veinRuntime.get(state.motherlodeVeinId);
+  if (!runtime?.motherlode || runtime.completed || countLiveVeinNodes(state.motherlodeVeinId) <= 0) return null;
+  const target = findNearestLiveVeinNode(state.motherlodeVeinId, state.player.x, state.player.y);
+  if (!target) return null;
+  const targetDistance = distance(state.player.x, state.player.y, target.x, target.y);
+  return {
+    kind: 'ore',
+    ...target,
+    distance: targetDistance,
+    lockRadius: targetDistance + TILE_SIZE * 2,
+    motherlode: true,
+  };
+}
+
+function advanceTripleSample(tile, x, y) {
+  const every = stats.tripleSampleEvery || 0;
+  const veinId = tile?.veinId || null;
+  if (every <= 0 || !veinId) return 0;
+  const progress = state.tripleSampleVeins.get(veinId) || { count: 0 };
+  progress.count += 1;
+  let bonusYield = 0;
+  if (progress.count >= every) {
+    progress.count = 0;
+    bonusYield = stats.tripleSampleBonusYield || 0;
+    const next = findNearestLiveVeinNode(veinId, x, y);
+    if (next && stats.tripleSampleNextNodeDamage > 0) {
+      const fracture = next.tile.maxHp * stats.tripleSampleNextNodeDamage;
+      // The sample weakens a still-existing node without creating another
+      // break/proc chain. Keep at least one hit point for the promised next hit.
+      next.tile.hp = Math.max(1, next.tile.hp - fracture);
+      next.tile.cracked = clamp(1 - next.tile.hp / Math.max(1, next.tile.maxHp), 0, 1);
+      next.tile.discovered = true;
+      next.tile.sensedUntil = Math.max(next.tile.sensedUntil || 0, state.elapsed + 1.2);
+      state.beams.push({ x, y, x2: next.x, y2: next.y, color: '#e7b9ff', life: 0.22, maxLife: 0.22, width: 3 });
+      state.floaters.push({ x: next.x, y: next.y - 28, text: `ПРОБА: ТРЕЩИНА ${Math.round(stats.tripleSampleNextNodeDamage * 100)}%`, color: '#e7b9ff', life: 0.9, maxLife: 0.9 });
+    }
+    state.floaters.push({ x, y: y - 42, text: `ТРОЙНАЯ ПРОБА +${bonusYield}`, color: '#f5d1ff', life: 1, maxLife: 1 });
+    sound.tone(470, 0.12, 'triangle', 0.025, 150);
+  }
+  state.tripleSampleVeins.set(veinId, progress);
+  return bonusYield;
+}
+
+function tagHighestExistingMotherlode(fallbackRuntime, x, y) {
+  if (!stats.motherlodeGuaranteed || !state.world || state.motherlodeTriggered) return fallbackRuntime;
+  let best = null;
+  let bestScore = -Infinity;
+  const consider = (tile, tx, ty) => {
+    if (!tile?.oreId || !tile.veinId || tile.kind === 'air') return;
+    const ore = oreById.get(tile.oreId);
+    if (!ore || !state.discoveredOreIds.has(ore.id)) return;
+    const targetX = (tx + 0.5) * TILE_SIZE;
+    const targetY = (ty + 0.5) * TILE_SIZE;
+    const score = ore.tier * 1_000_000 - distance(x, y, targetX, targetY);
+    if (score <= bestScore) return;
+    bestScore = score;
+    best = { tile, tx, ty, x: targetX, y: targetY };
+  };
+  if (typeof state.world.forEachOreTileInBounds === 'function') {
+    state.world.forEachOreTileInBounds(0, 0, WORLD_CONFIG.WIDTH - 1, WORLD_CONFIG.HEIGHT - 1, consider);
+  }
+  const targetVeinId = best?.tile?.veinId || fallbackRuntime.veinId;
+  let runtime = state.veinRuntime.get(targetVeinId);
+  if (!runtime) {
+    runtime = {
+      veinId: targetVeinId,
+      oreId: best?.tile?.oreId || fallbackRuntime.oreId,
+      rich: false,
+      richRollResolved: false,
+      motherlode: false,
+      completed: false,
+    };
+    state.veinRuntime.set(targetVeinId, runtime);
+  }
+  state.motherlodeTriggered = true;
+  state.motherlodeVeinId = targetVeinId;
+  runtime.motherlode = true;
+  runtime.rich = true;
+  runtime.richRollResolved = true;
+  state.motherlodeBreaks = 0;
+  state.metrics.motherlodes += 1;
+  const targetX = best?.x || x;
+  const targetY = best?.y || y;
+  if (best?.tile) {
+    best.tile.discovered = true;
+    best.tile.sensedUntil = Math.max(best.tile.sensedUntil || 0, state.elapsed + 4);
+    const targetDistance = state.player ? distance(state.player.x, state.player.y, best.x, best.y) : 0;
+    state.target = {
+      kind: 'ore',
+      tile: best.tile,
+      tx: best.tx,
+      ty: best.ty,
+      x: best.x,
+      y: best.y,
+      distance: targetDistance,
+      lockRadius: targetDistance + TILE_SIZE * 2,
+      motherlode: true,
+    };
+    state.ping = 1;
+  }
+  state.floaters.push({ x: targetX, y: targetY - 34, text: 'МАТЕРИНСКАЯ ЖИЛА', color: '#fff0a6', life: 1.25, maxLife: 1.25 });
+  toast('МАТЕРИНСКАЯ ЖИЛА НАЙДЕНА', 'success');
+  flash('#ffe28a', 0.2);
+  return runtime;
+}
+
+function getVeinRuntime(tile, x, y, allowProcs = true) {
+  const veinId = tile?.veinId || `${tile?.oreId || 'ore'}:single:${x}:${y}`;
+  let runtime = state.veinRuntime.get(veinId);
+  if (!runtime) {
+    runtime = {
+      veinId,
+      oreId: tile?.oreId || null,
+      rich: false,
+      richRollResolved: false,
+      motherlode: false,
+      completed: false,
+    };
+    state.veinRuntime.set(veinId, runtime);
+  }
+  if (allowProcs && !runtime.richRollResolved) {
+    runtime.richRollResolved = true;
+    if (stats.richVeinWholeChance > 0 && Math.random() < procChance(stats.richVeinWholeChance, 0.18)) {
+      runtime.rich = true;
+      runtime.richTaggedAtBreak = state.blocksBroken;
+      state.metrics.richVeins += 1;
+      state.floaters.push({ x, y: y - 28, text: 'БОГАТАЯ ЖИЛА', color: '#ffe074', life: 1, maxLife: 1 });
+    }
+  }
+  if (!state.motherlodeTriggered && stats.motherlodeGuaranteed && state.motherlodeBreaks >= stats.motherlodeTriggerBreaks) {
+    tagHighestExistingMotherlode(runtime, x, y);
+  }
+  return runtime;
+}
+
+function triggerFortuneWheel(runtime, x, y, allowProcs = true, hadRareEffect = false) {
+  const threshold = stats.fortunePityThreshold;
+  if (!stats.fortuneWheelEnabled || !allowProcs || threshold <= 0) return { extraYield: 0, bomb: false };
+  if (hadRareEffect) {
+    state.fortunePityCounter = 0;
+    return { extraYield: 0, bomb: false };
+  }
+  state.fortunePityCounter += 1;
+  if (state.fortunePityCounter < threshold) return { extraYield: 0, bomb: false };
+  state.fortunePityCounter = 0;
+  const cycleLength = clamp(stats.fortuneWheelCycleLength || 4, 1, 4);
+  const effect = state.fortuneWheelIndex % cycleLength;
+  state.fortuneWheelIndex = (state.fortuneWheelIndex + 1) % cycleLength;
+  state.metrics.fortuneWheelProcs += 1;
+  const labels = ['КОЛЕСО: ДВОЙНАЯ ДОБЫЧА', 'КОЛЕСО: БЕСПЛАТНАЯ БОМБА', 'КОЛЕСО: +0,25 С', 'КОЛЕСО: БОГАТАЯ ЖИЛА'];
+  const colors = ['#ffe37c', '#ff9b65', '#8ff8ef', '#f6c75b'];
+  state.floaters.push({ x, y: y - 42, text: labels[effect], color: colors[effect], life: 1.15, maxLife: 1.15 });
+  toast(labels[effect], 'success');
+  sound.tone(360 + effect * 75, 0.16, 'triangle', 0.032, 170);
+  if (effect === 0) return { extraYield: 1, bomb: false };
+  if (effect === 1) return { extraYield: 0, bomb: true };
+  if (effect === 2) {
+    addBonusTime(0.25, x, y - 34, 'КОЛЕСО');
+    return { extraYield: 0, bomb: false };
+  }
+  if (runtime && !runtime.rich) {
+    runtime.rich = true;
+    runtime.richRollResolved = true;
+    runtime.richTaggedAtBreak = state.blocksBroken;
+    state.metrics.richVeins += 1;
+  }
+  return { extraYield: 0, bomb: false };
+}
+
+function advanceDemolitionCombo(stage, target) {
+  if (!stats.demolitionComboEnabled || !target || state.demolitionComboCooldownRemaining > 0) return false;
+  const veinId = target.tile?.veinId || target.veinId || null;
+  if (state.demolitionComboStage > 0 && state.demolitionComboExpires < state.elapsed) {
+    state.demolitionComboStage = 0;
+    state.demolitionComboVeinId = null;
+  }
+  const sameVein = !state.demolitionComboVeinId || !veinId || state.demolitionComboVeinId === veinId;
+  if (stage === 'drone' && state.demolitionComboStage === 0) {
+    state.demolitionComboStage = 1;
+    state.demolitionComboVeinId = veinId;
+  } else if (stage === 'chain' && state.demolitionComboStage === 1 && sameVein) {
+    state.demolitionComboStage = 2;
+  } else if (stage === 'bomb' && state.demolitionComboStage === 2 && sameVein) {
+    const finalPower = Math.max(0.1, stats.demolitionComboFinishPower || 0.75);
+    const radius = Math.max(TILE_SIZE, stats.demolitionComboVeinRadiusTiles * TILE_SIZE);
+    const comboDamage = stats.pickPower * Math.max(1, stats.bombPower || 1) * 1.8 * (1 + finalPower);
+    const comboSnapshot = snapshotOreHpInCircle(target.x, target.y, radius);
+    const comboBreaks = state.world.damageCircle(
+      target.x,
+      target.y,
+      radius,
+      comboDamage,
+      (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'orchestra'),
+    );
+    collectCircleGadgetOverkill(comboBreaks, comboSnapshot, comboDamage, target.x, target.y);
+    state.metrics.demolitionCombos += 1;
+    state.demolitionComboStage = 0;
+    state.demolitionComboVeinId = null;
+    state.demolitionComboCooldownRemaining = Math.max(4, stats.demolitionComboMarkDuration || 0);
+    state.floaters.push({ x: target.x, y: target.y - 42, text: 'ОРКЕСТР: ФИНАЛ', color: '#fff0a1', life: 1.1, maxLife: 1.1 });
+    state.shocks.push({ x: target.x, y: target.y, life: 0.55, maxLife: 0.55, tick: Infinity, radius, color: '#ffd879' });
+    sound.tone(190, 0.22, 'sawtooth', 0.04, 520);
+    return true;
+  } else {
+    return false;
+  }
+  state.demolitionComboExpires = state.elapsed + stats.demolitionComboMarkDuration;
+  const label = state.demolitionComboStage === 1 ? 'ОРКЕСТР I/III · ДРОН' : 'ОРКЕСТР II/III · РАЗРЯД';
+  state.floaters.push({ x: target.x, y: target.y - 30, text: label, color: state.demolitionComboStage === 1 ? '#76dbff' : '#ca9cff', life: 0.8, maxLife: 0.8 });
+  return true;
+}
+
+function awardMotherlodeCache(pieceCount, x, y) {
+  const count = Math.max(0, Math.floor(pieceCount || 0));
+  if (count <= 0) return 0;
+  const available = ORE_TYPES
+    .filter((ore) => state.discoveredOreIds.has(ore.id))
+    .sort((left, right) => right.tier - left.tier);
+  if (!available.length) return 0;
+  for (let index = 0; index < count; index += 1) {
+    const ore = available[index % Math.min(3, available.length)];
+    state.oreCounts[ore.id] = (state.oreCounts[ore.id] || 0) + 1;
+  }
+  state.runOre += count;
+  state.floaters.push({ x, y: y - 48, text: `ТАЙНИК МАТЕРИНСКОЙ ЖИЛЫ +${count}`, color: '#fff0a6', life: 1.3, maxLife: 1.3 });
+  return count;
+}
+
+function triggerImpactWaveAt(x, y) {
+  const radius = Math.max(TILE_SIZE * 0.8, (stats.impactWaveRadiusTiles || 0) * TILE_SIZE);
+  const power = stats.pickPower * (stats.impactWavePower || 0);
+  if (!(power > 0) || !(radius > 0)) return false;
+  state.world.damageCircle(
+    x,
+    y,
+    radius,
+    power,
+    (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'impact-wave'),
+  );
+  state.shocks.push({ x, y, life: 0.42, maxLife: 0.42, tick: Infinity, radius, color: '#f7d878' });
+  spawnSparks(x, y, '#ffe69a', 9);
+  return true;
+}
+
+function triggerQuarryFractureAt(x, y) {
+  const power = stats.pickPower * (stats.quarryModeSideFracturePower || 0);
+  if (!(power > 0)) return false;
+  const radius = TILE_SIZE * 1.05;
+  state.world.damageCircle(
+    x,
+    y,
+    radius,
+    power,
+    (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'quarry-fracture'),
+  );
+  state.shocks.push({ x, y, life: 0.28, maxLife: 0.28, tick: Infinity, radius, color: '#dfbd79' });
+  return true;
+}
+
+function noteToolBreakProgress(tile, x, y, source) {
+  const veinId = tile?.veinId || null;
+  if (veinId) {
+    const nextCount = Math.max(0, remainingVeinNodes(veinId) - 1);
+    state.veinRemainingCounts.set(veinId, nextCount);
+    if (nextCount <= 0) {
+      if (state.lastBrokenVeinId === veinId) {
+        state.lastBrokenVeinId = null;
+        state.veinBreakStreak = 0;
+      }
+      if (state.lockedVeinId === veinId) {
+        state.lockedVeinId = null;
+        state.lockedVeinOreId = null;
+      }
+      if (state.quarryVeinId === veinId) {
+        state.quarryModeActive = false;
+        state.quarryModeRemaining = 0;
+        state.quarryVeinId = null;
+        state.quarryBreakStreak = 0;
+      }
+    }
+  }
+  if (!DIRECT_TOOL_BREAK_SOURCES.has(source)) return;
+
+  if (veinId) {
+    if (state.lastBrokenVeinId === veinId) state.veinBreakStreak += 1;
+    else {
+      state.lastBrokenVeinId = veinId;
+      state.veinBreakStreak = 1;
+    }
+    if ((stats.quarryModeRequiredBreaks || 0) > 0) {
+      if (!state.quarryModeActive && state.elapsed > state.quarryStreakExpires) {
+        state.quarryBreakStreak = 0;
+        state.quarryVeinId = null;
+      }
+      if (state.quarryVeinId === veinId) state.quarryBreakStreak += 1;
+      else {
+        state.quarryVeinId = veinId;
+        state.quarryBreakStreak = 1;
+        state.quarryModeActive = false;
+      }
+      state.quarryStreakExpires = state.elapsed + (stats.quarryModeWindow || 1.2);
+      if (!state.quarryModeActive && state.quarryBreakStreak >= stats.quarryModeRequiredBreaks) {
+        state.quarryModeActive = true;
+        state.quarryModeRemaining = stats.quarryModeDuration || 2.5;
+        state.floaters.push({ x, y: y - 34, text: 'КАРЬЕРНЫЙ ТЕМП', color: '#ffe08b', life: 1, maxLife: 1 });
+        sound.tone(145, 0.14, 'square', 0.03, 220);
+      }
+      if (state.quarryModeActive && remainingVeinNodes(veinId) > 0) triggerQuarryFractureAt(x, y);
+    }
+  } else {
+    // Ordinary rock between two ore nodes must not erase the remembered vein.
+    // The trail is deliberately cleared only when another vein is mined or the
+    // remembered vein is exhausted; otherwise narrow seams lose their benefit
+    // while the miner is merely opening the path between adjacent nodes.
+    if (!state.quarryModeActive) state.quarryBreakStreak = 0;
+  }
+
+  if ((stats.impactWaveEvery || 0) > 0 && (stats.impactWavePower || 0) > 0) {
+    state.impactWaveProgress += 1;
+    if (state.impactWaveProgress >= stats.impactWaveEvery) {
+      state.impactWaveProgress = 0;
+      triggerImpactWaveAt(x, y);
+    }
+  }
+}
+
 function resolveBrokenTile(tile, tx, ty, source = 'pick') {
   state.blocksBroken += 1;
   const countsForDeafKnock = ['pick', 'laser', 'multi'].includes(source);
@@ -2837,7 +3923,10 @@ function resolveBrokenTile(tile, tx, ty, source = 'pick') {
   const y = (ty + 0.5) * TILE_SIZE;
   const ore = tile?.oreId ? oreById.get(tile.oreId) : null;
   spawnDebris(x, y, ore?.color || (tile?.kind === 'dirt' ? '#74523d' : '#626779'), ore ? 8 : 4);
-  const noProcSource = source === 'event' || (source === 'echo' && stats.laserSuperPickEchoNoProcs);
+  noteToolBreakProgress(tile, x, y, source);
+  const noProcSource = source === 'event'
+    || SECONDARY_NO_PROC_SOURCES.has(source)
+    || (source === 'echo' && stats.laserSuperPickEchoNoProcs);
   if (!noProcSource && source !== 'shatter' && (stats.breakSplashChance || 0) > 0 && Math.random() < procChance(stats.breakSplashChance, 0.12)) {
     state.world.damageCircle(x, y, Math.max(TILE_SIZE, stats.splashRadius || TILE_SIZE), stats.pickPower * (stats.breakSplashPower || 0.25), (nearTile, nearTx, nearTy) => resolveBrokenTile(nearTile, nearTx, nearTy, 'shatter'));
   }
@@ -2851,6 +3940,9 @@ function resolveBrokenTile(tile, tx, ty, source = 'pick') {
   }
   if (countsForDeafKnock) state.dryRockBlocks = 0;
 
+  if (stats.motherlodeGuaranteed && !state.motherlodeTriggered) state.motherlodeBreaks += 1;
+  const veinRuntime = getVeinRuntime(tile, x, y, !noProcSource);
+
   const firstOfType = !state.discoveredOreIds.has(ore.id);
   if (firstOfType) {
     state.discoveredOreIds.add(ore.id);
@@ -2862,17 +3954,42 @@ function resolveBrokenTile(tile, tx, ty, source = 'pick') {
   const now = state.elapsed;
   state.combo = now <= state.comboExpires ? state.combo + 1 : 1;
   state.comboExpires = now + stats.comboWindow;
-  let yieldCount = 1;
+  let hadRareEffect = veinRuntime.richTaggedAtBreak === state.blocksBroken;
+  let yieldCount = 1 + advanceTripleSample(tile, x, y);
+  const breakKey = `${tx}:${ty}`;
+  if (state.overkillYieldReady && state.overkillYieldTargetKey === breakKey) {
+    yieldCount += 1;
+    state.overkillReservoir = 0;
+    state.overkillReservoirVeinId = null;
+    state.overkillYieldReady = false;
+    state.overkillYieldTargetKey = null;
+    state.floaters.push({ x, y: y - 52, text: 'ПЕРЕПЛАВКА +1', color: '#d6a5ff', life: 0.9, maxLife: 0.9 });
+  }
   const bonusChance = noProcSource ? 0 : procChance(stats.extraYieldChance, 0.24);
-  if (Math.random() < bonusChance) yieldCount += 1;
+  if (Math.random() < bonusChance) {
+    yieldCount += 1;
+    hadRareEffect = true;
+  }
   // Jackpot effects stack additively. Multiplying five independent rolls made
   // the late economy jump by two orders of magnitude and skipped whole tiers.
-  if (!noProcSource && Math.random() < procChance(stats.doubleDropChance, 0.18)) yieldCount += 1;
-  if (!noProcSource && Math.random() < procChance(stats.tripleDropChance, 0.12)) yieldCount += 2;
-  if (!noProcSource && Math.random() < procChance(stats.richVeinChance, 0.18)) yieldCount += 1;
-  const motherlode = !noProcSource && Math.random() < procChance(stats.motherlodeChance, 0.08);
-  if (motherlode) {
+  if (!noProcSource && Math.random() < procChance(stats.doubleDropChance, 0.18)) {
+    yieldCount += 1;
+    hadRareEffect = true;
+  }
+  if (!noProcSource && Math.random() < procChance(stats.tripleDropChance, 0.12)) {
+    yieldCount += 2;
+    hadRareEffect = true;
+  }
+  if (!noProcSource && Math.random() < procChance(stats.richVeinChance, 0.18)) {
+    yieldCount += 1;
+    hadRareEffect = true;
+  }
+  const legacyMotherlode = !stats.motherlodeGuaranteed
+    && !noProcSource
+    && Math.random() < procChance(stats.motherlodeChance, 0.08);
+  if (legacyMotherlode) {
     yieldCount += 4;
+    hadRareEffect = true;
     if (state.elapsed - state.lastBigToast > 1.2) {
       state.lastBigToast = state.elapsed;
       toast('МАТЕРИНСКАЯ ЖИЛА!', 'success');
@@ -2880,28 +3997,59 @@ function resolveBrokenTile(tile, tx, ty, source = 'pick') {
     }
   }
 
-  let rewardOre = ore;
-  if (!noProcSource && Math.random() < procChance(stats.rareOreChance, 0.2)) {
-    rewardOre = ORE_TYPES[Math.min(ORE_TYPES.length - 1, oreRank(ore) + 1)] || ore;
+  let rareBonusOre = null;
+  if (!noProcSource && stats.rareOreAdditiveChance > 0 && Math.random() < procChance(stats.rareOreAdditiveChance, 0.2)) {
+    rareBonusOre = ORE_TYPES
+      .filter((candidate) => candidate.tier > ore.tier && state.discoveredOreIds.has(candidate.id))
+      .sort((left, right) => left.tier - right.tier)[0] || null;
+    if (rareBonusOre) hadRareEffect = true;
   }
-  let golden = false;
-  if (!noProcSource && Math.random() < procChance(stats.goldenOreChance, 0.12)) {
-    const gold = oreById.get('gold');
-    if (gold && (gold.tier || 0) > (rewardOre.tier || 0)) rewardOre = gold;
-    golden = true;
+  let goldenBonusOre = null;
+  if (!noProcSource && stats.goldenOreAdditiveChance > 0 && Math.random() < procChance(stats.goldenOreAdditiveChance, 0.12)) {
+    const gold = oreById.get('gold') || null;
+    const goldIsKnown = Boolean(
+      gold
+      && (
+        state.discoveredOreIds.has(gold.id)
+        || (save.lifetimeOres?.[gold.id] || 0) > 0
+        || (save.inventory?.[gold.id] || 0) > 0
+      )
+    );
+    // Golden Touch is strictly an additive gold payout. It never substitutes
+    // the current high-tier ore and never opens gold before it was found.
+    goldenBonusOre = goldIsKnown ? gold : null;
+    if (goldenBonusOre) hadRareEffect = true;
   }
+  if (!noProcSource && stats.relicEffectChance > 0 && Math.random() < procChance(stats.relicEffectChance, 0.08)) {
+    activateRelicEffect(x, y, false);
+    hadRareEffect = true;
+  }
+  const wheelEffect = triggerFortuneWheel(veinRuntime, x, y, !noProcSource, hadRareEffect);
+  yieldCount += wheelEffect.extraYield;
+
+  const rewardOre = ore;
 
   const comboBonus = 1 + Math.min(1.5, Math.max(0, state.combo - 1) * 0.06 * stats.comboMultiplier);
   const gemBonus = oreRank(rewardOre) >= 6 ? (stats.gemValueMultiplier || 1) : 1;
   const depthProgress = clamp(state.deepest / 90, 0, 1);
-  const depthBonus = 1 + depthProgress * (stats.depthValueBonus || 0);
+  const contractStacks = stats.depthContractStep > 0
+    ? Math.min(stats.depthContractMaxStacks || 0, Math.floor(depthFromOrigin(x, y) / stats.depthContractStep))
+    : 0;
+  const depthBonus = (1 + depthProgress * (stats.depthValueBonus || 0))
+    * (1 + contractStacks * (stats.depthContractBonusPerStack || 0));
   const overkill = Math.max(0, stats.pickPower - (tile.maxHp || 1)) / Math.max(1, tile.maxHp || 1);
   const conversionBonus = 1 + Math.min(1, overkill) * (stats.oreConversionBonus || 0);
   const sourceBonus = source === 'bomb' ? (stats.bombValueMultiplier || 1) : 1;
-  const goldenBonus = golden ? 1.35 : 1;
+  const veinYieldBonus = veinRuntime.motherlode
+    ? stats.motherlodeYieldMultiplier
+    : veinRuntime.rich ? 1 + stats.richVeinYieldBonus : 1;
   const pickupBonus = 1 + Math.max(0, (stats.pickupRadius || 46) - 46) / 1400;
   const eventYieldBonus = state.eventYieldBoostRemaining > 0 ? 1.5 : 1;
-  const exactYield = Math.max(1, yieldCount * stats.oreValueMultiplier * comboBonus * gemBonus * depthBonus * conversionBonus * sourceBonus * goldenBonus * pickupBonus * eventYieldBonus);
+  const exactYield = Math.max(
+    1,
+    yieldCount * stats.oreValueMultiplier * comboBonus * gemBonus * depthBonus * conversionBonus
+      * sourceBonus * pickupBonus * eventYieldBonus * veinYieldBonus * relicYieldMultiplier(),
+  );
   const remainder = Math.max(0, Number(state.yieldRemainders[rewardOre.id]) || 0);
   yieldCount = Math.floor(exactYield + remainder);
   state.yieldRemainders[rewardOre.id] = exactYield + remainder - yieldCount;
@@ -2911,14 +4059,29 @@ function resolveBrokenTile(tile, tx, ty, source = 'pick') {
   if (!noProcSource && (stats.timeShardChance || 0) > 0 && Math.random() < procChance(stats.timeShardChance, 0.08)) {
     addBonusTime(stats.timeShardSeconds || 0, x + 10, y - 35, 'ХРОНО');
   }
-  const relicChance = procChance((stats.relicChance || 0) * (1 + Math.max(0, (stats.pickupRadius || 46) - 46) / 300), 0.08);
-  if (!noProcSource && relicChance > 0 && Math.random() < relicChance) {
-    const relicPieces = 1 + Math.floor(state.deepest / 45);
-    yieldCount += relicPieces;
-    state.floaters.push({ x: x - 8, y: y - 42, text: `РЕЛИКТ +${relicPieces}`, color: '#ff9fe3', life: 1.15, maxLife: 1.15 });
+  const veinCompleted = !veinRuntime.completed && countLiveVeinNodes(veinRuntime.veinId) <= 0;
+  if (veinCompleted) {
+    veinRuntime.completed = true;
+    if (veinRuntime.rich) yieldCount += Math.floor(stats.richVeinCompletionBonus || 0);
   }
   state.runOre += yieldCount;
   state.oreCounts[rewardOre.id] = (state.oreCounts[rewardOre.id] || 0) + yieldCount;
+  if (rareBonusOre) {
+    state.runOre += 1;
+    state.oreCounts[rareBonusOre.id] = (state.oreCounts[rareBonusOre.id] || 0) + 1;
+    state.floaters.push({ x: x - 12, y: y - 34, text: `БЛЕСК +1 ${rareBonusOre.name.toUpperCase()}`, color: rareBonusOre.accent || rareBonusOre.color, life: 1, maxLife: 1 });
+  }
+  if (goldenBonusOre) {
+    state.runOre += 1;
+    state.oreCounts[goldenBonusOre.id] = (state.oreCounts[goldenBonusOre.id] || 0) + 1;
+    state.floaters.push({ x: x + 12, y: y - 46, text: `${goldenBonusOre.name.toUpperCase()} +1`, color: '#ffe477', life: 1, maxLife: 1 });
+  }
+  if (veinCompleted && veinRuntime.motherlode) {
+    awardMotherlodeCache(stats.motherlodeCompletionCache, x, y);
+    if (stats.motherlodeCompletionTimeBonus > 0) {
+      addBonusTime(stats.motherlodeCompletionTimeBonus, x, y - 56, 'МАТЕРИНСКАЯ ЖИЛА');
+    }
+  }
   const existingRecord = save.oreRecords?.[ore.id] || {};
   save.oreRecords = save.oreRecords || {};
   save.oreRecords[ore.id] = {
@@ -2928,10 +4091,11 @@ function resolveBrokenTile(tile, tx, ty, source = 'pick') {
     largestYield: Math.max(existingRecord.largestYield || 0, yieldCount),
   };
   if (!noProcSource && (stats.veinRevealChance || 0) > 0 && Math.random() < procChance(stats.veinRevealChance, 0.08)) revealVein(tx, ty, ore.id);
-  state.floaters.push({ x, y: y - 10, text: `+${yieldCount} ${rewardOre.name.toUpperCase()}`, color: golden ? '#ffe477' : (rewardOre.accent || rewardOre.color), life: 1, maxLife: 1 });
+  state.floaters.push({ x, y: y - 10, text: `+${yieldCount} ${rewardOre.name.toUpperCase()}`, color: rewardOre.accent || rewardOre.color, life: 1, maxLife: 1 });
   state.shake = Math.max(state.shake, source === 'bomb' ? 9 : 3.5);
   sound.ore(ore);
   if ((ore.tier || 0) >= 5) flash(ore.color, 0.12);
+  if (wheelEffect.bomb) detonate(x, y, 0, 1, { source: 'fortune', noProcs: true });
   showTutorial(
     'first_ore',
     'ПЕРВАЯ ЖИЛА',
@@ -2989,11 +4153,12 @@ function fireLaserRicochets(originTarget, baseDamage, onBreak) {
       dy / segmentLength,
       rayRange,
       power,
-      stats.laserWidth,
+      Math.min(LASER_CORE_WIDTH, stats.laserWidth),
       onBreak,
       { excludedKeys: rayExcludedKeys },
     );
     const targetHit = tileReceivedDamage(target.tx, target.ty, hpBefore);
+    if (targetHit) applyLaserEdgeHeat(target, dx / segmentLength, dy / segmentLength, power);
     if (targetHit && calibration > 1) {
       state.metrics.focusedCalibrationHits += 1;
       if (state.world.getTile(target.tx, target.ty)?.kind !== 'air') {
@@ -3114,6 +4279,181 @@ function clearanceTarget(blockedTiles, player) {
   };
 }
 
+function damageSideChips(centerX, centerY, nx, ny, damage, hits, source = 'side-chip') {
+  const hitCount = clamp(Math.floor(hits || 0), 0, 8);
+  if (!state.world || !(damage > 0) || hitCount <= 0) return 0;
+  const perpendicularX = -ny;
+  const perpendicularY = nx;
+  const used = new Set();
+  const candidates = [];
+  const candidateCount = hitCount === 1 ? 2 : hitCount;
+  for (let index = 0; index < candidateCount; index += 1) {
+    const side = index % 2 === 0 ? -1 : 1;
+    const step = hitCount === 1 ? 1 : 1 + Math.floor(index / 2);
+    const point = state.world.worldToTile(
+      centerX + perpendicularX * TILE_SIZE * step * side,
+      centerY + perpendicularY * TILE_SIZE * step * side,
+    );
+    const key = `${point.tx}:${point.ty}`;
+    if (used.has(key)) continue;
+    used.add(key);
+    const tile = state.world.getTile(point.tx, point.ty);
+    if (!tile || tile.kind === 'air' || tile.kind === 'bedrock') continue;
+    candidates.push({ point, tile, order: index });
+  }
+  if (hitCount === 1 && candidates.length > 1) {
+    candidates.sort((left, right) => (
+      Math.max(0, left.tile.hp || 0) - Math.max(0, right.tile.hp || 0)
+      || left.order - right.order
+    ));
+  }
+  let applied = 0;
+  for (const { point } of candidates.slice(0, hitCount)) {
+    state.world.damageTile(
+      point.tx,
+      point.ty,
+      damage,
+      (brokenTile, tx, ty) => resolveBrokenTile(brokenTile, tx, ty, source),
+    );
+    const x = (point.tx + 0.5) * TILE_SIZE;
+    const y = (point.ty + 0.5) * TILE_SIZE;
+    state.beams.push({ x: centerX, y: centerY, x2: x, y2: y, color: '#efcf83', life: 0.11, maxLife: 0.11, width: 2 });
+    applied += 1;
+  }
+  return applied;
+}
+
+function forwardDamageableTiles(originX, originY, nx, ny, maximum) {
+  const targets = [];
+  const used = new Set();
+  const samples = Math.max(1, maximum) * 4;
+  for (let sample = 1; sample <= samples && targets.length < maximum; sample += 1) {
+    const point = state.world.worldToTile(
+      originX + nx * TILE_SIZE * sample * 0.55,
+      originY + ny * TILE_SIZE * sample * 0.55,
+    );
+    const key = `${point.tx}:${point.ty}`;
+    if (used.has(key)) continue;
+    used.add(key);
+    const tile = state.world.getTile(point.tx, point.ty);
+    if (!tile || tile.kind === 'air' || tile.kind === 'bedrock') continue;
+    targets.push({ ...point, tile, x: (point.tx + 0.5) * TILE_SIZE, y: (point.ty + 0.5) * TILE_SIZE });
+  }
+  return targets;
+}
+
+function triggerFaultLine(aimTarget, nx, ny, overkill) {
+  const maximum = stats.faultLineMaxBlocks || 0;
+  let carry = Math.max(0, overkill) * (stats.faultLinePower || 0);
+  if (!aimTarget || maximum <= 0 || !(carry > 0)) return false;
+  let remainingSteps = maximum;
+  let fromX = aimTarget.x;
+  let fromY = aimTarget.y;
+  let brokeAny = false;
+  const scanMaximum = stats.faultLineExtendOnBreak ? Math.min(12, maximum * 2) : maximum;
+  for (const target of forwardDamageableTiles(aimTarget.x, aimTarget.y, nx, ny, scanMaximum)) {
+    if (remainingSteps <= 0) break;
+    remainingSteps -= 1;
+    const hpBefore = Math.max(0, target.tile.hp || 0);
+    state.world.damageTile(
+      target.tx,
+      target.ty,
+      carry,
+      (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'fault-line'),
+    );
+    state.beams.push({ x: fromX, y: fromY, x2: target.x, y2: target.y, color: '#fff29b', life: 0.18, maxLife: 0.18, width: 3 });
+    if (state.world.getTile(target.tx, target.ty)?.kind !== 'air') break;
+    brokeAny = true;
+    if (stats.faultLineExtendOnBreak) remainingSteps += 1;
+    carry = Math.max(0, carry - hpBefore);
+    if (!(carry > 0)) break;
+    fromX = target.x;
+    fromY = target.y;
+  }
+  if (brokeAny) {
+    state.floaters.push({ x: aimTarget.x, y: aimTarget.y - 30, text: 'ЛИНИЯ РАЗЛОМА', color: '#fff3a4', life: 0.85, maxLife: 0.85 });
+    state.shake = Math.max(state.shake, 7);
+  }
+  return brokeAny;
+}
+
+function triggerChronoOverdriveStrike(aimTarget, nx, ny, damage) {
+  const every = stats.chronoOverflowProcEvery || 0;
+  if (!stats.chronoOverdrive || state.chronoOverflowRemaining <= 0 || every <= 0 || !(damage > 0)) return false;
+  state.chronoOverdriveHitCount += 1;
+  if (state.chronoOverdriveHitCount % every !== 0) return false;
+  let target = state.world.getTile(aimTarget.tx, aimTarget.ty);
+  let point = { tx: aimTarget.tx, ty: aimTarget.ty, x: aimTarget.x, y: aimTarget.y, tile: target };
+  if (!target || target.kind === 'air' || target.kind === 'bedrock') {
+    point = forwardDamageableTiles(aimTarget.x, aimTarget.y, nx, ny, 1)[0] || null;
+  }
+  if (!point) return false;
+  state.world.damageTile(
+    point.tx,
+    point.ty,
+    damage * 0.65,
+    (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'chrono-overdrive'),
+  );
+  state.beams.push({ x: aimTarget.x, y: aimTarget.y, x2: point.x, y2: point.y, color: '#7efcff', life: 0.16, maxLife: 0.16, width: 3 });
+  state.floaters.push({ x: point.x, y: point.y - 25, text: 'ХРОНОУДАР', color: '#8dfff6', life: 0.7, maxLife: 0.7 });
+  return true;
+}
+
+function applyLaserEdgeHeat(aimTarget, nx, ny, baseDamage) {
+  if (!aimTarget || !(baseDamage > 0) || !(stats.laserHeatEdgePower > 0) || !(stats.laserHeatDuration > 0)) return 0;
+  const perpendicularX = -ny;
+  const perpendicularY = nx;
+  const used = new Set([`${aimTarget.tx}:${aimTarget.ty}`]);
+  let heated = 0;
+  for (const side of [-1, 1]) {
+    const point = state.world.worldToTile(
+      aimTarget.x + perpendicularX * TILE_SIZE * side,
+      aimTarget.y + perpendicularY * TILE_SIZE * side,
+    );
+    const key = `${point.tx}:${point.ty}`;
+    if (used.has(key)) continue;
+    used.add(key);
+    const tile = state.world.getTile(point.tx, point.ty);
+    if (!tile || tile.kind === 'air' || tile.kind === 'bedrock') continue;
+    state.laserHeatMarks.set(key, state.elapsed + stats.laserHeatDuration);
+    const edgeDamage = baseDamage * stats.laserHeatEdgePower;
+    state.world.damageTile(
+      point.tx,
+      point.ty,
+      edgeDamage,
+      (brokenTile, tx, ty) => resolveBrokenTile(brokenTile, tx, ty, 'laser-heat'),
+    );
+    const x = (point.tx + 0.5) * TILE_SIZE;
+    const y = (point.ty + 0.5) * TILE_SIZE;
+    state.beams.push({ x: aimTarget.x, y: aimTarget.y, x2: x, y2: y, color: '#ff8b56', life: 0.18, maxLife: 0.18, width: 2.5 });
+    heated += 1;
+  }
+  if (heated > 0) {
+    state.metrics.laserHeatStrikes += heated;
+    state.floaters.push({ x: aimTarget.x, y: aimTarget.y - 28, text: `ТЕРМОКРАЙ ×${heated}`, color: '#ff9f68', life: 0.72, maxLife: 0.72 });
+  }
+  return heated;
+}
+
+function spawnSuperField(x, y, baseDamage) {
+  if (!stats.superFieldEnabled || !(stats.superFieldRadiusTiles > 0) || !(stats.superFieldPower > 0) || !(baseDamage > 0)) return false;
+  const duration = Math.max(0.2, stats.superFieldDuration || 0.8);
+  state.superFields.push({
+    x,
+    y,
+    radius: stats.superFieldRadiusTiles * TILE_SIZE,
+    remaining: duration,
+    maxDuration: duration,
+    tick: 0,
+    tickInterval: 0.2,
+    totalDamage: baseDamage * stats.superFieldPower,
+  });
+  // Bound overlapping visuals and work while preserving the newest impacts.
+  if (state.superFields.length > 12) state.superFields.splice(0, state.superFields.length - 12);
+  state.floaters.push({ x, y: y - 24, text: 'ПОЛЕ СУПЕРКИРКИ', color: '#75ffe2', life: 0.62, maxLife: 0.62 });
+  return true;
+}
+
 function attack(aimTarget = state.target) {
   if (!aimTarget || !state.target || !state.player || !state.world) return;
   const player = state.player;
@@ -3129,12 +4469,15 @@ function attack(aimTarget = state.target) {
 
   state.attackCount += 1;
   state.metrics.attacks += 1;
-  const targetKey = `${aimTarget.tx}:${aimTarget.ty}`;
+  const aimTile = state.world.getTile(aimTarget.tx, aimTarget.ty) || aimTarget.tile;
+  const targetKey = aimTile?.veinId ? `vein:${aimTile.veinId}` : `${aimTarget.tx}:${aimTarget.ty}`;
   state.hitStreak = state.lastTargetKey === targetKey ? state.hitStreak + 1 : 1;
   state.lastTargetKey = targetKey;
-  const aimTile = state.world.getTile(aimTarget.tx, aimTarget.ty) || aimTarget.tile;
   const targetOre = oreById.get(aimTile?.oreId);
-  const aimHpBefore = targetOre ? Math.max(0, aimTile.hp || 0) : 0;
+  const aimVeinId = aimTile?.veinId || null;
+  const aimHpBefore = aimTile && aimTile.kind !== 'air' && aimTile.kind !== 'bedrock'
+    ? Math.max(0, aimTile.hp || 0)
+    : 0;
   const streakBonus = 1 + Math.min(state.hitStreak, stats.streakCap || 0) * (stats.streakPower || 0);
   const densityBonus = 1 + (stats.hardnessPierce || 0) * 0.07;
   const oreBonus = 1 + (targetOre ? (stats.oreDamageBonus || 0) : 0);
@@ -3144,15 +4487,53 @@ function attack(aimTarget = state.target) {
   const chargedBonus = charged ? 1 + stats.chargedHitPower : 1;
   const critical = Math.random() < procChance(stats.critChance, 0.16);
   const eventSoftnessBonus = state.eventSoftRockRemaining > 0 && !targetOre ? 1.65 : 1;
-  const damage = stats.pickPower * streakBonus * densityBonus * oreBonus * rareBonus * chargedBonus * (critical ? stats.critMultiplier : 1) * eventSoftnessBonus;
+  const approachReady = (stats.approachStrikeTravelTime || 0) > 0
+    && state.approachTravelElapsed >= stats.approachStrikeTravelTime;
+  const approachBonus = approachReady ? 1 + (stats.approachStrikePower || 0) : 1;
+  const heatKey = `${aimTarget.tx}:${aimTarget.ty}`;
+  const heatMarkActive = stats.laserUnlocked && (state.laserHeatMarks.get(heatKey) || 0) >= state.elapsed;
+  const laserHeatBonus = heatMarkActive ? 1 + stats.laserHeatNextHitBonus : 1;
+  const damage = stats.pickPower * streakBonus * densityBonus * oreBonus * rareBonus * chargedBonus * (critical ? stats.critMultiplier : 1) * eventSoftnessBonus * approachBonus * laserHeatBonus;
+  if (
+    targetOre
+    && state.overkillReservoir > 0
+    && (!aimVeinId || state.overkillReservoirVeinId !== aimVeinId)
+  ) {
+    state.overkillReservoir = 0;
+    state.overkillReservoirVeinId = null;
+    state.overkillYieldReady = false;
+    state.overkillYieldTargetKey = null;
+  }
+  const reservoirAvailable = targetOre
+    && aimVeinId
+    && state.overkillReservoirVeinId === aimVeinId
+    && stats.trueOverkillEnabled
+    && (stats.overkillReservoirRatio || 0) > 0
+    ? Math.max(0, state.overkillReservoir || 0)
+    : 0;
+  state.overkillYieldTargetKey = reservoirAvailable > 0 ? `${aimTarget.tx}:${aimTarget.ty}` : null;
+  state.overkillYieldReady = Boolean(
+    reservoirAvailable > 0
+    && stats.overkillReservoirYieldThreshold > 0
+    && reservoirAvailable >= Math.max(1, aimTile?.maxHp || aimHpBefore) * stats.overkillReservoirYieldThreshold
+  );
   const aimingAtMainTarget = aimTarget.tx === state.target.tx && aimTarget.ty === state.target.ty;
-  const primaryHpBefore = aimingAtMainTarget && aimTile?.oreId ? Math.max(0, aimTile.hp || 0) : 0;
+  const primaryTargetWasDamageable = Boolean(
+    aimingAtMainTarget
+    && aimTile
+    && aimTile.kind !== 'air'
+    && aimTile.kind !== 'bedrock'
+  );
   const primaryOreId = aimingAtMainTarget ? aimTile?.oreId : null;
+  const primaryVeinId = aimingAtMainTarget ? aimVeinId : null;
   let primaryPhaseDamage = 0;
   let primaryBasePowerApplied = 0;
   let primaryOverkill = 0;
   let maxHittingLaserDamage = 0;
   let aimReceivedPrimaryHit = false;
+  let toolImpactX = aimTarget.x;
+  let toolImpactY = aimTarget.y;
+  let hadToolImpact = false;
   const broken = [];
   const onBreak = (tile, tx, ty) => {
     broken.push({ tile, tx, ty });
@@ -3161,7 +4542,8 @@ function attack(aimTarget = state.target) {
   };
 
   if (stats.laserUnlocked) {
-    const beamCount = clamp(Math.floor(stats.laserBeams || 1), 1, 5);
+    const relicBeam = state.relicSecondBeamRemaining > 0 ? 1 : 0;
+    const beamCount = clamp(Math.floor(stats.laserBeams || 1) + relicBeam, 1, 6);
     for (let beamIndex = 0; beamIndex < beamCount; beamIndex += 1) {
       const offsetIndex = beamIndex - (beamCount - 1) * 0.5;
       const splitAngle = offsetIndex * 0.075;
@@ -3169,13 +4551,27 @@ function attack(aimTarget = state.target) {
       const sin = Math.sin(splitAngle);
       const beamX = nx * cos - ny * sin;
       const beamY = nx * sin + ny * cos;
-      const splitPower = beamIndex === Math.floor(beamCount / 2) ? 1 : 0.62;
-      const beamDamage = damage * (stats.laserPower || 1) * (1 + (stats.laserPierce || 1) * 0.08) * splitPower;
+      const centralBeam = beamIndex === Math.floor(beamCount / 2);
+      const splitPower = centralBeam ? 1 : 0.62;
+      const beamDamage = damage * (stats.laserPower || 1) * (1 + (stats.laserPierce || 1) * 0.08) * splitPower
+        + (centralBeam ? reservoirAvailable : 0);
       const beamTarget = state.world.getTile(aimTarget.tx, aimTarget.ty);
-      const beamHpBefore = beamTarget?.oreId ? Math.max(0, beamTarget.hp || 0) : 0;
-      state.world.damageRay(player.x, player.y, beamX, beamY, stats.laserRange, beamDamage, stats.laserWidth, onBreak);
+      const beamHpBefore = beamTarget && beamTarget.kind !== 'air' && beamTarget.kind !== 'bedrock'
+        ? Math.max(0, beamTarget.hp || 0)
+        : 0;
+      state.world.damageRay(
+        player.x,
+        player.y,
+        beamX,
+        beamY,
+        stats.laserRange,
+        beamDamage,
+        Math.min(LASER_CORE_WIDTH, stats.laserWidth),
+        onBreak,
+      );
       const beamDamageTaken = tileDamageAmount(aimTarget.tx, aimTarget.ty, beamHpBefore);
       if (beamDamageTaken > 0) {
+        hadToolImpact = true;
         primaryBasePowerApplied += beamDamage;
         maxHittingLaserDamage = Math.max(maxHittingLaserDamage, beamDamage);
         if (state.world.getTile(aimTarget.tx, aimTarget.ty)?.kind === 'air') {
@@ -3189,32 +4585,104 @@ function attack(aimTarget = state.target) {
     sound.tone(420, 0.07, 'sawtooth', 0.025, 360);
   } else {
     const reach = Math.min(stats.digReach, Math.max(TILE_SIZE * 0.72, length));
+    const pickDamage = damage + reservoirAvailable;
     let hitX = player.x + nx * reach;
     let hitY = player.y + ny * reach;
     const impactTile = findPickContact(player, nx, ny, reach, aimTarget);
     if (impactTile) {
       hitX = (impactTile.tx + 0.5) * TILE_SIZE;
       hitY = (impactTile.ty + 0.5) * TILE_SIZE;
+      toolImpactX = hitX;
+      toolImpactY = hitY;
+      hadToolImpact = true;
     }
     const arcBonus = clamp((stats.digArc - Math.PI / 3) / Math.PI, 0, 0.7);
     if (impactTile) {
       if (stats.areaMiningUnlocked) {
-        state.world.damageCircle(hitX, hitY, stats.digRadius * (1 + arcBonus * 0.32), damage, onBreak);
+        state.world.damageCircle(hitX, hitY, stats.digRadius * (1 + arcBonus * 0.32), pickDamage, onBreak);
       } else {
-        state.world.damageTile(impactTile.tx, impactTile.ty, damage, onBreak);
+        state.world.damageTile(impactTile.tx, impactTile.ty, pickDamage, onBreak);
       }
     }
     primaryPhaseDamage = tileDamageAmount(aimTarget.tx, aimTarget.ty, aimHpBefore);
     aimReceivedPrimaryHit = primaryPhaseDamage > 1e-9;
-    if (aimReceivedPrimaryHit) primaryBasePowerApplied = damage;
+    if (aimReceivedPrimaryHit) primaryBasePowerApplied = pickDamage;
     if (aimReceivedPrimaryHit && state.world.getTile(aimTarget.tx, aimTarget.ty)?.kind === 'air') {
-      primaryOverkill += Math.max(0, damage - aimHpBefore);
+      primaryOverkill += Math.max(0, pickDamage - aimHpBefore);
     }
     if ((stats.splashDamage || 0) > 0 && (stats.splashRadius || 0) > 0) {
       state.world.damageCircle(hitX, hitY, stats.digRadius + stats.splashRadius, damage * stats.splashDamage, onBreak);
     }
     spawnSparks(hitX, hitY, critical ? '#fff1a6' : '#edbb66', critical ? 7 : 3);
     sound.hit(critical);
+  }
+
+  const laserImpactDamage = stats.laserUnlocked && aimReceivedPrimaryHit
+    ? (maxHittingLaserDamage > 0 ? maxHittingLaserDamage : damage * (stats.laserPower || 1))
+    : 0;
+  if (aimReceivedPrimaryHit) {
+    hadToolImpact = true;
+    toolImpactX = aimTarget.x;
+    toolImpactY = aimTarget.y;
+  }
+  if (stats.laserUnlocked && aimReceivedPrimaryHit && laserImpactDamage > 0) {
+    if (heatMarkActive) {
+      state.laserHeatMarks.delete(heatKey);
+      state.floaters.push({ x: aimTarget.x, y: aimTarget.y - 40, text: `ЖАР +${Math.round(stats.laserHeatNextHitBonus * 100)}%`, color: '#ffb06d', life: 0.85, maxLife: 0.85 });
+      state.shake = Math.max(state.shake, 5);
+    }
+    applyLaserEdgeHeat(aimTarget, nx, ny, laserImpactDamage);
+  }
+  if (
+    hadToolImpact
+    && stats.superFieldEnabled
+    && (!stats.laserUnlocked || stats.superFieldLaserPersistent)
+  ) {
+    spawnSuperField(
+      toolImpactX,
+      toolImpactY,
+      stats.laserUnlocked ? laserImpactDamage : damage,
+    );
+  }
+  if (hadToolImpact && approachReady) {
+    state.approachTravelElapsed = 0;
+    state.floaters.push({ x: toolImpactX, y: toolImpactY - 28, text: 'УДАР С ХОДУ', color: '#ffe5a0', life: 0.75, maxLife: 0.75 });
+    if ((stats.approachStrikeSideChip || 0) > 0) {
+      damageSideChips(
+        toolImpactX,
+        toolImpactY,
+        nx,
+        ny,
+        damage * stats.approachStrikeSideChip,
+        1,
+        'approach-chip',
+      );
+    }
+  }
+  if (
+    hadToolImpact
+    && (stats.sideChipEvery || 0) > 0
+    && state.attackCount % stats.sideChipEvery === 0
+    && (stats.sideChipPower || 0) > 0
+  ) {
+    damageSideChips(
+      toolImpactX,
+      toolImpactY,
+      nx,
+      ny,
+      damage * stats.sideChipPower,
+      stats.sideChipHits || 2,
+      'side-chip',
+    );
+  }
+  if (reservoirAvailable > 0 && targetOre && aimReceivedPrimaryHit) {
+    state.overkillReservoir = 0;
+    state.overkillReservoirVeinId = null;
+    state.floaters.push({ x: aimTarget.x, y: aimTarget.y - 38, text: `ИМПУЛЬС +${Math.floor(reservoirAvailable)}`, color: '#d6a5ff', life: 0.8, maxLife: 0.8 });
+    if (state.world.getTile(aimTarget.tx, aimTarget.ty)?.kind !== 'air') {
+      state.overkillYieldReady = false;
+      state.overkillYieldTargetKey = null;
+    }
   }
 
   if (targetOre && focusedCalibration > 1 && aimReceivedPrimaryHit) {
@@ -3232,6 +4700,35 @@ function attack(aimTarget = state.target) {
     }
   }
 
+  const primaryTargetDestroyed = Boolean(
+    primaryTargetWasDamageable
+    && aimReceivedPrimaryHit
+    && state.world.getTile(aimTarget.tx, aimTarget.ty)?.kind === 'air'
+  );
+  const primaryOreDestroyed = Boolean(primaryOreId && primaryTargetDestroyed);
+  if (primaryTargetDestroyed && critical) triggerFaultLine(aimTarget, nx, ny, primaryOverkill);
+  if (primaryOreDestroyed && primaryOverkill > 0 && stats.trueOverkillEnabled && (stats.overkillReservoirRatio || 0) > 0) {
+    const captured = primaryOverkill * stats.overkillReservoirRatio;
+    state.overkillReservoir += captured;
+    state.overkillReservoirVeinId = primaryVeinId;
+    state.floaters.push({
+      x: aimTarget.x + 8,
+      y: aimTarget.y - 48,
+      text: `ЗАПАС +${Math.floor(captured)}`,
+      color: '#c998ff',
+      life: 0.8,
+      maxLife: 0.8,
+    });
+  }
+  if (hadToolImpact) {
+    triggerChronoOverdriveStrike(
+      aimTarget,
+      nx,
+      ny,
+      Math.max(damage + reservoirAvailable, laserImpactDamage),
+    );
+  }
+
   if (primaryOreId && aimReceivedPrimaryHit && state.world.getTile(aimTarget.tx, aimTarget.ty)?.kind === 'air') {
     relayCrewOverkill(
       { x: aimTarget.x, y: aimTarget.y },
@@ -3244,17 +4741,38 @@ function attack(aimTarget = state.target) {
   if (stats.laserUnlocked && aimReceivedPrimaryHit) {
     // Calibration is target-specific hardness reduction. The ricochet applies
     // it to its own target, so its outgoing base must remain the raw hit power.
-    fireLaserRicochets(aimTarget, maxHittingLaserDamage, onBreak);
+    fireLaserRicochets(aimTarget, laserImpactDamage, onBreak);
   }
 
   if (stats.laserUnlocked && aimingAtMainTarget) {
     state.laserShotCount += 1;
+    const cadenceDamage = Math.max(laserImpactDamage, damage * (stats.laserPower || 1));
     if (
       stats.laserSuperPickEchoEvery > 0
       && state.laserShotCount % stats.laserSuperPickEchoEvery === 0
-      && maxHittingLaserDamage > 0
     ) {
-      triggerSuperPickEcho(aimTarget, maxHittingLaserDamage);
+      triggerSuperPickEcho(aimTarget, cadenceDamage);
+    }
+    if (
+      stats.solarDrillEnabled
+      && stats.solarDrillProcEvery > 0
+      && state.laserShotCount % stats.solarDrillProcEvery === 0
+    ) {
+      const duration = Math.max(0.12, stats.solarDrillBeamDuration || 0.7);
+      state.solarDrillBursts.push({
+        originX: player.x,
+        originY: player.y,
+        x: aimTarget.x,
+        y: aimTarget.y,
+        remaining: duration,
+        maxDuration: duration,
+        tick: 0,
+        damage: cadenceDamage,
+      });
+      state.metrics.solarDrillBursts += 1;
+      state.floaters.push({ x: aimTarget.x, y: aimTarget.y - 52, text: 'СОЛНЕЧНЫЙ БУР', color: '#fff08a', life: 1, maxLife: 1 });
+      toast('ПЯТЫЙ ВЫСТРЕЛ · СОЛНЕЧНЫЙ БУР', 'success');
+      sound.tone(610, 0.18, 'sawtooth', 0.03, 280);
     }
   }
 
@@ -3312,7 +4830,96 @@ function attack(aimTarget = state.target) {
   }
 }
 
-function damageBombShape(x, y, radius, power, directionX, directionY) {
+function addGadgetOverkill(reserves, oreId, veinId, hpBefore, damage) {
+  if (!stats.trueOverkillEnabled || !oreId || !veinId || !(stats.overkillReservoirRatio > 0)) return 0;
+  const captured = Math.max(0, damage - Math.max(0, hpBefore)) * stats.overkillReservoirRatio;
+  if (!(captured > 0)) return 0;
+  reserves.set(veinId, (reserves.get(veinId) || 0) + captured);
+  return captured;
+}
+
+function commitGadgetOverkill(reserves) {
+  if (!(reserves instanceof Map) || reserves.size <= 0) return { added: 0, total: 0, veinId: null };
+  const previousVeinId = state.overkillReservoirVeinId;
+  const previousReserve = previousVeinId ? Math.max(0, state.overkillReservoir || 0) : 0;
+  const candidates = new Map();
+  for (const [veinId, amount] of reserves) {
+    if (!veinId || !(amount > 0)) continue;
+    candidates.set(veinId, amount + (veinId === previousVeinId ? previousReserve : 0));
+  }
+  if (previousVeinId && previousReserve > 0 && !candidates.has(previousVeinId)) {
+    candidates.set(previousVeinId, previousReserve);
+  }
+
+  let selectedVeinId = null;
+  let selectedTotal = 0;
+  for (const [veinId, amount] of candidates) {
+    const preferExistingTie = amount === selectedTotal && veinId === previousVeinId;
+    if (amount > selectedTotal || preferExistingTie) {
+      selectedVeinId = veinId;
+      selectedTotal = amount;
+    }
+  }
+  if (!selectedVeinId || !(selectedTotal > 0)) return { added: 0, total: 0, veinId: null };
+
+  state.overkillReservoir = selectedTotal;
+  state.overkillReservoirVeinId = selectedVeinId;
+  state.overkillYieldReady = false;
+  state.overkillYieldTargetKey = null;
+  return {
+    added: Math.max(0, reserves.get(selectedVeinId) || 0),
+    total: selectedTotal,
+    veinId: selectedVeinId,
+  };
+}
+
+function storeGadgetOverkill(oreId, veinId, hpBefore, damage, x, y, show = false) {
+  const reserves = new Map();
+  addGadgetOverkill(reserves, oreId, veinId, hpBefore, damage);
+  const retained = commitGadgetOverkill(reserves);
+  if (show && retained.added > 0) {
+    state.floaters.push({ x, y: y - 34, text: `ЗАПАС +${Math.floor(retained.added)}`, color: '#c998ff', life: 0.75, maxLife: 0.75 });
+  }
+  return retained.added;
+}
+
+function snapshotOreHpInCircle(x, y, radius) {
+  const snapshot = new Map();
+  if (!stats.trueOverkillEnabled || !state.world || !(radius > 0)) return snapshot;
+  const min = state.world.worldToTile(x - radius - TILE_SIZE, y - radius - TILE_SIZE);
+  const max = state.world.worldToTile(x + radius + TILE_SIZE, y + radius + TILE_SIZE);
+  const radiusSquared = radius * radius;
+  for (let ty = Math.max(0, min.ty); ty <= Math.min(WORLD_CONFIG.HEIGHT - 1, max.ty); ty += 1) {
+    for (let tx = Math.max(0, min.tx); tx <= Math.min(WORLD_CONFIG.WIDTH - 1, max.tx); tx += 1) {
+      const tile = state.world.getTile(tx, ty);
+      if (!tile?.oreId || tile.kind === 'air' || tile.kind === 'bedrock') continue;
+      const left = tx * TILE_SIZE;
+      const top = ty * TILE_SIZE;
+      const closestX = clamp(x, left, left + TILE_SIZE);
+      const closestY = clamp(y, top, top + TILE_SIZE);
+      if ((x - closestX) ** 2 + (y - closestY) ** 2 > radiusSquared) continue;
+      snapshot.set(`${tx}:${ty}`, { oreId: tile.oreId, veinId: tile.veinId, hp: Math.max(0, tile.hp || 0), tx, ty });
+    }
+  }
+  return snapshot;
+}
+
+function collectCircleGadgetOverkill(brokenTiles, snapshot, damage, x, y) {
+  if (!Array.isArray(brokenTiles) || !brokenTiles.length || !snapshot?.size) return 0;
+  const reserves = new Map();
+  for (const broken of brokenTiles) {
+    const before = snapshot.get(`${broken.tx}:${broken.ty}`);
+    if (!before) continue;
+    addGadgetOverkill(reserves, before.oreId, before.veinId, before.hp, damage);
+  }
+  const retained = commitGadgetOverkill(reserves);
+  if (retained.added > 0) {
+    state.floaters.push({ x, y: y - 40, text: `ЗАПАС ГАДЖЕТОВ +${Math.floor(retained.added)}`, color: '#c998ff', life: 0.8, maxLife: 0.8 });
+  }
+  return retained.added;
+}
+
+function damageBombShape(x, y, radius, power, directionX, directionY, source = 'bomb') {
   const magnitude = Math.hypot(directionX, directionY);
   const directional = Boolean(stats.directionalBombs && stats.directionalBombConeTiles > 0 && magnitude > 0.001);
   if (directional) state.metrics.directionalBlasts += 1;
@@ -3356,6 +4963,7 @@ function damageBombShape(x, y, radius, power, directionX, directionY) {
   }
 
   candidates.sort((left, right) => left.order - right.order || left.ty - right.ty || left.tx - right.tx);
+  const gadgetOverkillReserves = new Map();
   for (const candidate of candidates) {
     const tile = state.world.getTile(candidate.tx, candidate.ty);
     if (!tile || tile.kind === 'air' || tile.kind === 'bedrock') continue;
@@ -3367,7 +4975,16 @@ function damageBombShape(x, y, radius, power, directionX, directionY) {
       : 0;
     if (triangularBonus > 0) state.metrics.triangleBuffHits += 1;
     const amount = power * candidate.factor * focusedDamageMultiplier(tile) * (1 + triangularBonus);
-    state.world.damageTile(candidate.tx, candidate.ty, amount, (brokenTile, tx, ty) => resolveBrokenTile(brokenTile, tx, ty, 'bomb'));
+    const brokenTiles = state.world.damageTile(candidate.tx, candidate.ty, amount, (brokenTile, tx, ty) => resolveBrokenTile(brokenTile, tx, ty, source));
+    if (oreId && brokenTiles.length) {
+      addGadgetOverkill(
+        gadgetOverkillReserves,
+        oreId,
+        veinId,
+        hpBefore,
+        amount,
+      );
+    }
     const beacon = getCrewBeacon();
     if (oreId && tile.kind === 'air' && beacon?.veinId && veinId === beacon.veinId) {
       relayCrewOverkill(
@@ -3377,6 +4994,10 @@ function damageBombShape(x, y, radius, power, directionX, directionY) {
         [`${candidate.tx}:${candidate.ty}`],
       );
     }
+  }
+  const retainedGadgetOverkill = commitGadgetOverkill(gadgetOverkillReserves);
+  if (retainedGadgetOverkill.added > 0) {
+    state.floaters.push({ x, y: y - 44, text: `ЗАПАС БОМБЫ +${Math.floor(retainedGadgetOverkill.added)}`, color: '#c998ff', life: 0.8, maxLife: 0.8 });
   }
 
   if (directional) {
@@ -3398,32 +5019,91 @@ function damageBombShape(x, y, radius, power, directionX, directionY) {
   }
 }
 
-function detonate(x, y, directionX = 0, directionY = 1) {
+function detonate(x, y, directionX = 0, directionY = 1, options = {}) {
+  const noProcs = Boolean(options.noProcs);
+  const source = options.source || 'bomb';
   sound.boom();
   state.shake = Math.max(state.shake, 15);
   flash('#f0a24c', 0.28);
-  const volatile = (stats.volatileBombChance || 0) > 0 && Math.random() < procChance(stats.volatileBombChance, 0.1);
-  const sticky = (stats.stickyBombChance || 0) > 0 && Math.random() < procChance(stats.stickyBombChance, 0.12);
+  const volatile = !noProcs && (stats.volatileBombChance || 0) > 0 && Math.random() < procChance(stats.volatileBombChance, 0.1);
+  const sticky = !noProcs && (stats.stickyBombChance || 0) > 0 && Math.random() < procChance(stats.stickyBombChance, 0.12);
   const beacon = getCrewBeacon();
   let blastX = x;
   let blastY = y;
   let blastDirectionX = directionX;
   let blastDirectionY = directionY;
-  if (sticky && beacon) {
+  const focusedOre = getFocusedOre();
+  const activeFieldTarget = findMagneticFieldTarget(focusedOre);
+  const prospectiveField = stats.magneticFieldEnabled && stats.magneticFieldRadiusTiles > 0
+    ? { x, y, radius: stats.magneticFieldRadiusTiles * TILE_SIZE }
+    : null;
+  // The very bomb that creates the field is guided too; waiting for a second
+  // bomb made the headline behavior effectively invisible in short runs.
+  const guidedTarget = activeFieldTarget || findValuableOreInField(prospectiveField, focusedOre);
+  if (guidedTarget) {
+    blastDirectionX = guidedTarget.x - x;
+    blastDirectionY = guidedTarget.y - y;
+    blastX = guidedTarget.x;
+    blastY = guidedTarget.y;
+  } else if (sticky && beacon) {
     blastDirectionX = beacon.x - x;
     blastDirectionY = beacon.y - y;
     blastX = beacon.x;
     blastY = beacon.y;
   }
+  if (stats.magneticFieldEnabled && stats.magneticFieldDuration > 0 && stats.magneticFieldRadiusTiles > 0) {
+    state.magneticField = {
+      x: blastX,
+      y: blastY,
+      radius: stats.magneticFieldRadiusTiles * TILE_SIZE,
+      remaining: stats.magneticFieldDuration,
+      maxDuration: stats.magneticFieldDuration,
+    };
+    revealMagneticFieldOres(state.magneticField);
+    state.metrics.magneticFields += 1;
+  }
+  const blastPoint = state.world.worldToTile(blastX, blastY);
+  const blastTile = state.world.getTile(blastPoint.tx, blastPoint.ty);
+  if (!noProcs && source === 'bomb') {
+    const nearestVeinTarget = blastTile?.veinId
+      ? null
+      : findBestOreTarget(
+        blastX,
+        blastY,
+        Math.max(stats.bombRadius, TILE_SIZE * 1.5),
+        null,
+        { ignoreSenseLine: true },
+      );
+    const comboTile = nearestVeinTarget?.tile || blastTile;
+    advanceDemolitionCombo('bomb', {
+      x: blastX,
+      y: blastY,
+      tx: blastPoint.tx,
+      ty: blastPoint.ty,
+      tile: comboTile,
+      veinId: comboTile?.veinId || null,
+    });
+  }
   const radius = stats.bombRadius * (volatile ? 1.75 : 1);
-  const power = stats.pickPower * stats.bombPower * 1.8 * (volatile ? 2.2 : 1) * (sticky ? 1.45 : 1);
-  damageBombShape(blastX, blastY, radius, power, blastDirectionX, blastDirectionY);
+  const power = stats.pickPower * stats.bombPower * 1.8 * (volatile ? 2.2 : 1) * (sticky ? 1.45 : 1)
+    * magneticGadgetMultiplier(blastX, blastY);
+  damageBombShape(blastX, blastY, radius, power, blastDirectionX, blastDirectionY, source);
   const fragments = Math.min(6, Math.floor(stats.bombFragments || 0));
   for (let index = 0; index < fragments; index += 1) {
     const angle = index / Math.max(1, fragments) * Math.PI * 2 + Math.random() * 0.4;
     const fragmentX = blastX + Math.cos(angle) * radius * 0.72;
     const fragmentY = blastY + Math.sin(angle) * radius * 0.72;
-    state.world.damageCircle(fragmentX, fragmentY, radius * 0.36, power * (stats.bombFragmentPower || 0.3), (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'bomb'));
+    const fragmentRadius = radius * 0.36;
+    const fragmentPower = power * (stats.bombFragmentPower || 0.3);
+    const fragmentSnapshot = snapshotOreHpInCircle(fragmentX, fragmentY, fragmentRadius);
+    const fragmentBreaks = state.world.damageCircle(
+      fragmentX,
+      fragmentY,
+      fragmentRadius,
+      fragmentPower,
+      (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, source),
+    );
+    collectCircleGadgetOverkill(fragmentBreaks, fragmentSnapshot, fragmentPower, fragmentX, fragmentY);
   }
   if (volatile) toast('НЕСТАБИЛЬНЫЙ ЗАРЯД!', 'warning');
   for (let index = 0; index < 26; index += 1) {
@@ -3443,10 +5123,12 @@ function chainStrike(x, y, nx, ny) {
     const targetOreId = beacon?.oreId || focusedOre?.id || null;
     const triangle = getTriangulationTriangle();
     const chainRangeBonus = triangle ? 1 + stats.triangularFixRangeBonus : 1;
-    const target = findBeaconAwareTarget(
+    const fieldRangeMultiplier = activeMagneticField() ? 1 + stats.magneticFieldTargetingBonus : 1;
+    const magneticTarget = findMagneticFieldTarget(focusedOre, visited);
+    const target = magneticTarget || findBeaconAwareTarget(
       fromX + nx * TILE_SIZE,
       fromY + ny * TILE_SIZE,
-      stats.senseRadius * 0.65 * (focusedOre ? focusedSenseMultiplier(focusedOre) : 1) * chainRangeBonus,
+      stats.senseRadius * 0.65 * (focusedOre ? focusedSenseMultiplier(focusedOre) : 1) * chainRangeBonus * fieldRangeMultiplier,
       focusedOre,
       beacon,
       { excludedKeys: visited },
@@ -3456,16 +5138,27 @@ function chainStrike(x, y, nx, ny) {
     const inTriangle = pointInTriangle(target.x, target.y, triangle);
     const gadgetBonus = inTriangle ? stats.triangularFixGadgetDamageBonus : 0;
     if (gadgetBonus > 0 || (triangle && stats.triangularFixRangeBonus > 0)) state.metrics.triangleBuffHits += 1;
-    const power = stats.pickPower * (stats.chainPower || 0.55) * (1 + gadgetBonus);
+    const power = stats.pickPower * (stats.chainPower || 0.55) * (1 + gadgetBonus)
+      * magneticGadgetMultiplier(target.x, target.y);
     const hpBefore = target.tile.hp || 0;
+    const comboTarget = { ...target, veinId: target.tile?.veinId || null };
     const calibration = focusedDamageMultiplier(target.tile);
-    state.world.damageCircle(target.x, target.y, Math.max(10, stats.digRadius * 0.55), power, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'chain'));
+    const chainRadius = Math.max(10, stats.digRadius * 0.55);
+    const chainSnapshot = snapshotOreHpInCircle(target.x, target.y, chainRadius);
+    const chainBreaks = state.world.damageCircle(target.x, target.y, chainRadius, power, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'chain'));
+    collectCircleGadgetOverkill(chainBreaks, chainSnapshot, power, target.x, target.y);
     if (calibration > 1 && target.tile.kind !== 'air') {
-      state.world.damageTile(target.tx, target.ty, power * (calibration - 1), (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'chain'));
+      const calibrationPower = power * (calibration - 1);
+      const calibrationHp = target.tile.hp || 0;
+      const calibrationOreId = target.tile.oreId;
+      const calibrationVeinId = target.tile.veinId;
+      const calibrationBreaks = state.world.damageTile(target.tx, target.ty, calibrationPower, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'chain'));
+      if (calibrationBreaks.length) storeGadgetOverkill(calibrationOreId, calibrationVeinId, calibrationHp, calibrationPower, target.x, target.y, true);
     }
     if (target.tile.kind === 'air') {
       relayCrewOverkill(target, targetOreId, Math.max(0, power * calibration - hpBefore), visited);
     }
+    advanceDemolitionCombo('chain', comboTarget);
     const beamLife = 0.18 + (stats.shockDuration || 0);
     state.beams.push({ x: fromX, y: fromY, x2: target.x, y2: target.y, color: '#b58cff', life: beamLife, maxLife: beamLife, width: 3 });
     if ((stats.shockDuration || 0) > 0) {
@@ -3509,6 +5202,80 @@ function showMicroEventIndicator(event, text) {
   updateMicroEventIndicator();
 }
 
+function perkStatusEntries() {
+  if (state.mode !== 'run') return [];
+  const entries = [];
+  const add = (label, value, color) => entries.push({ label, value: String(value || ''), color });
+  const targetTile = state.target?.kind === 'ore'
+    ? state.world?.getTile(state.target.tx, state.target.ty)
+    : null;
+  const targetVein = targetTile?.veinId ? state.veinRuntime.get(targetTile.veinId) : null;
+  if (targetVein?.motherlode) add('Материнская жила', '×2', '#fff0a6');
+  else if (targetVein?.rich) add('Богатая жила', `+${Math.round((stats.richVeinYieldBonus || 0) * 100)}%`, '#f2c95d');
+  if (state.chronoOverflowRemaining > 0) {
+    add('Хронофорсаж', `${Math.ceil(state.chronoOverflowRemaining)}с`, '#8ff8ef');
+  }
+  if (state.quarryModeActive && state.quarryModeRemaining > 0) {
+    add('Карьерный темп', `${Math.ceil(state.quarryModeRemaining)}с`, '#ffb56f');
+  }
+  const field = activeMagneticField();
+  if (field) add('Магнитное поле', `${Math.ceil(field.remaining)}с`, '#74dfff');
+  const relicAuxiliaryRemaining = Math.max(
+    state.relicDigBoostRemaining || 0,
+    state.relicYieldBoostRemaining || 0,
+    state.relicGadgetBoostRemaining || 0,
+  );
+  const relicParts = [];
+  if (state.relicSecondBeamRemaining > 0) relicParts.push(`луч ${Math.ceil(state.relicSecondBeamRemaining)}с`);
+  if (state.relicSoftRockRemaining > 0) relicParts.push(`порода ${Math.ceil(state.relicSoftRockRemaining)}с`);
+  if (relicAuxiliaryRemaining > 0) relicParts.push(`усиление ${Math.ceil(relicAuxiliaryRemaining)}с`);
+  if (state.relicChestBoostCharges > 0) relicParts.push(`сундук ×${state.relicChestBoostCharges}`);
+  if (relicParts.length) add('Реликвия', relicParts.join(' · '), '#ff9fe3');
+  if (state.demolitionComboStage > 0) add('Оркестр', `${state.demolitionComboStage}/3`, '#ca9cff');
+  const sampleVeinId = targetTile?.veinId || state.lastBrokenVeinId;
+  const sampleProgress = sampleVeinId ? state.tripleSampleVeins.get(sampleVeinId)?.count || 0 : 0;
+  if ((stats.tripleSampleEvery || 0) > 0) add('Тройная проба', `${sampleProgress}/${stats.tripleSampleEvery}`, '#e7b9ff');
+  if (stats.fortuneWheelEnabled && stats.fortunePityThreshold > 0) {
+    add('Колесо', `${state.fortunePityCounter}/${stats.fortunePityThreshold}`, '#ffe37c');
+  }
+  if (stats.motherlodeGuaranteed && !state.motherlodeTriggered && !targetVein?.motherlode) {
+    add('Материнская', `${Math.min(state.motherlodeBreaks, stats.motherlodeTriggerBreaks)}/${stats.motherlodeTriggerBreaks}`, '#fff0a6');
+  }
+  if (state.overkillReservoir > 0.5) add('Импульс', Math.round(state.overkillReservoir), '#ffcf84');
+  return entries;
+}
+
+function updatePerkStatusRail() {
+  if (!ui.perkStatusRail) return;
+  const entries = perkStatusEntries();
+  if (!entries.length) {
+    ui.perkStatusRail.classList.add('hidden');
+    ui.perkStatusRail.dataset.signature = '';
+    ui.perkStatusRail.replaceChildren();
+    return;
+  }
+  const signature = entries.map((entry) => `${entry.label}:${entry.value}`).join('|');
+  if (ui.perkStatusRail.dataset.signature !== signature) {
+    const fragment = document.createDocumentFragment();
+    for (const entry of entries) {
+      const item = document.createElement('span');
+      item.className = 'perk-status-rail__item';
+      item.style.setProperty('--perk-color', entry.color);
+      const dot = document.createElement('i');
+      dot.setAttribute('aria-hidden', 'true');
+      const label = document.createElement('span');
+      label.textContent = entry.label;
+      const value = document.createElement('strong');
+      value.textContent = entry.value;
+      item.append(dot, label, value);
+      fragment.append(item);
+    }
+    ui.perkStatusRail.replaceChildren(fragment);
+    ui.perkStatusRail.dataset.signature = signature;
+  }
+  ui.perkStatusRail.classList.remove('hidden');
+}
+
 function applyMicroEvent(event) {
   if (!event || !state.world || state.mode !== 'run') return false;
   const triggered = typeof state.world.triggerMicroEvent === 'function'
@@ -3530,12 +5297,14 @@ function applyMicroEvent(event) {
     state.eventYieldBoostRemaining = Math.max(state.eventYieldBoostRemaining, duration || 5);
     indicatorText = 'ВЫХОД РУДЫ ×1,5';
   } else if (triggered.type === 'ancient_container') {
+    const enhancedByRelic = state.relicChestBoostCharges > 0;
+    const chestMultiplier = enhancedByRelic ? 2 : 1;
     const lootEntries = Object.entries(triggered.loot || {})
       .filter(([oreId, amount]) => oreById.has(oreId) && Number(amount) > 0);
     let pieces = 0;
     const labels = [];
     for (const [oreId, rawAmount] of lootEntries) {
-      const amount = Math.max(1, Math.floor(Number(rawAmount) || 0));
+      const amount = Math.max(1, Math.floor(Number(rawAmount) || 0)) * chestMultiplier;
       const rewardOre = oreById.get(oreId);
       state.oreCounts[oreId] = (state.oreCounts[oreId] || 0) + amount;
       state.discoveredOreIds.add(oreId);
@@ -3544,7 +5313,11 @@ function applyMicroEvent(event) {
     }
     state.runOre += pieces;
     addBonusTime(0.5, x, y - 38, 'КОНТЕЙНЕР');
-    indicatorText = `СУНДУК · ${labels.join(', ') || 'ПУСТО'}${pieces ? ' · +0,5 С' : ''}`;
+    if (enhancedByRelic) {
+      state.relicChestBoostCharges -= 1;
+      activateRelicEffect(x, y, true);
+    }
+    indicatorText = `${enhancedByRelic ? 'УСИЛЕННЫЙ СУНДУК' : 'СУНДУК'} · ${labels.join(', ') || 'ПУСТО'}${pieces ? ' · +0,5 С' : ''}`;
   } else if (triggered.type === 'underground_flow') {
     state.eventMoveBoostRemaining = Math.max(state.eventMoveBoostRemaining, duration || 5);
     state.pathWaypoint = null;
@@ -3600,6 +5373,97 @@ function checkMicroEventsAt(x, y, fromBreak = false) {
   return closest;
 }
 
+function veinTravelSpeedMultiplier(target = state.target) {
+  if (!target || target.kind !== 'ore' || !state.world) return 1;
+  const tile = state.world.getTile(target.tx, target.ty);
+  const veinId = tile?.veinId || null;
+  if (!veinId) return 1;
+  let bonus = 0;
+  if (veinId === state.lastBrokenVeinId) bonus += stats.veinTrailMoveSpeedBonus || 0;
+  if (stats.veinLockEnabled && veinId === state.lockedVeinId) bonus += stats.veinLockMoveSpeedBonus || 0;
+  const focusedOre = getFocusedOre();
+  if (focusedOre?.id === tile.oreId && veinId === state.lastBrokenVeinId) {
+    bonus += Math.min(6, state.veinBreakStreak || 0) * (stats.focusMoveSpeedPerNode || 0);
+  }
+  if (state.quarryModeActive && veinId === state.quarryVeinId) bonus += stats.quarryModeMoveSpeedBonus || 0;
+  return 1 + bonus;
+}
+
+function quarryDigSpeedMultiplier() {
+  if (!state.quarryModeActive || remainingVeinNodes(state.quarryVeinId) <= 0) return 1;
+  return 1 + (stats.quarryModeDigSpeedBonus || 0);
+}
+
+function updateSuperFields(delta) {
+  if (!state.superFields.length || !state.world) return;
+  const survivors = [];
+  for (const field of state.superFields) {
+    field.remaining -= delta;
+    field.tick -= delta;
+    while (field.tick <= 0 && field.remaining > 0) {
+      field.tick += field.tickInterval;
+      const tickDamage = field.totalDamage * field.tickInterval / Math.max(field.tickInterval, field.maxDuration);
+      state.world.damageCircle(
+        field.x,
+        field.y,
+        field.radius,
+        tickDamage,
+        (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'super_field'),
+      );
+      state.shocks.push({ x: field.x, y: field.y, life: 0.22, maxLife: 0.22, tick: Infinity, radius: field.radius, color: '#65ffe3' });
+    }
+    if (field.remaining > 0) survivors.push(field);
+  }
+  state.superFields = survivors;
+}
+
+function updateSolarDrillBursts(delta) {
+  if (!state.solarDrillBursts.length || !state.world) return;
+  const survivors = [];
+  for (const burst of state.solarDrillBursts) {
+    burst.remaining -= delta;
+    burst.tick -= delta;
+    while (burst.tick <= 0 && burst.remaining > 0) {
+      burst.tick += 0.12;
+      const heldBeamDamage = burst.damage * 0.12 / Math.max(0.12, burst.maxDuration || stats.solarDrillBeamDuration || 0.7);
+      state.world.damageCircle(
+        burst.x,
+        burst.y,
+        Math.max(TILE_SIZE * 0.45, stats.laserWidth || 8),
+        heldBeamDamage,
+        (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'solar'),
+      );
+      state.beams.push({
+        x: burst.originX,
+        y: burst.originY,
+        x2: burst.x,
+        y2: burst.y,
+        color: '#fff08a',
+        life: 0.14,
+        maxLife: 0.14,
+        width: Math.max(4, stats.laserWidth * 0.8),
+      });
+    }
+    if (burst.remaining <= 0) {
+      const finalPower = Math.max(0, stats.solarDrillFinalBurstPower || 0);
+      if (finalPower > 0) {
+        state.world.damageCircle(
+          burst.x,
+          burst.y,
+          TILE_SIZE * 1.15,
+          burst.damage * finalPower,
+          (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'solar'),
+        );
+        state.shocks.push({ x: burst.x, y: burst.y, life: 0.5, maxLife: 0.5, tick: Infinity, radius: TILE_SIZE * 1.15, color: '#fff08a' });
+        spawnSparks(burst.x, burst.y, '#fff6a8', 16);
+      }
+    } else {
+      survivors.push(burst);
+    }
+  }
+  state.solarDrillBursts = survivors;
+}
+
 function updateRun(delta, now = performance.now()) {
   if (state.paused || !state.player || !state.world) return;
   state.activeWallElapsed = Math.max(0, (now - state.runStartedAt) / 1000);
@@ -3619,12 +5483,41 @@ function updateRun(delta, now = performance.now()) {
   state.targetCooldown -= delta;
   state.pathCooldown -= delta;
   state.droneCooldown -= delta;
+  state.echoPingCooldownRemaining = Math.max(0, state.echoPingCooldownRemaining - delta);
+  state.chronoOverflowRemaining = Math.max(0, state.chronoOverflowRemaining - delta);
+  if (state.quarryModeActive) {
+    state.quarryModeRemaining = Math.max(0, state.quarryModeRemaining - delta);
+    if (state.quarryModeRemaining <= 0) {
+      state.quarryModeActive = false;
+      state.quarryBreakStreak = 0;
+      state.quarryVeinId = null;
+    }
+  }
   state.deafKnockCooldown = Math.max(0, state.deafKnockCooldown - delta);
   state.deafKnockBoostRemaining = Math.max(0, state.deafKnockBoostRemaining - delta);
   state.eventYieldBoostRemaining = Math.max(0, state.eventYieldBoostRemaining - delta);
   state.eventMoveBoostRemaining = Math.max(0, state.eventMoveBoostRemaining - delta);
   state.eventDigBoostRemaining = Math.max(0, state.eventDigBoostRemaining - delta);
   state.eventSoftRockRemaining = Math.max(0, state.eventSoftRockRemaining - delta);
+  state.relicDigBoostRemaining = Math.max(0, state.relicDigBoostRemaining - delta);
+  state.relicYieldBoostRemaining = Math.max(0, state.relicYieldBoostRemaining - delta);
+  state.relicGadgetBoostRemaining = Math.max(0, state.relicGadgetBoostRemaining - delta);
+  state.relicSecondBeamRemaining = Math.max(0, state.relicSecondBeamRemaining - delta);
+  state.relicSoftRockRemaining = Math.max(0, state.relicSoftRockRemaining - delta);
+  state.demolitionComboCooldownRemaining = Math.max(0, state.demolitionComboCooldownRemaining - delta);
+  if (state.demolitionComboStage > 0 && state.demolitionComboExpires < state.elapsed) {
+    state.demolitionComboStage = 0;
+    state.demolitionComboVeinId = null;
+  }
+  if (state.magneticField) {
+    state.magneticField.remaining = Math.max(0, state.magneticField.remaining - delta);
+    if (state.magneticField.remaining <= 0) state.magneticField = null;
+  }
+  for (const [key, expires] of state.laserHeatMarks) {
+    if (expires < state.elapsed) state.laserHeatMarks.delete(key);
+  }
+  updateSuperFields(delta);
+  updateSolarDrillBursts(delta);
   state.microEventCheckCooldown -= delta;
   state.triangleRefreshCooldown -= delta;
   for (const [key, expires] of state.triangleOreMemory) {
@@ -3660,12 +5553,32 @@ function updateRun(delta, now = performance.now()) {
     const rememberedDistance = rememberedUntil >= state.elapsed
       ? distance(state.player.x, state.player.y, state.target.x, state.target.y) + TILE_SIZE
       : 0;
+    const ghostTrailActive = (state.target.ghostUntil || 0) >= state.elapsed
+      && (
+        !(stats.ghostTrailMaxLayers > 0)
+        || hasSenseLine(
+          state.player.x,
+          state.player.y,
+          state.target.x,
+          state.target.y,
+          stats.ghostTrailMaxLayers,
+        )
+      );
+    const targetMemoryActive = (
+      ghostTrailActive
+      || (state.target.echoHoldUntil || 0) >= state.elapsed
+      || Boolean(state.target.rememberedRoute)
+    );
+    const targetMemoryDistance = targetMemoryActive
+      ? distance(state.player.x, state.player.y, state.target.x, state.target.y) + TILE_SIZE
+      : 0;
     const maxTargetDistance = explorationTarget
       ? EXPLORATION_SCAN_TILES * TILE_SIZE * 1.25
       : Math.max(
         state.target.lockRadius || 0,
         effectiveSenseRadius() * focusedSenseMultiplier(focusedOre),
         rememberedDistance,
+        targetMemoryDistance,
       ) * persistence;
     if (
       (microEventTarget && !liveMicroEvent)
@@ -3673,7 +5586,7 @@ function updateRun(delta, now = performance.now()) {
       || (!microEventTarget && current.kind === 'air')
       || (!microEventTarget && current.kind === 'bedrock')
       || (!microEventTarget && !explorationTarget && !current.oreId)
-      || (!microEventTarget && !explorationTarget && focusedOre && current.oreId !== focusedOre.id)
+      || (!microEventTarget && !explorationTarget && !state.target.motherlode && focusedOre && current.oreId !== focusedOre.id)
       || distance(state.player.x, state.player.y, state.target.x, state.target.y) > maxTargetDistance
     ) {
       state.target = null;
@@ -3700,14 +5613,17 @@ function updateRun(delta, now = performance.now()) {
   if (state.targetCooldown <= 0) {
     const searchRadius = effectiveSenseRadius() * focusedSenseMultiplier(focusedOre);
     const priorityChest = findPriorityChestTarget();
+    const priorityMotherlode = priorityChest ? null : findMotherlodePriorityTarget();
     const targets = priorityChest
       ? { primary: priorityChest, backup: state.target?.kind === 'ore' ? state.target : state.backupTarget }
+      : priorityMotherlode
+        ? { primary: priorityMotherlode, backup: state.target?.kind === 'ore' && !state.target.motherlode ? state.target : state.backupTarget }
       : chooseOreTargets(state.player.x, state.player.y, searchRadius, focusedOre?.id || null);
     if (targets.primary) {
       const previousKey = state.target ? `${state.target.tx}:${state.target.ty}` : '';
       const nextKey = `${targets.primary.tx}:${targets.primary.ty}`;
-      targets.primary.lockRadius = searchRadius;
-      if (targets.backup) targets.backup.lockRadius = searchRadius;
+      targets.primary.lockRadius = Math.max(targets.primary.lockRadius || 0, searchRadius);
+      if (targets.backup) targets.backup.lockRadius = Math.max(targets.backup.lockRadius || 0, searchRadius);
       state.target = targets.primary;
       state.backupTarget = targets.backup;
       noteTargetAcquired(state.target);
@@ -3719,6 +5635,9 @@ function updateRun(delta, now = performance.now()) {
         state.focusMissElapsed = 0;
         refreshCrewBeacon(state.target);
       }
+    }
+    else if (triggerEchoPing(focusedOre)) {
+      refreshCrewBeacon(state.target);
     }
     else if (!state.target || state.target.kind !== 'exploration') {
       state.target = findExplorationTarget(state.player.x, state.player.y, focusedOre?.id || null);
@@ -3784,7 +5703,11 @@ function updateRun(delta, now = performance.now()) {
 
     const deafKnockMoveMultiplier = state.deafKnockBoostRemaining > 0 ? 1 + stats.deafKnockMoveSpeedBonus : 1;
     const eventMoveMultiplier = state.eventMoveBoostRemaining > 0 ? 1.35 : 1;
-    const desiredSpeed = stats.moveSpeed * (stats.mineMoveMultiplier || 1) * deafKnockMoveMultiplier * eventMoveMultiplier;
+    const desiredSpeed = stats.moveSpeed
+      * (stats.mineMoveMultiplier || 1)
+      * deafKnockMoveMultiplier
+      * eventMoveMultiplier
+      * veinTravelSpeedMultiplier(state.target);
     const moveDistance = Math.min(targetDistance, desiredSpeed * delta);
     const nextX = clamp(state.player.x + nx * moveDistance, TILE_SIZE, WORLD_CONFIG.WIDTH * TILE_SIZE - TILE_SIZE);
     const nextY = clamp(state.player.y + ny * moveDistance, TILE_SIZE, WORLD_CONFIG.HEIGHT * TILE_SIZE - TILE_SIZE);
@@ -3804,6 +5727,9 @@ function updateRun(delta, now = performance.now()) {
       state.player.x = nextX;
       state.player.y = nextY;
       state.stuckElapsed = 0;
+      if ((stats.approachStrikeTravelTime || 0) > 0 && moveDistance > 0.1) {
+        state.approachTravelElapsed += delta;
+      }
     } else {
       state.stuckElapsed += delta;
       if (state.stuckElapsed > 0.4) {
@@ -3817,7 +5743,15 @@ function updateRun(delta, now = performance.now()) {
       attack(contactTarget || movementTarget);
       const chargeRate = stats.laserUnlocked ? (stats.laserChargeRate || 1) : 1;
       const eventDigMultiplier = state.eventDigBoostRemaining > 0 ? 1.5 : 1;
-      state.attackCooldown = 1 / Math.max(0.2, stats.digSpeed * chargeRate * temporalOverclockMultiplier() * eventDigMultiplier);
+      state.attackCooldown = 1 / Math.max(
+        0.2,
+        stats.digSpeed
+          * chargeRate
+          * temporalOverclockMultiplier()
+          * eventDigMultiplier
+          * relicDigMultiplier()
+          * quarryDigSpeedMultiplier(),
+      );
     }
   } else {
     state.player.moving = lerp(state.player.moving, 0, clamp(delta * 5, 0, 1));
@@ -3826,7 +5760,8 @@ function updateRun(delta, now = performance.now()) {
 
   if (dronesAreActive() && state.droneCooldown <= 0) {
     droneAttack();
-    state.droneCooldown = 1 / Math.max(0.25, stats.droneSpeed || 1);
+    const fieldSpeed = activeMagneticField() ? 1 + stats.magneticFieldTargetingBonus : 1;
+    state.droneCooldown = 1 / Math.max(0.25, (stats.droneSpeed || 1) * relicGadgetMultiplier() * fieldSpeed);
   }
 
   if (state.microEventCheckCooldown <= 0) {
@@ -3858,9 +5793,11 @@ function droneAttack() {
     const targetOreId = beacon?.oreId || focusedOre?.id || null;
     const triangle = getTriangulationTriangle();
     const hasRememberedOre = [...state.triangleOreMemory.values()].some((expires) => expires >= state.elapsed);
+    const fieldRangeMultiplier = activeMagneticField() ? 1 + stats.magneticFieldTargetingBonus : 1;
     const baseRange = (effectiveSenseRadius() * 0.85 + Math.max(0, (stats.pickupRadius || 46) - 46) * 0.35)
       * (focusedOre ? focusedSenseMultiplier(focusedOre) : 1)
-      * (triangle ? 1 + stats.triangularFixRangeBonus : 1);
+      * (triangle ? 1 + stats.triangularFixRangeBonus : 1)
+      * fieldRangeMultiplier;
     const triangleTarget = (triangle || hasRememberedOre) && stats.triangularFixDronePriority
       ? findBeaconAwareTarget(
         origin.x,
@@ -3876,7 +5813,8 @@ function droneAttack() {
         },
       )
       : null;
-    const target = triangleTarget || findBeaconAwareTarget(
+    const magneticTarget = findMagneticFieldTarget(focusedOre);
+    const target = magneticTarget || triangleTarget || findBeaconAwareTarget(
       origin.x,
       origin.y,
       baseRange,
@@ -3887,16 +5825,27 @@ function droneAttack() {
     const inTriangle = pointInTriangle(target.x, target.y, triangle);
     const gadgetBonus = inTriangle ? stats.triangularFixGadgetDamageBonus : 0;
     if (triangleTarget || gadgetBonus > 0 || (triangle && stats.triangularFixRangeBonus > 0)) state.metrics.triangleBuffHits += 1;
-    const power = stats.pickPower * Math.max(0.2, stats.dronePower || 0.35) * (1 + gadgetBonus);
+    const power = stats.pickPower * Math.max(0.2, stats.dronePower || 0.35) * (1 + gadgetBonus)
+      * magneticGadgetMultiplier(target.x, target.y);
     const hpBefore = target.tile.hp || 0;
+    const comboTarget = { ...target, veinId: target.tile?.veinId || null };
     const calibration = focusedDamageMultiplier(target.tile);
-    state.world.damageCircle(target.x, target.y, Math.max(7, stats.digRadius * 0.34), power, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'drone'));
+    const droneRadius = Math.max(7, stats.digRadius * 0.34);
+    const droneSnapshot = snapshotOreHpInCircle(target.x, target.y, droneRadius);
+    const droneBreaks = state.world.damageCircle(target.x, target.y, droneRadius, power, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'drone'));
+    collectCircleGadgetOverkill(droneBreaks, droneSnapshot, power, target.x, target.y);
     if (calibration > 1 && target.tile.kind !== 'air') {
-      state.world.damageTile(target.tx, target.ty, power * (calibration - 1), (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'drone'));
+      const calibrationPower = power * (calibration - 1);
+      const calibrationHp = target.tile.hp || 0;
+      const calibrationOreId = target.tile.oreId;
+      const calibrationVeinId = target.tile.veinId;
+      const calibrationBreaks = state.world.damageTile(target.tx, target.ty, calibrationPower, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'drone'));
+      if (calibrationBreaks.length) storeGadgetOverkill(calibrationOreId, calibrationVeinId, calibrationHp, calibrationPower, target.x, target.y, true);
     }
     if (target.tile.kind === 'air') {
       relayCrewOverkill(target, targetOreId, Math.max(0, power * calibration - hpBefore), [`${target.tx}:${target.ty}`]);
     }
+    advanceDemolitionCombo('drone', comboTarget);
     state.beams.push({ x: origin.x, y: origin.y, x2: target.x, y2: target.y, color: '#76dbff', life: 0.1, maxLife: 0.1, width: 2 });
     if ((stats.droneBombChance || 0) > 0 && Math.random() < procChance(stats.droneBombChance, 0.12)) {
       const dx = target.x - origin.x;
@@ -3970,6 +5919,7 @@ function updateEffects(delta) {
     state.eventBannerTimer = Math.max(0, state.eventBannerTimer - interfaceDelta);
   }
   updateMicroEventIndicator();
+  updatePerkStatusRail();
   state.shake = Math.max(0, state.shake - delta * 32);
 }
 
@@ -4280,6 +6230,7 @@ function drawWorld(now) {
   for (const entry of visible) drawTile(entry, now);
 
   drawSenseField(now);
+  drawRuntimeFields(now);
   drawMicroEvents(now);
   drawTargeting(now);
   drawBeams();
@@ -4289,6 +6240,65 @@ function drawWorld(now) {
   drawFloaters();
   ctx.restore();
   drawVignette();
+}
+
+function drawRuntimeFields(now) {
+  const field = activeMagneticField();
+  if (field) {
+    const alpha = clamp(field.remaining / Math.max(0.01, field.maxDuration || field.remaining), 0, 1);
+    const pulse = 0.96 + Math.sin(now * 0.008) * 0.04;
+    ctx.save();
+    ctx.translate(field.x, field.y);
+    ctx.globalAlpha = 0.32 + alpha * 0.48;
+    ctx.strokeStyle = '#66e5ff';
+    ctx.fillStyle = 'rgba(68, 184, 218, 0.08)';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([7, 5]);
+    ctx.beginPath();
+    ctx.arc(0, 0, field.radius * pulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.rotate(now * 0.0015);
+    for (let index = 0; index < 4; index += 1) {
+      ctx.rotate(Math.PI * 0.5);
+      ctx.beginPath();
+      ctx.moveTo(field.radius * 0.28, 0);
+      ctx.lineTo(field.radius * 0.42, 0);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  for (const superField of state.superFields) {
+    const alpha = clamp(superField.remaining / Math.max(0.01, superField.maxDuration), 0, 1);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.16 + alpha * 0.38;
+    ctx.fillStyle = 'rgba(76, 255, 218, 0.12)';
+    ctx.strokeStyle = '#75ffe2';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(superField.x, superField.y, superField.radius * (0.94 + Math.sin(now * 0.014) * 0.06), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+  for (const [key, expires] of state.laserHeatMarks) {
+    if (expires < state.elapsed) continue;
+    const [tx, ty] = key.split(':').map(Number);
+    const tile = state.world.getTile(tx, ty);
+    if (!tile || tile.kind === 'air') continue;
+    const alpha = clamp((expires - state.elapsed) / Math.max(0.01, stats.laserHeatDuration), 0, 1);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.25 + alpha * 0.45;
+    ctx.strokeStyle = '#ff8757';
+    ctx.fillStyle = 'rgba(255, 93, 52, 0.12)';
+    ctx.lineWidth = 2.5;
+    ctx.fillRect(tx * TILE_SIZE + 2, ty * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+    ctx.strokeRect(tx * TILE_SIZE + 2, ty * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+    ctx.restore();
+  }
 }
 
 function drawMicroEvents(now) {
@@ -4405,6 +6415,18 @@ function drawTile({ tile, tx, ty, x, y }, now) {
     const remembered = (tile.sensedUntil || 0) >= state.elapsed;
     const physicallyExposed = tile.discovered && oreDistance <= TILE_SIZE * 2.25;
     drawOreInTile(x, y, tx, ty, ore, sensed || remembered || physicallyExposed, now);
+    const veinState = tile.veinId ? state.veinRuntime.get(tile.veinId) : null;
+    if (veinState?.rich || veinState?.motherlode) {
+      const motherlode = Boolean(veinState.motherlode);
+      const glow = 0.5 + Math.sin(now * 0.006 + tx + ty) * 0.25;
+      ctx.save();
+      ctx.globalAlpha = motherlode ? 0.72 + glow * 0.2 : 0.42 + glow * 0.16;
+      ctx.strokeStyle = motherlode ? '#fff0a6' : '#f2c95d';
+      ctx.lineWidth = motherlode ? 3 : 2;
+      ctx.setLineDash(motherlode ? [5, 2] : [3, 4]);
+      ctx.strokeRect(x + 2.5, y + 2.5, TILE_SIZE - 5, TILE_SIZE - 5);
+      ctx.restore();
+    }
     if (stats.oreOutline && tile.discovered && !sensed && ore) {
       ctx.fillStyle = `${ore.accent || ore.color}88`;
       ctx.fillRect(x + 3, y + 3, 6, 1);
@@ -4969,6 +6991,46 @@ function drawMiner(now) {
   ctx.fillRect(12, 5, 2, 2);
   ctx.restore();
 
+  const targetTile = state.target ? state.world?.getTile(state.target.tx, state.target.ty) : null;
+  const targetVeinId = targetTile?.veinId || state.lastBrokenVeinId || null;
+  const sampleProgress = targetVeinId ? state.tripleSampleVeins.get(targetVeinId)?.count || 0 : 0;
+  if (stats.tripleSampleEvery > 0 && targetVeinId) {
+    ctx.save();
+    ctx.font = '900 10px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const label = `ПРОБА ${sampleProgress}/${stats.tripleSampleEvery}`;
+    const width = Math.max(76, ctx.measureText(label).width + 14);
+    ctx.fillStyle = 'rgba(7, 12, 20, 0.88)';
+    ctx.fillRect(player.x - width * 0.5, player.y - 54 - bob, width, 16);
+    ctx.strokeStyle = '#e7b9ff';
+    ctx.strokeRect(player.x - width * 0.5, player.y - 54 - bob, width, 16);
+    ctx.fillStyle = '#f5d1ff';
+    ctx.fillText(label, player.x, player.y - 46 - bob);
+    ctx.restore();
+  }
+  if (stats.trueOverkillEnabled && state.overkillReservoir > 0) {
+    const thresholdHp = Math.max(1, targetTile?.maxHp || stats.pickPower || 1) * Math.max(0.01, stats.overkillReservoirYieldThreshold || 1);
+    const fill = clamp(state.overkillReservoir / thresholdHp, 0, 1);
+    const barY = player.y - (stats.tripleSampleEvery > 0 && targetVeinId ? 62 : 46) - bob;
+    ctx.save();
+    ctx.fillStyle = 'rgba(8, 10, 18, 0.88)';
+    ctx.fillRect(player.x - 34, barY, 68, 6);
+    ctx.fillStyle = '#c998ff';
+    ctx.fillRect(player.x - 33, barY + 1, 66 * fill, 4);
+    ctx.strokeStyle = fill >= 1 ? '#fff1ff' : '#8353ae';
+    ctx.strokeRect(player.x - 34, barY, 68, 6);
+    ctx.restore();
+  }
+  if (state.demolitionComboStage > 0 && state.demolitionComboExpires >= state.elapsed) {
+    ctx.save();
+    ctx.font = '900 9px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = state.demolitionComboStage === 1 ? '#76dbff' : '#ca9cff';
+    ctx.fillText(`ОРКЕСТР ${state.demolitionComboStage}/3`, player.x, player.y - 72 - bob);
+    ctx.restore();
+  }
+
   drawTool();
 }
 
@@ -5321,6 +7383,7 @@ window.__DEPTH_ZERO__ = {
     bonusTimeCap: getBonusRunCap(),
     bonusTimeEarned: state.bonusTimeEarned,
     activeWallElapsed: state.activeWallElapsed,
+    chronoOverflowRemaining: state.chronoOverflowRemaining,
     runOre: state.runOre,
     lastHaul: { ...(state.lastHaul || createOreBag()) },
     attackCooldown: state.attackCooldown,
@@ -5361,6 +7424,11 @@ window.__DEPTH_ZERO__ = {
     eventMoveBoostRemaining: state.eventMoveBoostRemaining,
     eventDigBoostRemaining: state.eventDigBoostRemaining,
     eventSoftRockRemaining: state.eventSoftRockRemaining,
+    relicSoftRockRemaining: state.relicSoftRockRemaining,
+    relicChestBoostCharges: state.relicChestBoostCharges,
+    perkStatus: perkStatusEntries().map((entry) => ({ ...entry })),
+    overkillReservoir: state.overkillReservoir,
+    overkillReservoirVeinId: state.overkillReservoirVeinId,
     triangleActive: Boolean(getTriangulationTriangle()),
     triangleRememberedOre: [...(state.triangleOreMemory || new Map())]
       .filter(([, expires]) => expires >= state.elapsed)
@@ -5370,33 +7438,7 @@ window.__DEPTH_ZERO__ = {
     lastRunReport: save.lastRunReport ? { ...save.lastRunReport } : null,
     balanceReport: state.balanceReport ? { ...state.balanceReport } : null,
   }),
-  getStats: () => ({
-    runDuration: stats.runDuration,
-    bonusRunDurationCap: stats.bonusRunDurationCap,
-    pickPower: stats.pickPower,
-    digReach: stats.digReach,
-    backupTargetSlots: stats.backupTargetSlots,
-    oreFocusEscalationBonus: stats.oreFocusEscalationBonus,
-    leastResistancePathing: stats.leastResistancePathing,
-    mineLiftRecordDepthRatio: stats.mineLiftRecordDepthRatio,
-    focusedOreHardnessReduction: stats.focusedOreHardnessReduction,
-    discoveryTimeBonus: stats.discoveryTimeBonus,
-    directionalBombConeTiles: stats.directionalBombConeTiles,
-    crewBeaconUnlocked: stats.crewBeaconUnlocked,
-    laserRicochetCount: stats.laserRicochetCount,
-    oreDiversityBonusPerType: stats.oreDiversityBonusPerType,
-    deafKnockStoneThreshold: stats.deafKnockStoneThreshold,
-    deafKnockSenseRadiusMultiplier: stats.deafKnockSenseRadiusMultiplier,
-    deafKnockMoveSpeedBonus: stats.deafKnockMoveSpeedBonus,
-    deafKnockMoveDuration: stats.deafKnockMoveDuration,
-    deafKnockCooldown: stats.deafKnockCooldown,
-    triangularFixUnlocked: stats.triangularFixUnlocked,
-    triangularFixGadgetDamageBonus: stats.triangularFixGadgetDamageBonus,
-    triangularFixRangeBonus: stats.triangularFixRangeBonus,
-    laserSuperPickEchoEvery: stats.laserSuperPickEchoEvery,
-    laserSuperPickEchoRadiusTiles: stats.laserSuperPickEchoRadiusTiles,
-    laserSuperPickEchoPower: stats.laserSuperPickEchoPower,
-  }),
+  getStats: () => ({ ...stats }),
   getUpgradeCatalog: () => UPGRADE_DEFS.map((definition) => {
     const level = getUpgradeLevel(definition);
     const recipe = level < definition.maxLevel ? getUpgradeRecipe(definition, level) : {};
@@ -5427,6 +7469,11 @@ window.__DEPTH_ZERO__ = {
   openJournal: openJournalScreen,
   openBalance: openBalanceScreen,
   runBalanceBench,
+  debugEstimateBalanceRun: (seed = 'runtime-estimator', overrides = {}) => estimateBalanceRun(
+    String(seed),
+    0,
+    normalizeStats({ ...calculateMetaStats({}), ...(overrides || {}) }),
+  ),
   watchEnding: showEnding,
   grantOre: (oreId = 'copper', amount = 1000) => {
     if (!oreById.has(oreId)) return false;
@@ -5493,10 +7540,18 @@ window.__DEPTH_ZERO__ = {
     const result = state.world.breakTile(target.tx, target.ty, (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'debug'));
     return result ? { tx: target.tx, ty: target.ty, oreId } : null;
   },
-  forceDetonate: () => {
+  forceDetonate: (directionX = null, directionY = null) => {
     if (state.mode !== 'run' || !state.player) return false;
     const angle = state.player.angle || 0;
-    detonate(state.player.x, state.player.y, Math.cos(angle), Math.sin(angle));
+    const dx = Number(directionX);
+    const dy = Number(directionY);
+    const hasDirection = Number.isFinite(dx) && Number.isFinite(dy) && Math.hypot(dx, dy) > 0.001;
+    detonate(
+      state.player.x,
+      state.player.y,
+      hasDirection ? dx : Math.cos(angle),
+      hasDirection ? dy : Math.sin(angle),
+    );
     return true;
   },
   forceFocusMiss: (seconds = 2) => {
@@ -5550,8 +7605,16 @@ window.__DEPTH_ZERO__ = {
     if (!state.world) return null;
     const tile = state.world.getTile(Math.floor(tx), Math.floor(ty));
     if (!tile) return null;
+    const previousVeinId = tile.oreId && tile.veinId && tile.kind !== 'air' ? tile.veinId : null;
     for (const key of ['kind', 'oreId', 'veinId', 'hp', 'maxHp', 'discovered', 'cracked']) {
       if (Object.prototype.hasOwnProperty.call(patch, key)) tile[key] = patch[key];
+    }
+    const nextVeinId = tile.oreId && tile.veinId && tile.kind !== 'air' ? tile.veinId : null;
+    if (previousVeinId) {
+      state.veinRemainingCounts.set(previousVeinId, Math.max(0, (state.veinRemainingCounts.get(previousVeinId) || 0) - 1));
+    }
+    if (nextVeinId) {
+      state.veinRemainingCounts.set(nextVeinId, (state.veinRemainingCounts.get(nextVeinId) || 0) + 1);
     }
     if (typeof state.world._rebuildOreIndex === 'function') state.world._rebuildOreIndex();
     return { ...tile };
@@ -5580,6 +7643,22 @@ window.__DEPTH_ZERO__ = {
     state.backupTarget = null;
     refreshCrewBeacon(state.target);
     return true;
+  },
+  debugSetClearanceTargetTile: (tx, ty) => {
+    if (state.mode !== 'run' || !state.player || !state.world) return false;
+    const tileX = Math.floor(tx);
+    const tileY = Math.floor(ty);
+    const tile = state.world.getTile(tileX, tileY);
+    if (!tile || tile.kind === 'air' || tile.kind === 'bedrock') return false;
+    const x = (tileX + 0.5) * TILE_SIZE;
+    const y = (tileY + 0.5) * TILE_SIZE;
+    state.target = { kind: 'clearance', tile, tx: tileX, ty: tileY, x, y, distance: distance(state.player.x, state.player.y, x, y) };
+    state.backupTarget = null;
+    return true;
+  },
+  debugSetApproachTravel: (seconds) => {
+    state.approachTravelElapsed = Math.max(0, Number(seconds) || 0);
+    return state.approachTravelElapsed;
   },
   debugFireRicochetFrom: (tx, ty, damage = 100) => {
     const tileX = Math.floor(tx);
@@ -5695,9 +7774,18 @@ window.__DEPTH_ZERO__ = {
           ), 0);
           const depth = getUpgradeLayout().depthById.get(definition.id) || 0;
           const categoryLoad = categoryLevels[definition.category] || 0;
+          const strategicTarget = CAMPAIGN_AUTOBUY_TARGETS[definition.id] || 0;
+          const strategicWeight = level < strategicTarget
+            ? (CAMPAIGN_AUTOBUY_WEIGHTS[definition.id] || 1)
+            : 1;
           const corePriority = definition.id === 'core_first_descent' ? -1_000_000 : 0;
           const finalPriority = definition.id === CAMPAIGN.finalUpgrade ? -100_000 : 0;
-          return { definition, level, recipe, score: weightedCost + depth * 4 + categoryLoad * 0.6 + corePriority + finalPriority };
+          return {
+            definition,
+            level,
+            recipe,
+            score: weightedCost * strategicWeight + depth * 4 + categoryLoad * 0.6 + corePriority + finalPriority,
+          };
         })
         .sort((left, right) => left.score - right.score || UPGRADE_DEFS.indexOf(left.definition) - UPGRADE_DEFS.indexOf(right.definition));
       const candidate = candidates[0];

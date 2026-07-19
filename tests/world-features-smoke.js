@@ -406,6 +406,34 @@ const route = eventWorld.findLeastResistanceStep(spawn, firstOre, {
 assert.ok(route?.route.length >= 1);
 assert.equal(eventWorld.getTile(firstOre.tx, firstOre.ty).hp, hpBeforeRoute, "routing stays read-only");
 
+// damageRay deliberately applies its full damage to every tile covered by the
+// supplied width. Falloff bands therefore belong to the caller: the laser must
+// pass only its permanent core width and resolve thermal edges separately.
+const rayContractWorld = new MineWorld(ORE_TYPES, "ray-width-contract");
+const rayOriginTx = 120;
+const rayOriginTy = 40;
+const rayCore = rayContractWorld.getTile(rayOriginTx + 2, rayOriginTy);
+const rayEdge = rayContractWorld.getTile(rayOriginTx + 2, rayOriginTy + 1);
+for (const tile of [rayCore, rayEdge]) {
+  Object.assign(tile, {
+    kind: "stone",
+    oreId: null,
+    veinId: null,
+    hp: 100,
+    maxHp: 100,
+    discovered: true,
+    cracked: 0,
+  });
+}
+const rayOriginX = (rayOriginTx + 0.5) * WORLD_CONFIG.TILE_SIZE;
+const rayOriginY = (rayOriginTy + 0.5) * WORLD_CONFIG.TILE_SIZE;
+rayContractWorld.damageRay(rayOriginX, rayOriginY, 1, 0, WORLD_CONFIG.TILE_SIZE * 4, 10, 8);
+assert.equal(rayCore.hp, 90, "the eight-pixel core must damage its center row");
+assert.equal(rayEdge.hp, 100, "the eight-pixel core must not reach the neighboring row");
+rayContractWorld.damageRay(rayOriginX, rayOriginY, 1, 0, WORLD_CONFIG.TILE_SIZE * 4, 10, 23);
+assert.equal(rayCore.hp, 80);
+assert.equal(rayEdge.hp, 90, "damageRay has no implicit edge falloff at wider widths");
+
 console.log(JSON.stringify({
   ok: true,
   diagnosticProfiles: legacyProfiles.length,
