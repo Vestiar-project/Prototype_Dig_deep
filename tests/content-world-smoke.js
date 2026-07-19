@@ -9,13 +9,13 @@ const root = path.resolve(__dirname, "..");
 require(path.join(root, "js", "upgrades.js"));
 require(path.join(root, "js", "world.js"));
 
-const { UPGRADE_DEFS, ORE_TYPES, calculateMetaStats } = global.DepthZeroUpgrades;
+const { UPGRADE_DEFS, ORE_TYPES, calculateMetaStats, getUpgradeRecipe } = global.DepthZeroUpgrades;
 const { MineWorld, WORLD_CONFIG } = global.DepthZeroWorld;
 const ids = new Set(UPGRADE_DEFS.map((definition) => definition.id));
 
 assert.equal(UPGRADE_DEFS.length, 102);
 assert.equal(ids.size, UPGRADE_DEFS.length, "upgrade ids must be unique");
-assert.equal(UPGRADE_DEFS.reduce((sum, definition) => sum + definition.maxLevel, 0), 498);
+assert.equal(UPGRADE_DEFS.reduce((sum, definition) => sum + definition.maxLevel, 0), 481);
 for (const definition of UPGRADE_DEFS) {
   for (const requirement of definition.requires || []) {
     const id = typeof requirement === "string" ? requirement : requirement.id;
@@ -47,8 +47,38 @@ const fullLevels = Object.fromEntries(UPGRADE_DEFS.map((definition) => [definiti
 const fullStats = calculateMetaStats(fullLevels);
 assert.equal(fullStats.runDuration, 45);
 assert.equal(fullStats.bonusRunDurationCap, 60);
+assert.equal(fullStats.echoPingCooldown, 3, "resonance ping must affect real search cadence");
+assert.equal(fullStats.echoPingRadiusMultiplier, 1.55);
+assert.equal(fullStats.veinTrailRangeMultiplier, 1.65);
+assert.equal(fullStats.seismicRouteSlots, 3);
+assert.equal(fullStats.ghostTrailDuration, 4);
+assert.equal(fullStats.sideChipPower, 0.6);
+assert.equal(fullStats.impactWaveEvery, 4);
+assert.equal(fullStats.quarryModeRequiredBreaks, 3);
+assert.equal(fullStats.faultLineMaxBlocks, 4);
+assert.equal(fullStats.chronoOverdrive, true);
+assert.equal(fullStats.overkillReservoirRatio, 0.85);
+assert.equal(fullStats.richVeinWholeChance, 0.18);
+assert.equal(fullStats.superFieldLaserPersistent, true);
+assert.equal(fullStats.laserHeatNextHitBonus, 0.3);
+assert.equal(fullStats.rareOreAdditiveChance, 0.18);
+assert.equal(fullStats.goldenOreAdditiveChance, 0.075);
+assert.equal(fullStats.magneticFieldRadiusTiles, 3);
+assert.equal(fullStats.fortunePityThreshold, 5);
+assert.equal(fullStats.motherlodeTriggerBreaks, 20);
+assert.equal(fullStats.demolitionComboEnabled, true);
+assert.equal(fullStats.solarDrillProcEvery, 5);
 const oreFocus = UPGRADE_DEFS.find((definition) => definition.id === "sense_ore_focus");
 assert.equal(oreFocus?.requiresOreDiscovery, "amethyst", "ore focus must wait for a post-T5 sample");
+const superPick = UPGRADE_DEFS.find((definition) => definition.id === "tools_super_pick");
+assert.ok(superPick?.requires.includes("power_diamond_tip"), "the super pick must keep its thematic diamond-tip gate");
+assert.equal(superPick?.requiresOreDiscovery, "prism_crystal", "the super pick must remain a distinct late-middle tool phase");
+const finalUpgrade = UPGRADE_DEFS.find((definition) => definition.id === "core_bon_voyage");
+assert.deepEqual(
+  getUpgradeRecipe(finalUpgrade, 0),
+  { prism_crystal: 4600, void_ore: 2500, star_core: 650 },
+  "the final recipe must preserve the calibrated multi-ore accumulation tail",
+);
 
 const timerNodes = UPGRADE_DEFS.filter((definition) => definition.category === "time");
 assert.deepEqual(

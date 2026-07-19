@@ -187,6 +187,94 @@ assert.equal(fullStats.laserSuperPickEchoEvery, 4);
 assert.equal(fullStats.laserSuperPickEchoRadiusTiles, 1.4);
 assert.equal(fullStats.laserSuperPickEchoPower, 0.85);
 
+// Every redesigned perk must survive the upgrades -> runtime normalization
+// boundary. Keep this exhaustive: a missing field silently turns an installed
+// tree node into a cosmetic purchase.
+const expectedRuntimePerkStats = {
+  echoPingCooldown: 3,
+  echoPingRadiusMultiplier: 1.55,
+  echoPingTargetHold: 1.2,
+  veinTrailRangeMultiplier: 1.65,
+  veinTrailMoveSpeedBonus: 0.2,
+  seismicRouteSlots: 3,
+  ghostTrailDuration: 4,
+  ghostTrailMaxLayers: 3,
+  ghostTrailThroughWalls: true,
+  veinLockEnabled: true,
+  veinLockRangeMultiplier: 1.6,
+  veinLockMoveSpeedBonus: 0.2,
+  approachStrikeTravelTime: 0.9,
+  approachStrikePower: 1,
+  approachStrikeSideChip: 0.45,
+  focusVeinSizeBias: 1.2,
+  focusMoveSpeedPerNode: 0.12,
+  sideChipEvery: 1,
+  sideChipHits: 2,
+  sideChipPower: 0.6,
+  impactWaveEvery: 4,
+  impactWaveRadiusTiles: 1.5,
+  impactWavePower: 0.65,
+  quarryModeRequiredBreaks: 3,
+  quarryModeWindow: 1.2,
+  quarryModeDuration: 2.5,
+  quarryModeMoveSpeedBonus: 0.25,
+  quarryModeDigSpeedBonus: 0.25,
+  quarryModeSideFracturePower: 0.4,
+  faultLineMaxBlocks: 4,
+  faultLinePower: 0.75,
+  faultLineExtendOnBreak: true,
+  overkillReservoirRatio: 0.85,
+  chronoOverdrive: true,
+  chronoOverflowThreshold: 45,
+  chronoOverflowSpeedBonus: 0.25,
+  chronoOverflowProcEvery: 5,
+  magneticFieldEnabled: true,
+  magneticFieldDuration: 2.7,
+  magneticFieldRadiusTiles: 3,
+  magneticFieldTargetingBonus: 0.48,
+  demolitionComboEnabled: true,
+  demolitionComboMarkDuration: 3,
+  demolitionComboFinishPower: 0.75,
+  demolitionComboVeinRadiusTiles: 2,
+  superFieldEnabled: true,
+  superFieldRadiusTiles: 1.75,
+  superFieldPower: 0.6,
+  superFieldDuration: 1.6,
+  superFieldLaserPersistent: true,
+  laserHeatEdgePower: 0.45,
+  laserHeatDuration: 1.2,
+  laserHeatNextHitBonus: 0.3,
+  solarDrillEnabled: true,
+  solarDrillProcEvery: 5,
+  solarDrillBeamDuration: 0.7,
+  solarDrillFinalBurstPower: 0.9,
+  rareOreAdditiveChance: 0.18,
+  goldenOreAdditiveChance: 0.075,
+  richVeinWholeChance: 0.18,
+  richVeinYieldBonus: 0.5,
+  richVeinCompletionBonus: 6,
+  tripleSampleEvery: 3,
+  tripleSampleBonusYield: 2,
+  tripleSampleNextNodeDamage: 0.5,
+  depthContractStep: 100,
+  depthContractBonusPerStack: 0.18,
+  depthContractMaxStacks: 8,
+  relicEffectChance: 0.075,
+  relicEffectDuration: 6,
+  relicEffectPower: 0.4,
+  fortuneWheelEnabled: true,
+  fortunePityThreshold: 5,
+  fortuneWheelCycleLength: 4,
+  motherlodeGuaranteed: true,
+  motherlodeTriggerBreaks: 20,
+  motherlodeYieldMultiplier: 2,
+  motherlodeCompletionCache: 6,
+  motherlodeCompletionTimeBonus: 2.5,
+};
+for (const [key, expected] of Object.entries(expectedRuntimePerkStats)) {
+  assert.equal(fullStats[key], expected, `runtime stat contract ${key}`);
+}
+
 api.openUpgrades();
 assert.equal(api.getSnapshot().mode, "upgrades", "the 102-node radial map should render without a runtime error");
 const radialLayout = api.debugGetUpgradeLayout();
@@ -378,6 +466,21 @@ api.finishRun();
 
 const measureFocusedLaserDamage = (calibrationLevel) => {
   api.setAllUpgrades(true);
+  // Redesigned secondary impacts are deliberately orthogonal to hardness
+  // calibration. Disable them here so this legacy assertion continues to
+  // measure the primary beam only.
+  for (const upgradeId of [
+    "dig_sweeping_arc",
+    "dig_precision_path",
+    "dig_omni_swing",
+    "dig_quarry_presence",
+    "power_mountain_splitter",
+    "time_thirty_second_oath",
+    "tools_super_field",
+    "tools_laser_width",
+    "tools_solar_drill",
+    "fortune_alchemist_scales",
+  ]) api.setUpgradeLevel(upgradeId, 0);
   api.setUpgradeLevel("power_sample_calibration", calibrationLevel);
   api.setFocusedOre("star_core");
   api.startRun({ seed: "runtime-laser-calibration", sectorId: "stable_strata" });
@@ -402,6 +505,18 @@ assert.ok(
 
 const measureFocusedRicochetDamage = (calibrationLevel) => {
   api.setAllUpgrades(true);
+  for (const upgradeId of [
+    "dig_sweeping_arc",
+    "dig_precision_path",
+    "dig_omni_swing",
+    "dig_quarry_presence",
+    "power_mountain_splitter",
+    "time_thirty_second_oath",
+    "tools_super_field",
+    "tools_laser_width",
+    "tools_solar_drill",
+    "fortune_alchemist_scales",
+  ]) api.setUpgradeLevel(upgradeId, 0);
   api.setUpgradeLevel("power_sample_calibration", calibrationLevel);
   api.setFocusedOre("star_core");
   api.startRun({ seed: "runtime-ricochet-calibration", sectorId: "stable_strata" });
@@ -514,23 +629,38 @@ api.setFocusedOre(null);
 api.setAllUpgrades(true);
 api.setUpgradeLevel("tools_super_pick_echo", 1);
 api.setUpgradeLevel("sense_deaf_knock", 0);
+for (const upgradeId of ["dig_sweeping_arc", "dig_precision_path", "dig_omni_swing", "dig_quarry_presence", "tools_super_field", "tools_laser_width", "tools_solar_drill", "fortune_motherlode_covenant"]) {
+  api.setUpgradeLevel(upgradeId, 0);
+}
 api.startRun({ seed: "echo-level-one", sectorId: "stable_strata" });
 api.debugSetPlayerTile(40, 14);
-for (let tx = 40; tx < 44; tx += 1) clearTile(tx, 14);
+for (let ty = 10; ty <= 18; ty += 1) {
+  for (let tx = 38; tx <= 48; tx += 1) clearTile(tx, ty);
+}
 placeOre(44, 14, "copper", "echo-target-one", 1_000_000_000);
 assert.ok(api.debugSetTargetTile(44, 14));
 let echoBefore = api.getSnapshot().metrics.superPickEchoes;
 for (let shot = 0; shot < 5; shot += 1) assert.ok(api.attackNow());
 assert.equal(api.getSnapshot().metrics.superPickEchoes, echoBefore, "level-one Echo must wait for shot six");
 assert.ok(api.attackNow());
-assert.equal(api.getSnapshot().metrics.superPickEchoes, echoBefore + 1, "level-one Echo must fire on shot six");
+assert.equal(
+  api.getSnapshot().metrics.superPickEchoes,
+  echoBefore + 1,
+  "level-one Echo must fire on shot six",
+);
 api.finishRun();
 
+api.setAllUpgrades(true);
 api.setUpgradeLevel("tools_super_pick_echo", 2);
 api.setUpgradeLevel("sense_deaf_knock", 0);
+for (const upgradeId of ["dig_sweeping_arc", "dig_precision_path", "dig_omni_swing", "dig_quarry_presence", "tools_super_field", "tools_laser_width", "tools_solar_drill", "fortune_motherlode_covenant"]) {
+  api.setUpgradeLevel(upgradeId, 0);
+}
 api.startRun({ seed: "echo-level-two", sectorId: "stable_strata" });
 api.debugSetPlayerTile(40, 14);
-for (let tx = 40; tx < 44; tx += 1) clearTile(tx, 14);
+for (let ty = 10; ty <= 18; ty += 1) {
+  for (let tx = 38; tx <= 48; tx += 1) clearTile(tx, ty);
+}
 placeOre(44, 14, "copper", "echo-target-two", 1_000_000_000);
 assert.ok(api.debugSetTargetTile(44, 14));
 echoBefore = api.getSnapshot().metrics.superPickEchoes;
@@ -667,6 +797,402 @@ assert.ok(elementFor("#microEventBanner").classList.contains("hidden"), "the eve
 api.finishRun();
 assert.ok(elementFor("#microEventBanner").classList.contains("hidden"), "event notices must not leak onto the result screen");
 
+// Resonant Ping must acquire ore that the ordinary scanner cannot reach. The
+// debug world is cleared locally so an unrelated generated node cannot mask
+// the enlarged scan.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("sense_echo_pulse", 3);
+api.setFocusedOre(null);
+api.startRun({ seed: "runtime-resonant-ping", sectorId: "stable_strata" });
+api.debugSetPlayerTile(40, 20);
+for (let ty = 15; ty <= 25; ty += 1) {
+  for (let tx = 35; tx <= 48; tx += 1) clearTile(tx, ty);
+}
+placeOre(44, 20, "copper", "echo-ping-vein", 1000);
+api.forceFocusMiss(0);
+api.stepRun(0.05);
+snapshot = api.getSnapshot();
+assert.equal(snapshot.target?.tx, 44, "resonant ping should acquire ore beyond the ordinary sense radius");
+assert.equal(snapshot.target?.ty, 20);
+api.finishRun();
+
+// Opening one ordinary stone between two nodes must not erase the remembered
+// vein. With the memory intact, the farther continuation wins over a closer
+// decoy vein that the base scanner could otherwise choose.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("sense_vein_whisper", 3);
+api.setFocusedOre(null);
+api.startRun({ seed: "runtime-vein-memory-through-rock", sectorId: "stable_strata" });
+api.debugSetPlayerTile(40, 20);
+for (let ty = 18; ty <= 22; ty += 1) {
+  for (let tx = 38; tx <= 46; tx += 1) clearTile(tx, ty);
+}
+placeOre(41, 20, "copper", "remembered-vein", 1);
+placeRock(42, 20, 1);
+placeOre(44, 20, "copper", "remembered-vein", 1000);
+placeOre(43, 20, "copper", "closer-decoy-vein", 1000);
+assert.ok(api.debugBreakTileWithSource(41, 20, "pick"));
+assert.ok(api.debugBreakTileWithSource(42, 20, "pick"));
+api.forceFocusMiss(0);
+const rememberedVeinTargets = api.acquireTargets();
+assert.equal(
+  rememberedVeinTargets?.primary?.tx,
+  44,
+  "a path-opening rock must preserve priority for the remaining node of the last vein",
+);
+assert.equal(rememberedVeinTargets?.primary?.ty, 20);
+api.finishRun();
+
+// Side Chip is an actual two-sided hit, including at level three where it
+// fires on every swing instead of merely widening a decorative arc.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("dig_sweeping_arc", 3);
+api.startRun({ seed: "runtime-side-chip", sectorId: "stable_strata" });
+api.debugSetPlayerTile(40, 20);
+for (let ty = 17; ty <= 23; ty += 1) {
+  for (let tx = 38; tx <= 44; tx += 1) clearTile(tx, ty);
+}
+placeOre(42, 20, "copper", "side-chip-target", 1000);
+placeRock(42, 19, 10);
+placeRock(42, 21, 10);
+assert.ok(api.debugSetTargetTile(42, 20));
+assert.ok(api.attackNow());
+assert.ok(api.debugGetTile(42, 19).hp < 10, "the upper side block should receive chip damage");
+assert.ok(api.debugGetTile(42, 21).hp < 10, "the lower side block should receive chip damage");
+api.finishRun();
+
+// Bonus seconds above the direct 45-second cap charge Chrono Overdrive. Its
+// fifth strike is identified by the break source, so the test covers both the
+// overflow state and the promised deterministic cadence.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("time_thirty_second_oath", 1);
+api.startRun({ seed: "runtime-chrono-overdrive", sectorId: "stable_strata" });
+api.debugSetPlayerTile(40, 20);
+for (let ty = 18; ty <= 22; ty += 1) {
+  for (let tx = 39; tx <= 44; tx += 1) clearTile(tx, ty);
+}
+placeOre(42, 20, "copper", "chrono-target", 5.5);
+assert.ok(api.debugSetTargetTile(42, 20));
+assert.ok(api.grantBonusTime(100) > 0);
+for (let hit = 0; hit < 4; hit += 1) assert.ok(api.attackNow());
+assert.notEqual(api.debugGetTile(42, 20).kind, "air", "chrono repeat must wait for the fifth strike");
+assert.ok(api.attackNow());
+snapshot = api.getSnapshot();
+assert.equal(api.debugGetTile(42, 20).kind, "air", "the fifth chrono strike should finish the prepared target");
+assert.equal(snapshot.metrics.sourceBreaks["chrono-overdrive"], 1);
+api.finishRun();
+
+// Fortune Wheel is a visible pity cycle, not another hidden percentage roll:
+// with every random proc suppressed, the fifth dry ore break must still fire.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("fortune_wheel", 4);
+api.startRun({ seed: "runtime-fortune-wheel", sectorId: "stable_strata" });
+for (let index = 0; index < 5; index += 1) {
+  placeOre(70 + index, 12, "copper", `fortune-${index}`, 1);
+  assert.ok(api.debugBreakTileWithSource(70 + index, 12, "debug"));
+}
+snapshot = api.getSnapshot();
+assert.equal(snapshot.metrics.fortuneWheelProcs, 1, "the pity threshold must guarantee the fifth proc");
+api.finishRun();
+
+// The covenant marks an already existing highest-tier vein after twenty ore
+// breaks. Completing that exact vein must grant its cache/time reward.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("fortune_motherlode_covenant", 1);
+api.startRun({ seed: "runtime-motherlode", sectorId: "stable_strata" });
+for (let tx = 90; tx <= 92; tx += 1) placeOre(tx, 12, "star_core", "motherlode-candidate", 1);
+assert.ok(api.debugBreakTileWithSource(90, 12, "debug"), "the first sample should reveal the candidate tier");
+for (let index = 0; index < 19; index += 1) {
+  placeOre(100 + index, 12, "copper", `motherlode-feed-${index}`, 1);
+  assert.ok(api.debugBreakTileWithSource(100 + index, 12, "debug"));
+}
+snapshot = api.getSnapshot();
+assert.equal(snapshot.metrics.motherlodes, 1, "the twentieth break must mark one existing motherlode");
+const motherlodeBonusBefore = snapshot.bonusTimeEarned;
+assert.ok(api.debugBreakTileWithSource(91, 12, "debug"));
+assert.ok(api.debugBreakTileWithSource(92, 12, "debug"));
+snapshot = api.getSnapshot();
+assert.ok(
+  snapshot.bonusTimeEarned >= motherlodeBonusBefore + 2.5,
+  "completing the marked motherlode must grant its 2.5-second reward",
+);
+for (let index = 0; index < 20; index += 1) {
+  placeOre(60 + index, 10, "copper", `motherlode-second-cycle-${index}`, 1);
+  assert.ok(api.debugBreakTileWithSource(60 + index, 10, "debug"));
+}
+assert.equal(
+  api.getSnapshot().metrics.motherlodes,
+  1,
+  "a completed motherlode must not allow a second mark after another twenty pieces",
+);
+api.finishRun();
+
+// Golden Touch is additive gold, but only after gold is already known. The
+// same forced proc first proves that amethyst cannot unlock gold by itself,
+// then proves that the unlocked reward is exactly gold rather than a generic
+// higher-tier substitution.
+api.debugResetProgress();
+api.setAllUpgrades(false);
+api.setUpgradeLevel("fortune_golden_touch", 5);
+api.startRun({ seed: "runtime-golden-touch-locked", sectorId: "stable_strata" });
+placeOre(70, 12, "amethyst", "golden-touch-locked", 1);
+const savedGoldenRandom = Math.random;
+Math.random = () => 0;
+try {
+  assert.ok(api.debugBreakTileWithSource(70, 12, "debug"));
+} finally {
+  Math.random = savedGoldenRandom;
+}
+snapshot = api.getSnapshot();
+assert.equal(snapshot.discoveredOreTypes.includes("gold"), false, "Golden Touch must not discover locked gold");
+assert.equal(snapshot.inventory.gold, 0);
+api.finishRun();
+snapshot = api.getSnapshot();
+assert.equal(snapshot.lastHaul.amethyst, 1, "the source amethyst must be preserved");
+assert.equal(snapshot.lastHaul.gold, 0, "locked gold must not be paid out");
+
+api.grantOre("gold", 1);
+api.startRun({ seed: "runtime-golden-touch-known", sectorId: "stable_strata" });
+placeOre(70, 12, "amethyst", "golden-touch-known", 1);
+Math.random = () => 0;
+try {
+  assert.ok(api.debugBreakTileWithSource(70, 12, "debug"));
+} finally {
+  Math.random = savedGoldenRandom;
+}
+api.finishRun();
+snapshot = api.getSnapshot();
+assert.equal(snapshot.lastHaul.amethyst, 1, "Golden Touch must not replace amethyst");
+assert.equal(snapshot.lastHaul.gold, 1, "known gold must be the exact additive reward");
+assert.equal(snapshot.inventory.gold, 2, "the additive gold piece must enter persistent inventory");
+
+// A secondary/no-proc break may discover a vein first, but it must not consume
+// the vein's one legitimate Rich Vein roll. The next allowed break resolves it.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("fortune_rich_vein", 6);
+api.startRun({ seed: "runtime-rich-roll-deferred", sectorId: "stable_strata" });
+placeOre(70, 12, "copper", "deferred-rich-vein", 1);
+placeOre(71, 12, "copper", "deferred-rich-vein", 1);
+const savedRichRandom = Math.random;
+Math.random = () => 0;
+try {
+  assert.ok(api.debugBreakTileWithSource(70, 12, "event"));
+  assert.equal(api.getSnapshot().metrics.richVeins, 0, "a no-proc break must leave the rich roll unresolved");
+  assert.ok(api.debugBreakTileWithSource(71, 12, "debug"));
+} finally {
+  Math.random = savedRichRandom;
+}
+assert.equal(api.getSnapshot().metrics.richVeins, 1, "the first allowed break must still resolve the vein-rich roll");
+api.finishRun();
+
+// Relic status uses the real soft-rock timer and represents an enhanced chest
+// as a charge, not as a made-up duration.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("fortune_relic_magnet", 5);
+api.startRun({ seed: "runtime-relic-status", sectorId: "stable_strata" });
+const savedRelicRandom = Math.random;
+Math.random = () => 0;
+try {
+  for (let index = 0; index < 4; index += 1) {
+    placeOre(70 + index, 12, "copper", `relic-status-${index}`, 1);
+    assert.ok(api.debugBreakTileWithSource(70 + index, 12, "debug"));
+  }
+} finally {
+  Math.random = savedRelicRandom;
+}
+snapshot = api.getSnapshot();
+assert.ok(snapshot.relicSoftRockRemaining >= 6, "the relic rail must retain the real soft-rock window");
+assert.equal(snapshot.relicChestBoostCharges, 1, "the fourth relic effect must grant one enhanced-chest charge");
+const relicStatus = snapshot.perkStatus.find((entry) => entry.label === "Реликвия");
+assert.match(relicStatus?.value || "", /порода 6с/);
+assert.match(relicStatus?.value || "", /сундук ×1/);
+api.finishRun();
+
+// Gadget overkill belongs to the broken vein. It cannot help a foreign vein,
+// while a fresh gadget reserve must transfer to the next node of its own vein.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("fortune_alchemist_scales", 5);
+api.startRun({ seed: "runtime-gadget-overkill-vein", sectorId: "stable_strata" });
+api.debugSetPlayerTile(40, 20);
+for (let ty = 17; ty <= 23; ty += 1) {
+  for (let tx = 37; tx <= 43; tx += 1) clearTile(tx, ty);
+}
+const overkillPickPower = api.getStats().pickPower;
+placeOre(40, 20, "copper", "overkill-vein-a", overkillPickPower * 0.1);
+assert.equal(api.forceDetonate(), true);
+snapshot = api.getSnapshot();
+assert.ok(snapshot.overkillReservoir > 0);
+assert.equal(snapshot.overkillReservoirVeinId, "overkill-vein-a");
+placeOre(41, 20, "copper", "overkill-vein-b", overkillPickPower * 1.3);
+assert.ok(api.debugSetTargetTile(41, 20));
+assert.ok(api.attackNow());
+assert.notEqual(api.debugGetTile(41, 20).kind, "air", "vein A reserve must not break a vein B node");
+snapshot = api.getSnapshot();
+assert.equal(snapshot.overkillReservoir, 0);
+assert.equal(snapshot.overkillReservoirVeinId, null);
+clearTile(41, 20);
+placeOre(40, 20, "copper", "overkill-vein-a", overkillPickPower * 0.1);
+assert.equal(api.forceDetonate(), true);
+placeOre(41, 20, "copper", "overkill-vein-a", overkillPickPower * 1.3);
+assert.ok(api.debugSetTargetTile(41, 20));
+assert.ok(api.attackNow());
+assert.equal(api.debugGetTile(41, 20).kind, "air", "gadget reserve must transfer to the next node of the same vein");
+api.finishRun();
+
+// A single blast may destroy several veins. Circle and directional shapes must
+// aggregate by vein, retain only the largest real reserve, and never report the
+// impossible sum of mutually exclusive reserves.
+function assertLargestBlastReserve({ directional, seed }) {
+  api.setAllUpgrades(false);
+  api.setUpgradeLevel("fortune_alchemist_scales", 5);
+  if (directional) api.setUpgradeLevel("gadgets_geo_charge", 3);
+  api.startRun({ seed, sectorId: "stable_strata" });
+  api.debugSetPlayerTile(40, 20);
+  for (let ty = 17; ty <= 23; ty += 1) {
+    for (let tx = 37; tx <= 44; tx += 1) clearTile(tx, ty);
+  }
+  const blastStats = api.getStats();
+  const blastDamage = blastStats.pickPower * blastStats.bombPower * 1.8;
+  const nodeHp = blastDamage * 0.05;
+  placeOre(40, 20, "copper", `${seed}-large`, nodeHp);
+  placeOre(41, 20, "copper", `${seed}-large`, nodeHp);
+  placeOre(40, 19, "copper", `${seed}-small`, nodeHp);
+  assert.equal(api.forceDetonate(1, 0), true);
+  const blastSnapshot = api.getSnapshot();
+  const expectedReserve = 2 * (blastDamage - nodeHp) * blastStats.overkillReservoirRatio;
+  assert.equal(blastSnapshot.overkillReservoirVeinId, `${seed}-large`);
+  assert.ok(
+    Math.abs(blastSnapshot.overkillReservoir - expectedReserve) < 1e-9,
+    `${directional ? "directional" : "circle"} blast must retain the largest vein aggregate only`,
+  );
+  api.finishRun();
+}
+assertLargestBlastReserve({ directional: false, seed: "runtime-circle-reserve" });
+assertLargestBlastReserve({ directional: true, seed: "runtime-directional-reserve" });
+
+// A detonation with Magnetic Field installed must create the local field even
+// when random bomb procs are suppressed. The first bomb is already guided: a
+// valuable ore outside the original blast radius breaks, while the nearby
+// low-value decoy outside the moved blast remains intact.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("gadgets_magnet_mine", 6);
+api.startRun({ seed: "runtime-magnetic-field", sectorId: "stable_strata" });
+api.debugSetPlayerTile(40, 20);
+for (let ty = 18; ty <= 22; ty += 1) {
+  for (let tx = 37; tx <= 43; tx += 1) clearTile(tx, ty);
+}
+placeOre(39, 20, "copper", "magnetic-decoy", 1);
+placeOre(42, 20, "star_core", "magnetic-priority", 1);
+const magneticFieldsBefore = api.getSnapshot().metrics.magneticFields;
+assert.equal(api.forceDetonate(), true);
+assert.equal(api.getSnapshot().metrics.magneticFields, magneticFieldsBefore + 1);
+assert.equal(api.debugGetTile(42, 20).kind, "air", "the first field bomb must move its epicenter to valuable ore");
+assert.notEqual(api.debugGetTile(39, 20).kind, "air", "the moved epicenter must leave the low-value decoy outside the blast");
+api.finishRun();
+
+// Thermal Trail widens only the visual/edge band. damageRay keeps the original
+// eight-pixel full-power core, while a neighboring edge tile receives exactly
+// the advertised level-five 45% damage and is credited to the readable source.
+api.setAllUpgrades(false);
+api.setFocusedOre(null);
+api.setUpgradeLevel("tools_laser_emitter", 1);
+api.setUpgradeLevel("tools_laser_width", 5);
+api.startRun({ seed: "runtime-thermal-edge", sectorId: "stable_strata" });
+api.debugSetPlayerTile(40, 20);
+for (let ty = 18; ty <= 22; ty += 1) {
+  for (let tx = 39; tx <= 43; tx += 1) clearTile(tx, ty);
+}
+placeOre(41, 20, "copper", "thermal-core", 10_000);
+placeOre(41, 21, "copper", "thermal-edge", 10_000);
+assert.ok(api.debugSetTargetTile(41, 20));
+const thermalStats = api.getStats();
+const thermalCoreBefore = api.debugGetTile(41, 20).hp;
+const thermalEdgeBefore = api.debugGetTile(41, 21).hp;
+assert.ok(api.attackNow());
+const thermalCoreDamage = thermalCoreBefore - api.debugGetTile(41, 20).hp;
+const thermalEdgeDamage = thermalEdgeBefore - api.debugGetTile(41, 21).hp;
+assert.ok(thermalCoreDamage > 0);
+assert.ok(
+  Math.abs(thermalEdgeDamage / thermalCoreDamage - thermalStats.laserHeatEdgePower) < 1e-9,
+  "thermal edge must receive only its advertised falloff instead of full-width ray damage plus edge damage",
+);
+placeOre(41, 21, "copper", "thermal-edge-break", thermalEdgeDamage * 0.5);
+assert.ok(api.attackNow());
+assert.equal(api.getSnapshot().metrics.sourceBreaks["laser-heat"], 1);
+api.finishRun();
+assert.match(elementFor("#reportDetails").innerHTML, /Термический след/);
+
+// A one-target approach chip must inspect both sides. If its historical first
+// side is empty, the existing obstructing side still receives the strike.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("dig_precision_path", 3);
+api.startRun({ seed: "runtime-approach-side-choice", sectorId: "stable_strata" });
+api.debugSetPlayerTile(40, 20);
+for (let ty = 18; ty <= 22; ty += 1) {
+  for (let tx = 39; tx <= 43; tx += 1) clearTile(tx, ty);
+}
+placeOre(41, 20, "copper", "approach-target", 100);
+placeRock(41, 21, 10);
+assert.ok(api.debugSetTargetTile(41, 20));
+api.debugSetApproachTravel(1);
+const obstructingSideBefore = api.debugGetTile(41, 21).hp;
+assert.ok(api.attackNow());
+assert.ok(api.debugGetTile(41, 21).hp < obstructingSideBefore, "the existing side must receive the one approach chip");
+api.finishRun();
+
+// Fault Line follows any critically destroyed primary target, including a
+// clearance rock. Its secondary break remains a non-recursive fault-line hit.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("power_mountain_splitter", 1);
+api.startRun({ seed: "runtime-fault-line-clearance", sectorId: "stable_strata" });
+api.debugSetPlayerTile(40, 20);
+for (let ty = 18; ty <= 22; ty += 1) {
+  for (let tx = 39; tx <= 44; tx += 1) clearTile(tx, ty);
+}
+placeRock(41, 20, 0.1);
+placeRock(42, 20, 0.5);
+assert.ok(api.debugSetClearanceTargetTile(41, 20));
+const savedFaultRandom = Math.random;
+Math.random = () => 0;
+try {
+  assert.ok(api.attackNow());
+} finally {
+  Math.random = savedFaultRandom;
+}
+assert.equal(api.debugGetTile(41, 20).kind, "air");
+assert.equal(api.debugGetTile(42, 20).kind, "air", "clearance overkill must continue forward through Fault Line");
+assert.equal(api.getSnapshot().metrics.sourceBreaks["fault-line"], 1);
+api.finishRun();
+
+// A motherlode is also rich at runtime, so its estimator completion must carry
+// the same guaranteed rich completion pieces in addition to its cache.
+const motherlodeEstimatorBase = {
+  runDuration: 45,
+  bonusRunDurationCap: 60,
+  pickPower: 100000,
+  digSpeed: 20,
+  moveSpeed: 5000,
+  motherlodeGuaranteed: true,
+  motherlodeTriggerBreaks: 1,
+  motherlodeYieldMultiplier: 2,
+  motherlodeCompletionCache: 0,
+  motherlodeCompletionTimeBonus: 0,
+  richVeinWholeChance: 0,
+  richVeinYieldBonus: 0.5,
+};
+const motherlodeEstimateWithoutRichFinish = api.debugEstimateBalanceRun(
+  "runtime-estimator-motherlode-rich",
+  { ...motherlodeEstimatorBase, richVeinCompletionBonus: 0 },
+);
+const motherlodeEstimateWithRichFinish = api.debugEstimateBalanceRun(
+  "runtime-estimator-motherlode-rich",
+  { ...motherlodeEstimatorBase, richVeinCompletionBonus: 6 },
+);
+assert.ok(
+  motherlodeEstimateWithRichFinish.haul >= motherlodeEstimateWithoutRichFinish.haul + 5.99,
+  "motherlode estimator completion must include its rich completion bonus",
+);
+
 const balanceReport = api.runBalanceBench();
 assert.equal(balanceReport.rows.length, 3);
 assert.equal(balanceReport.simulations, 12);
@@ -685,6 +1211,22 @@ elementFor("#balanceRuns").value = "1";
 const prefinalBalanceReport = api.runBalanceBench();
 assert.deepEqual(prefinalBalanceReport.profileBuild.invalidRequirements, []);
 assert.equal(prefinalBalanceReport.profileBuild.laserUnlocked, true, "the prefinal profile must exercise the laser model");
+
+// Once projected wall-clock end already reaches 60 seconds, a late bonus must
+// grant/log nothing and must not recharge Chrono Overdrive past the real cap.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("time_thirty_second_oath", 1);
+api.startRun({ seed: "runtime-late-bonus-cap", sectorId: "stable_strata" });
+api.grantBonusTime(100);
+api.stepRun(55);
+const lateBonusBefore = api.getSnapshot();
+const lateGranted = api.grantBonusTime(10);
+const lateBonusAfter = api.getSnapshot();
+assert.ok(lateGranted <= 1e-6, "a bonus beyond the projected absolute end must grant zero real seconds");
+assert.ok(lateBonusAfter.activeWallElapsed + lateBonusAfter.timeLeft <= 60 + 1e-6);
+assert.ok(Math.abs(lateBonusAfter.bonusTimeEarned - lateBonusBefore.bonusTimeEarned) <= 1e-6);
+assert.ok(Math.abs(lateBonusAfter.chronoOverflowRemaining - lateBonusBefore.chronoOverflowRemaining) <= 1e-6);
+api.finishRun();
 
 api.setAllUpgrades(true);
 api.startRun({ seed: "runtime-timer-cap", sectorId: "stable_strata" });
@@ -724,6 +1266,18 @@ console.log(JSON.stringify({
     "triangular-fix",
     "random-geology-without-sector-choice",
     "short-global-micro-events",
+    "resonant-ping",
+    "vein-memory-through-rock",
+    "side-chip",
+    "chrono-overdrive",
+    "fortune-pity-cycle",
+    "motherlode-covenant",
+    "golden-touch-gating",
+    "magnetic-field",
+    "multi-vein-gadget-reserve",
+    "thermal-edge-falloff",
+    "approach-side-choice",
+    "fault-line-clearance",
     "priority-depth-scaled-chest",
     "run-diagnostics",
     "geological-journal",

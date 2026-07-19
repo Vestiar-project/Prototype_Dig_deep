@@ -356,27 +356,35 @@ const senseUpgrades = [
   }),
   defineUpgrade({
     id: "sense_echo_pulse",
-    name: "Эхо-пульс",
-    description: "Импульс чутья обновляется на 8% быстрее за уровень.",
+    name: "Резонансный пинг",
+    description: "Если цели нет, раз в 5/4/3 секунды запускает усиленный поиск на 125/140/155% радиуса и удерживает найденную цель 1,2 секунды.",
     category: "sense",
     icon: "⌁",
-    maxLevel: 6,
+    maxLevel: 3,
     baseCost: 18,
-    growth: 1.42,
+    growth: 1.55,
     requires: ["sense_instinct_spark"],
-    apply: (stats, level) => add(stats, "sensePulseSpeed", 0.08 * level),
+    apply: (stats, level) => {
+      stats.echoPingCooldown = [0, 5, 4, 3][level] || 5;
+      stats.echoPingRadiusMultiplier = [1, 1.25, 1.4, 1.55][level] || 1.25;
+      stats.echoPingTargetHold = 1.2;
+    },
   }),
   defineUpgrade({
     id: "sense_clear_signal",
-    name: "Чистый сигнал",
-    description: "Наведение на найденную руду на 12% быстрее за уровень.",
+    name: "Зацеп за жилу",
+    description: "Удерживает выбранную жилу до исчерпания. Переход к следующей её ноде ускоряется на 8/14/20%, а дальность продолжения жилы возрастает до 120/140/160% чутья.",
     category: "sense",
     icon: "⌖",
-    maxLevel: 5,
+    maxLevel: 3,
     baseCost: 31,
-    growth: 1.43,
+    growth: 1.54,
     requires: [{ id: "sense_instinct_spark", level: 4 }],
-    apply: (stats, level) => add(stats, "targetLockSpeed", 0.12 * level),
+    apply: (stats, level) => {
+      stats.veinLockEnabled = true;
+      stats.veinLockMoveSpeedBonus = [0, 0.08, 0.14, 0.2][level] || 0.08;
+      stats.veinLockRangeMultiplier = [1, 1.2, 1.4, 1.6][level] || 1.2;
+    },
   }),
   defineUpgrade({
     id: "sense_deep_resonance",
@@ -395,16 +403,20 @@ const senseUpgrades = [
   }),
   defineUpgrade({
     id: "sense_vein_whisper",
-    name: "Шёпот жил",
-    description: "Шанс подсветить соседние куски той же жилы +7% за уровень.",
+    name: "След жилы",
+    description: "После первого куска продолжает искать ту же жилу на 125/145/165% радиуса; скорость движения вдоль неё +8/14/20%.",
     category: "sense",
     layoutLobe: "tools",
     icon: "〰",
-    maxLevel: 5,
+    maxLevel: 3,
     baseCost: 58,
-    growth: 1.47,
+    growth: 1.58,
     requires: ["sense_echo_pulse"],
-    apply: (stats, level) => add(stats, "veinRevealChance", 0.07 * level),
+    apply: (stats, level) => {
+      stats.veinTrailEnabled = true;
+      stats.veinTrailRangeMultiplier = [1, 1.25, 1.45, 1.65][level] || 1.25;
+      stats.veinTrailMoveSpeedBonus = [0, 0.08, 0.14, 0.2][level] || 0.08;
+    },
   }),
   defineUpgrade({
     id: "sense_greed_compass",
@@ -420,15 +432,15 @@ const senseUpgrades = [
   }),
   defineUpgrade({
     id: "sense_seismic_memory",
-    name: "Сейсмическая память",
-    description: "Обнаруженная руда остаётся видимой на 0,8 сек дольше за уровень.",
+    name: "Карта напряжений",
+    description: "Запоминает 1/2/3 резервные жилы за пределами чутья и сразу прокладывает путь к следующей после исчерпания текущей.",
     category: "sense",
     icon: "≋",
-    maxLevel: 5,
+    maxLevel: 3,
     baseCost: 104,
-    growth: 1.44,
+    growth: 1.57,
     requires: ["sense_vein_whisper"],
-    apply: (stats, level) => add(stats, "sensePersistence", 0.8 * level),
+    apply: (stats, level) => add(stats, "seismicRouteSlots", level),
   }),
   defineUpgrade({
     id: "sense_panoramic_intuition",
@@ -464,20 +476,23 @@ const senseUpgrades = [
   }),
   defineUpgrade({
     id: "sense_priority_tuning",
-    name: "Настройка приоритета",
-    description: "Вес ценности цели +18% за уровень без потери скорости поиска.",
+    name: "Оценка залежи",
+    description: "Рудный фокус предпочитает крупные залежи. Вес размера жилы +30%, а скорость за каждый следующий её кусок +3% за уровень.",
     category: "sense",
     icon: "☷",
-    maxLevel: 5,
+    maxLevel: 4,
     baseCost: 175,
-    growth: 1.48,
+    growth: 1.54,
     requires: ["sense_greed_compass"],
-    apply: (stats, level) => add(stats, "targetValueBias", 0.18 * level),
+    apply: (stats, level) => {
+      add(stats, "focusVeinSizeBias", 0.3 * level);
+      add(stats, "focusVeinMoveSpeedPerNode", 0.03 * level);
+    },
   }),
   defineUpgrade({
     id: "sense_ghost_outline",
-    name: "Призрачный контур",
-    description: "Открывает постоянный контур уже обнаруженной руды.",
+    name: "Призрачный след",
+    description: "Потерянная рудная цель ещё 4 секунды остаётся доступной за пределами чутья и сквозь три слоя породы.",
     category: "sense",
     icon: "▧",
     maxLevel: 1,
@@ -485,7 +500,11 @@ const senseUpgrades = [
     growth: 1,
     requires: ["sense_seismic_memory"],
     apply: (stats, level) => {
-      if (level > 0) stats.oreOutline = true;
+      if (level > 0) {
+        stats.oreOutline = true;
+        stats.ghostTrailDuration = 4;
+        stats.ghostTrailMaxLayers = 3;
+      }
     },
   }),
   defineUpgrade({
@@ -568,7 +587,7 @@ const senseUpgrades = [
     category: "sense",
     icon: "△",
     maxLevel: 2,
-    baseCost: 1100,
+    baseCost: 850,
     growth: 1.7,
     requires: ["sense_second_fix", "gadgets_scout_drone"],
     apply: (stats, level) => {
@@ -615,15 +634,20 @@ const digUpgrades = [
   }),
   defineUpgrade({
     id: "dig_sweeping_arc",
-    name: "Сметающая дуга",
-    description: "Сектор удара шире на 4° за уровень.",
+    name: "Боковой скол",
+    description: "Каждый 3-й/2-й/1-й удар также задевает два боковых блока на 30/45/60% силы. С лазером выпускает два коротких боковых луча.",
     category: "dig",
     icon: "⌒",
-    maxLevel: 6,
+    maxLevel: 3,
     baseCost: 18,
-    growth: 1.39,
+    growth: 1.55,
     requires: ["dig_arm_swing"],
-    apply: (stats, level) => add(stats, "digArc", (Math.PI / 45) * level),
+    apply: (stats, level) => {
+      stats.sideChipEvery = [0, 3, 2, 1][level] || 3;
+      stats.sideChipTargets = 2;
+      stats.sideChipPower = [0, 0.3, 0.45, 0.6][level] || 0.3;
+      stats.sideChipLaserEnabled = true;
+    },
   }),
   defineUpgrade({
     id: "dig_light_footwork",
@@ -664,15 +688,19 @@ const digUpgrades = [
   }),
   defineUpgrade({
     id: "dig_precision_path",
-    name: "Точная траектория",
-    description: "Поворот к новой цели на 15% быстрее за уровень.",
+    name: "Удар на сближении",
+    description: "После 0,9 секунды пути первый удар получает +50/75/100% силы и скалывает бок мешающего блока на 25/35/45%. Сбрасывается при смене цели.",
     category: "dig",
     icon: "⌖",
-    maxLevel: 5,
+    maxLevel: 3,
     baseCost: 73,
-    growth: 1.42,
+    growth: 1.58,
     requires: [{ id: "dig_arm_swing", level: 6 }],
-    apply: (stats, level) => add(stats, "aimTurnSpeed", 0.15 * level),
+    apply: (stats, level) => {
+      stats.approachStrikeTravelTime = 0.9;
+      stats.approachStrikePower = [0, 0.5, 0.75, 1][level] || 0.5;
+      stats.approachStrikeSideChipPower = [0, 0.25, 0.35, 0.45][level] || 0.25;
+    },
   }),
   defineUpgrade({
     id: "dig_reach_training",
@@ -747,8 +775,8 @@ const digUpgrades = [
   }),
   defineUpgrade({
     id: "dig_omni_swing",
-    name: "Круговой замах",
-    description: "Сектор удара шире на 12° и урон по площади +5% за уровень.",
+    name: "Ударная волна",
+    description: "Каждые 6/5/4 разрушенных блока любой инструмент создаёт ударную волну радиусом 1/1,25/1,5 блока и силой 35/50/65%.",
     category: "dig",
     icon: "⟳",
     maxLevel: 3,
@@ -756,8 +784,9 @@ const digUpgrades = [
     growth: 1.63,
     requires: ["dig_wall_bite", "dig_master_reach"],
     apply: (stats, level) => {
-      add(stats, "digArc", (Math.PI / 15) * level);
-      add(stats, "splashDamage", 0.05 * level);
+      stats.impactWaveEvery = [0, 6, 5, 4][level] || 6;
+      stats.impactWaveRadiusTiles = [0, 1, 1.25, 1.5][level] || 1;
+      stats.impactWavePower = [0, 0.35, 0.5, 0.65][level] || 0.35;
     },
   }),
   defineUpgrade({
@@ -781,7 +810,7 @@ const digUpgrades = [
     category: "dig",
     icon: "⇓",
     maxLevel: 3,
-    baseCost: 520,
+    baseCost: 320,
     growth: 1.64,
     requires: ["dig_tunnel_step", "time_capsule"],
     apply: (stats, level) => {
@@ -790,8 +819,8 @@ const digUpgrades = [
   }),
   defineUpgrade({
     id: "dig_quarry_presence",
-    name: "Присутствие карьера",
-    description: "Дальность копки +25%, скорость ударов +15%, сектор становится шире.",
+    name: "Карьерный темп",
+    description: "Три быстрых разрушения включают карьерный режим на 2,5 секунды: движение и копка +25%, каждое разрушение раскалывает боковые блоки на 40% силы.",
     category: "dig",
     icon: "◯",
     maxLevel: 1,
@@ -799,9 +828,12 @@ const digUpgrades = [
     growth: 1,
     requires: ["dig_omni_swing", "dig_stone_dance"],
     apply: (stats, level) => {
-      add(stats, "digReachMultiplier", 0.25 * level);
-      add(stats, "digSpeedMultiplier", 0.15 * level);
-      add(stats, "digArc", (Math.PI / 9) * level);
+      stats.quarryModeRequiredBreaks = 3;
+      stats.quarryModeWindow = 1.2;
+      stats.quarryModeDuration = 2.5;
+      add(stats, "quarryModeMoveSpeedBonus", 0.25 * level);
+      add(stats, "quarryModeDigSpeedBonus", 0.25 * level);
+      add(stats, "quarryModeSideFracturePower", 0.4 * level);
     },
   }),
 ];
@@ -998,8 +1030,8 @@ const powerUpgrades = [
   }),
   defineUpgrade({
     id: "power_mountain_splitter",
-    name: "Раскалывающий горы",
-    description: "Сила кирки +30%, критический шанс +10%.",
+    name: "Линия разлома",
+    description: "Критическое разрушение переносит 75% реального лишнего урона через четыре блока по направлению удара. Каждое новое разрушение продлевает разлом ещё на блок.",
     category: "power",
     icon: "✷",
     maxLevel: 1,
@@ -1007,8 +1039,10 @@ const powerUpgrades = [
     growth: 1,
     requires: ["power_one_hit_legend"],
     apply: (stats, level) => {
-      add(stats, "pickPowerMultiplier", 0.3 * level);
-      add(stats, "critChance", 0.1 * level);
+      stats.faultLineEnabled = level > 0;
+      stats.faultLineMaxBlocks = 4;
+      stats.faultLinePower = 0.75;
+      stats.faultLineExtendOnBreak = true;
     },
   }),
 ];
@@ -1300,8 +1334,8 @@ const timeUpgrades = [
   }),
   defineUpgrade({
     id: "time_thirty_second_oath",
-    name: "Клятва сорока пяти секунд",
-    description: "Максимальный таймер становится 45 секунд; лишняя хроноэнергия ускоряет инструмент.",
+    name: "Хронофорсаж",
+    description: "Бонусное время сверх 45 секунд становится видимой перегрузкой: инструмент работает на 25% быстрее и каждый пятый удар повторяется. Общий предел — 60 секунд.",
     category: "time",
     layoutLobe: "power",
     icon: "45",
@@ -1315,7 +1349,13 @@ const timeUpgrades = [
     ],
     recipeOverride: { prism_crystal: 14, void_ore: 4 },
     apply: (stats, level) => {
-      if (level > 0) stats.chronoOverclock = true;
+      if (level > 0) {
+        stats.chronoOverclock = true;
+        stats.chronoOverdrive = true;
+        stats.chronoOverflowThreshold = 45;
+        stats.chronoOverflowSpeedBonus = 0.25;
+        stats.chronoOverflowRepeatEvery = 5;
+      }
     },
   }),
 ];
@@ -1425,8 +1465,8 @@ const gadgetUpgrades = [
   }),
   defineUpgrade({
     id: "gadgets_magnet_mine",
-    name: "Магнитная мина",
-    description: "Магнит стягивает осколки: радиус сбора и поиска дронов +14 за уровень.",
+    name: "Магнитное поле",
+    description: "После взрыва на 1,2–2,7 секунды оставляет поле: раскрывает руду и направляет бомбы, разряды и дроны к самой ценной цели внутри него.",
     category: "gadgets",
     layoutLobe: "fortune",
     icon: "∩",
@@ -1434,7 +1474,13 @@ const gadgetUpgrades = [
     baseCost: 72,
     growth: 1.45,
     requires: ["gadgets_powder_pocket"],
-    apply: (stats, level) => add(stats, "pickupRadius", 14 * level),
+    apply: (stats, level) => {
+      add(stats, "pickupRadius", 14 * level);
+      stats.magneticFieldEnabled = true;
+      stats.magneticFieldDuration = 0.9 + 0.3 * level;
+      stats.magneticFieldRadiusTiles = 1.5 + 0.25 * level;
+      add(stats, "magneticFieldTargetingBonus", 0.08 * level);
+    },
   }),
   defineUpgrade({
     id: "gadgets_scout_drone",
@@ -1443,9 +1489,10 @@ const gadgetUpgrades = [
     category: "gadgets",
     icon: "▣",
     maxLevel: 1,
-    baseCost: 280,
+    baseCost: 190,
     growth: 1,
     requires: ["gadgets_magnet_mine", "sense_echo_pulse"],
+    recipeOverride: { silver: 2, amber: 8, iron: 7 },
     apply: (stats, level) => {
       if (level > 0) stats.droneUnlocked = true;
       add(stats, "droneCount", level);
@@ -1454,7 +1501,7 @@ const gadgetUpgrades = [
   defineUpgrade({
     id: "gadgets_drone_battery",
     name: "Батарея дрона",
-    description: "Скорость и доля смены, когда работают дроны, +12% за уровень.",
+    description: "Скорость дронов +12%, время их работы +11% смены за уровень. Пятый уровень даёт полную автономность.",
     category: "gadgets",
     icon: "▥",
     maxLevel: 5,
@@ -1463,7 +1510,7 @@ const gadgetUpgrades = [
     requires: ["gadgets_scout_drone"],
     apply: (stats, level) => {
       add(stats, "droneSpeed", 0.12 * level);
-      add(stats, "droneLifetime", 0.12 * level);
+      add(stats, "droneLifetime", 0.11 * level);
     },
   }),
   defineUpgrade({
@@ -1485,7 +1532,7 @@ const gadgetUpgrades = [
     category: "gadgets",
     icon: "⬡",
     maxLevel: 3,
-    baseCost: 690,
+    baseCost: 560,
     growth: 1.68,
     requires: ["gadgets_drone_battery", "gadgets_drone_drill"],
     apply: (stats, level) => add(stats, "droneCount", level),
@@ -1512,7 +1559,7 @@ const gadgetUpgrades = [
     category: "gadgets",
     icon: "◁",
     maxLevel: 3,
-    baseCost: 920,
+    baseCost: 760,
     growth: 1.66,
     requires: ["gadgets_cluster_shell", "power_tectonic_blow"],
     apply: (stats, level) => {
@@ -1527,7 +1574,7 @@ const gadgetUpgrades = [
     category: "gadgets",
     icon: "⌖",
     maxLevel: 1,
-    baseCost: 1600,
+    baseCost: 1250,
     growth: 1,
     requires: ["gadgets_scout_drone", "gadgets_sticky_charge", "sense_ore_focus"],
     apply: (stats, level) => {
@@ -1540,7 +1587,7 @@ const gadgetUpgrades = [
   defineUpgrade({
     id: "gadgets_demolition_orchestra",
     name: "Оркестр подрывников",
-    description: "Бомбы, цепи и дроны усиливают друг друга на 25%.",
+    description: "Открывает трёхтактное комбо: дрон ставит метку, цепной разряд заряжает её, а бомба завершает усиленным на 75% взрывом по жиле.",
     category: "gadgets",
     icon: "♫",
     maxLevel: 1,
@@ -1548,10 +1595,11 @@ const gadgetUpgrades = [
     growth: 1,
     requires: ["gadgets_drone_swarm", "gadgets_volatile_jackpot", "gadgets_shock_capsule"],
     apply: (stats, level) => {
-      add(stats, "bombPower", 0.25 * level);
-      add(stats, "chainPower", 0.25 * level);
-      add(stats, "dronePower", 0.25 * level);
-      add(stats, "droneBombChance", 0.08 * level);
+      stats.demolitionComboEnabled = level > 0;
+      stats.demolitionComboMarkDuration = 3;
+      stats.demolitionComboFinishPower = 0.75;
+      stats.demolitionComboVeinRadiusTiles = 2;
+      add(stats, "droneBombChance", 0.1 * level);
     },
   }),
 ];
@@ -1596,9 +1644,10 @@ const toolUpgrades = [
     category: "tools",
     icon: "⚒",
     maxLevel: 1,
-    baseCost: 105,
+    baseCost: 78,
     growth: 1,
     requires: ["tools_iron_pick", "power_tempered_steel"],
+    recipeOverride: { iron: 6, coal: 6, amber: 2 },
     apply: (stats, level) => {
       if (level > 0) {
         stats.tool = "steelPick";
@@ -1615,7 +1664,7 @@ const toolUpgrades = [
     category: "tools",
     icon: "⚙",
     maxLevel: 1,
-    baseCost: 260,
+    baseCost: 145,
     growth: 1,
     requires: ["tools_steel_pick", { id: "tools_balanced_handle", level: 6 }],
     apply: (stats, level) => {
@@ -1633,9 +1682,10 @@ const toolUpgrades = [
     category: "tools",
     icon: "★",
     maxLevel: 1,
-    baseCost: 620,
+    baseCost: 420,
     growth: 1,
     requires: ["tools_pneumatic_pick", "power_diamond_tip"],
+    requiresOreDiscovery: "prism_crystal",
     apply: (stats, level) => {
       if (level > 0) {
         stats.tool = "superPick";
@@ -1653,7 +1703,7 @@ const toolUpgrades = [
     category: "tools",
     icon: "⚙",
     maxLevel: 5,
-    baseCost: 760,
+    baseCost: 560,
     growth: 1.56,
     requires: ["tools_super_pick"],
     apply: (stats, level) => add(stats, "digSpeedMultiplier", 0.09 * level),
@@ -1665,24 +1715,27 @@ const toolUpgrades = [
     category: "tools",
     icon: "▴",
     maxLevel: 5,
-    baseCost: 810,
+    baseCost: 720,
     growth: 1.57,
     requires: ["tools_super_pick"],
     apply: (stats, level) => add(stats, "pickPowerMultiplier", 0.13 * level),
   }),
   defineUpgrade({
     id: "tools_super_field",
-    name: "Поле суперкирки",
-    description: "Радиус урона +7 и урон по площади +6% за уровень.",
+    name: "Накопитель поля",
+    description: "Удары суперкирки создают поле радиусом 1,0–1,75 блока и силой 30–60%. После получения лазера поле возникает в точке попадания луча.",
     category: "tools",
     icon: "◌",
     maxLevel: 4,
-    baseCost: 980,
+    baseCost: 760,
     growth: 1.6,
     requires: ["tools_super_motor", "tools_super_teeth"],
     apply: (stats, level) => {
-      add(stats, "splashRadius", 7 * level);
-      add(stats, "splashDamage", 0.06 * level);
+      stats.superFieldEnabled = true;
+      stats.superFieldRadiusTiles = 0.75 + 0.25 * level;
+      stats.superFieldPower = 0.2 + 0.1 * level;
+      stats.superFieldDuration = 0.8 + 0.2 * level;
+      stats.superFieldLaserPersistent = true;
     },
   }),
   defineUpgrade({
@@ -1692,7 +1745,7 @@ const toolUpgrades = [
     category: "tools",
     icon: "━",
     maxLevel: 1,
-    baseCost: 2400,
+    baseCost: 1500,
     growth: 1,
     requires: ["tools_super_field", "sense_far_echo", "tools_super_pick"],
     apply: (stats, level) => {
@@ -1711,7 +1764,7 @@ const toolUpgrades = [
     category: "tools",
     icon: "⟶",
     maxLevel: 10,
-    baseCost: 2750,
+    baseCost: 2000,
     growth: 1.5,
     requires: ["tools_laser_emitter"],
     apply: (stats, level) => add(stats, "laserRange", 50 * level),
@@ -1723,24 +1776,26 @@ const toolUpgrades = [
     category: "tools",
     icon: "═",
     maxLevel: 6,
-    baseCost: 2920,
+    baseCost: 2100,
     growth: 1.59,
     requires: ["tools_laser_emitter"],
     apply: (stats, level) => add(stats, "laserPower", 0.18 * level),
   }),
   defineUpgrade({
     id: "tools_laser_width",
-    name: "Расширитель луча",
-    description: "Ширина лазера +3 и урон соседям +4% за уровень.",
+    name: "Термический след",
+    description: "Ширина луча +3. Его края наносят 25–45% силы и на 1,2 секунды нагревают соседние блоки; следующее попадание по ним сильнее на 6–30%.",
     category: "tools",
     icon: "▰",
     maxLevel: 5,
-    baseCost: 3400,
+    baseCost: 2400,
     growth: 1.61,
     requires: ["tools_laser_power"],
     apply: (stats, level) => {
       add(stats, "laserWidth", 3 * level);
-      add(stats, "splashDamage", 0.04 * level);
+      stats.laserHeatEdgePower = 0.2 + 0.05 * level;
+      stats.laserHeatDuration = 1.2;
+      add(stats, "laserHeatNextHitBonus", 0.06 * level);
     },
   }),
   defineUpgrade({
@@ -1750,8 +1805,8 @@ const toolUpgrades = [
     category: "tools",
     icon: "⋔",
     maxLevel: 3,
-    baseCost: 4800,
-    growth: 1.7,
+    baseCost: 2800,
+    growth: 1.35,
     requires: ["tools_laser_range", "tools_laser_width"],
     apply: (stats, level) => {
       add(stats, "laserBeams", level);
@@ -1765,7 +1820,7 @@ const toolUpgrades = [
     category: "tools",
     icon: "◈",
     maxLevel: 2,
-    baseCost: 3600,
+    baseCost: 2100,
     growth: 1.72,
     requires: ["tools_laser_emitter", "sense_ore_focus"],
     apply: (stats, level) => {
@@ -1781,7 +1836,7 @@ const toolUpgrades = [
     category: "tools",
     icon: "✹",
     maxLevel: 2,
-    baseCost: 4600,
+    baseCost: 2800,
     growth: 1.74,
     requires: ["tools_laser_emitter", "dig_omni_swing"],
     apply: (stats, level) => {
@@ -1794,11 +1849,11 @@ const toolUpgrades = [
   defineUpgrade({
     id: "tools_solar_drill",
     name: "Солнечный бур",
-    description: "Лазер становится призмобуром: +35% мощности и быстрее заряжается.",
+    description: "Лазер становится призмобуром: каждый пятый выстрел удерживает луч 0,7 секунды на жиле и завершает проход солнечным разрядом силой 90%.",
     category: "tools",
     icon: "☀",
     maxLevel: 1,
-    baseCost: 12000,
+    baseCost: 7200,
     growth: 1,
     requires: [
       { id: "tools_laser_splitter", level: 2 },
@@ -1809,8 +1864,12 @@ const toolUpgrades = [
         stats.tool = "prismaticLaser";
         stats.toolTier = Math.max(stats.toolTier, 7);
       }
-      add(stats, "laserPower", 0.35 * level);
-      add(stats, "laserChargeRate", 0.25 * level);
+      stats.solarDrillEnabled = level > 0;
+      stats.solarDrillProcEvery = 5;
+      stats.solarDrillBeamDuration = 0.7;
+      stats.solarDrillFinalBurstPower = 0.9;
+      add(stats, "laserPower", 0.15 * level);
+      add(stats, "laserChargeRate", 0.1 * level);
     },
   }),
 ];
@@ -1844,14 +1903,14 @@ const fortuneUpgrades = [
   defineUpgrade({
     id: "fortune_glimmer_hunter",
     name: "Охотник за блеском",
-    description: "Шанс редкой руды +3% за уровень.",
+    description: "Шанс получить дополнительный кусок более редкой руды +3% за уровень. Исходная добыча всегда сохраняется.",
     category: "fortune",
     icon: "✧",
     maxLevel: 6,
     baseCost: 42,
     growth: 1.45,
     requires: ["fortune_lucky_chip"],
-    apply: (stats, level) => add(stats, "rareOreChance", 0.03 * level),
+    apply: (stats, level) => add(stats, "rareOreAdditiveChance", 0.03 * level),
   }),
   defineUpgrade({
     id: "fortune_gem_polish",
@@ -1868,14 +1927,18 @@ const fortuneUpgrades = [
   defineUpgrade({
     id: "fortune_rich_vein",
     name: "Богатая жила",
-    description: "Шанс заменить обычную жилу богатой +2,5% за уровень.",
+    description: "Первый кусок с шансом +3% за уровень помечает всю существующую жилу богатой: оставшиеся ноды дают +50%, а завершение приносит 1 дополнительный кусок за уровень.",
     category: "fortune",
     icon: "▦",
     maxLevel: 6,
     baseCost: 88,
     growth: 1.48,
     requires: ["fortune_glimmer_hunter"],
-    apply: (stats, level) => add(stats, "richVeinChance", 0.025 * level),
+    apply: (stats, level) => {
+      add(stats, "richVeinWholeChance", 0.03 * level);
+      stats.richVeinYieldBonus = 0.5;
+      add(stats, "richVeinCompletionBonus", level);
+    },
   }),
   defineUpgrade({
     id: "fortune_double_yield",
@@ -1894,56 +1957,68 @@ const fortuneUpgrades = [
   }),
   defineUpgrade({
     id: "fortune_triple_seam",
-    name: "Тройной пласт",
-    description: "Шанс тройной награды +1% за уровень.",
+    name: "Тройная проба",
+    description: "Каждый 5-й/4-й/3-й кусок одной жилы гарантирует +1/+2/+2 добычи и раскалывает следующую ноду на 25/40/50%. Счётчик виден над шахтёром.",
     category: "fortune",
     icon: "Ⅲ",
-    maxLevel: 5,
+    maxLevel: 3,
     baseCost: 190,
-    growth: 1.55,
+    growth: 1.68,
     requires: ["fortune_double_yield", "fortune_rich_vein"],
-    apply: (stats, level) => add(stats, "tripleDropChance", 0.01 * level),
+    apply: (stats, level) => {
+      stats.tripleSampleEvery = [0, 5, 4, 3][level] || 5;
+      stats.tripleSampleBonusYield = [0, 1, 2, 2][level] || 1;
+      stats.tripleSampleNextNodeDamage = [0, 0.25, 0.4, 0.5][level] || 0.25;
+    },
   }),
   defineUpgrade({
     id: "fortune_alchemist_scales",
-    name: "Весы алхимика",
-    description: "Лишний урон превращается в +4% выхода руды за уровень.",
+    name: "Переплавка импульса",
+    description: "25/40/55/70/85% реального лишнего урона от кирки, лазера и гаджетов сохраняется в шкале и переносится на следующую ноду жилы; полный заряд даёт дополнительную добычу.",
     category: "fortune",
     icon: "⚖",
     maxLevel: 5,
     baseCost: 230,
     growth: 1.54,
     requires: ["fortune_gem_polish", "power_shatterpoint"],
-    apply: (stats, level) => add(stats, "oreConversionBonus", 0.04 * level),
+    apply: (stats, level) => {
+      stats.trueOverkillEnabled = true;
+      stats.overkillReservoirRatio = [0, 0.25, 0.4, 0.55, 0.7, 0.85][level] || 0.25;
+      stats.overkillReservoirYieldThreshold = 1;
+    },
   }),
   defineUpgrade({
     id: "fortune_deep_market",
-    name: "Глубинная биржа",
-    description: "Бонус выхода руды за глубину +8% за уровень.",
+    name: "Контракт глубины",
+    description: "Каждые 100 метров ниже точки старта смены дают стак выхода руды: +3% за уровень. В забеге может накопиться до восьми стаков.",
     category: "fortune",
     icon: "↧",
     maxLevel: 6,
     baseCost: 285,
     growth: 1.56,
     requires: ["fortune_gem_polish"],
-    apply: (stats, level) => add(stats, "depthValueBonus", 0.08 * level),
+    apply: (stats, level) => {
+      stats.depthContractStep = 100;
+      add(stats, "depthContractBonusPerStack", 0.03 * level);
+      stats.depthContractMaxStacks = 8;
+    },
   }),
   defineUpgrade({
     id: "fortune_golden_touch",
     name: "Золотое касание",
-    description: "Шанс сделать найденную руду золотой +1,5% за уровень.",
+    description: "Шанс получить дополнительный кусок золота +1,5% за уровень. Исходная руда не заменяется.",
     category: "fortune",
     icon: "☀",
     maxLevel: 5,
     baseCost: 420,
     growth: 1.59,
     requires: ["fortune_triple_seam"],
-    apply: (stats, level) => add(stats, "goldenOreChance", 0.015 * level),
+    apply: (stats, level) => add(stats, "goldenOreAdditiveChance", 0.015 * level),
   }),
   defineUpgrade({
     id: "fortune_relic_magnet",
     name: "Магнит реликвий",
-    description: "Шанс реликвии +1% и радиус подбора +10 за уровень.",
+    description: "Шанс получить временную реликвию +1,5% за уровень: второй луч, мягкая порода, бонус времени или усиленный сундук. Эффект заметно показывается сверху.",
     category: "fortune",
     icon: "⌑",
     maxLevel: 5,
@@ -1951,8 +2026,10 @@ const fortuneUpgrades = [
     growth: 1.6,
     requires: ["fortune_lucky_chip", "gadgets_magnet_mine"],
     apply: (stats, level) => {
-      add(stats, "relicChance", 0.01 * level);
       add(stats, "pickupRadius", 10 * level);
+      add(stats, "relicEffectChance", 0.015 * level);
+      stats.relicEffectDuration = 6;
+      add(stats, "relicEffectPower", 0.08 * level);
     },
   }),
   defineUpgrade({
@@ -1973,14 +2050,18 @@ const fortuneUpgrades = [
   defineUpgrade({
     id: "fortune_wheel",
     name: "Колесо фортуны",
-    description: "Шанс любого редкого эффекта +2% за уровень.",
+    description: "После 8/7/6/5 кусков руды без редкого эффекта следующий гарантирован. Колесо по кругу выдаёт добычу, бомбу, время и богатую ноду.",
     category: "fortune",
     icon: "⊛",
     maxLevel: 4,
     baseCost: 960,
     growth: 1.67,
     requires: ["fortune_relic_magnet", "fortune_kings_ransom"],
-    apply: (stats, level) => add(stats, "fortuneProcChance", 0.02 * level),
+    apply: (stats, level) => {
+      stats.fortuneWheelEnabled = true;
+      stats.fortunePityThreshold = [0, 8, 7, 6, 5][level] || 8;
+      stats.fortuneWheelCycleLength = 4;
+    },
   }),
   defineUpgrade({
     id: "fortune_findings_catalog",
@@ -1997,7 +2078,7 @@ const fortuneUpgrades = [
   defineUpgrade({
     id: "fortune_motherlode_covenant",
     name: "Договор с Материнской жилой",
-    description: "Даёт шанс открыть сверхбогатую жилу и повышает выход всей руды на 25%.",
+    description: "После 20 добытых кусков гарантированно помечает одну существующую жилу высшего доступного тира Материнской: выход ×2, а завершение даёт смешанный тайник и +2,5 секунды.",
     category: "fortune",
     icon: "♢",
     maxLevel: 1,
@@ -2005,8 +2086,11 @@ const fortuneUpgrades = [
     growth: 1,
     requires: ["fortune_wheel", "fortune_alchemist_scales"],
     apply: (stats, level) => {
-      add(stats, "motherlodeChance", 0.04 * level);
-      add(stats, "oreValueMultiplier", 0.25 * level);
+      stats.motherlodeGuaranteed = level > 0;
+      stats.motherlodeTriggerBreaks = 20;
+      stats.motherlodeYieldMultiplier = 2;
+      stats.motherlodeCompletionCache = 6;
+      stats.motherlodeCompletionTimeBonus = 2.5;
     },
   }),
 ];
@@ -2030,9 +2114,9 @@ const coreFinalUpgrade = defineUpgrade({
     "fortune_motherlode_covenant",
   ],
   recipeOverride: {
-    prism_crystal: 500,
-    void_ore: 300,
-    star_core: 500,
+    prism_crystal: 4600,
+    void_ore: 2500,
+    star_core: 650,
   },
   apply: (stats, level) => {
     if (level > 0) stats.bonVoyageUnlocked = true;
@@ -2061,14 +2145,28 @@ function createBaseMetaStats() {
     sensePulseSpeed: 1,
     sensePersistence: 0.7,
     senseThroughWalls: false,
+    echoPingCooldown: 0,
+    echoPingRadiusMultiplier: 1,
+    echoPingTargetHold: 0,
     deepOreSenseBonus: 0,
     veinRevealChance: 0,
+    veinTrailEnabled: false,
+    veinTrailRangeMultiplier: 1,
+    veinTrailMoveSpeedBonus: 0,
+    veinLockEnabled: false,
+    veinLockRangeMultiplier: 1,
+    veinLockMoveSpeedBonus: 0,
     targetLockSpeed: 1,
     targetValueBias: 0.12,
     backupTargetSlots: 0,
+    seismicRouteSlots: 0,
     oreOutline: false,
+    ghostTrailDuration: 0,
+    ghostTrailMaxLayers: 0,
     oreFocusUnlocked: false,
     oreFocusRadiusMultiplier: 1,
+    focusVeinSizeBias: 0,
+    focusVeinMoveSpeedPerNode: 0,
     oreFocusEscalationDelay: 0,
     oreFocusEscalationBonus: 0,
     deafKnockStoneThreshold: 0,
@@ -2098,10 +2196,26 @@ function createBaseMetaStats() {
     aimTurnSpeed: 1,
     multiHitChance: 0,
     multiHitCount: 1,
+    sideChipEvery: 0,
+    sideChipTargets: 0,
+    sideChipPower: 0,
+    sideChipLaserEnabled: false,
+    approachStrikeTravelTime: 0,
+    approachStrikePower: 0,
+    approachStrikeSideChipPower: 0,
     splashRadius: 0,
     splashDamage: 0,
+    impactWaveEvery: 0,
+    impactWaveRadiusTiles: 0,
+    impactWavePower: 0,
     leastResistancePathing: false,
     mineLiftRecordDepthRatio: 0,
+    quarryModeRequiredBreaks: 0,
+    quarryModeWindow: 0,
+    quarryModeDuration: 0,
+    quarryModeMoveSpeedBonus: 0,
+    quarryModeDigSpeedBonus: 0,
+    quarryModeSideFracturePower: 0,
 
     // Direct mining damage.
     pickPower: 1,
@@ -2120,6 +2234,10 @@ function createBaseMetaStats() {
     chargedHitPower: 0,
     overkillCarry: 0,
     focusedOreHardnessReduction: 0,
+    faultLineEnabled: false,
+    faultLineMaxBlocks: 0,
+    faultLinePower: 0,
+    faultLineExtendOnBreak: false,
 
     // Permanent upgrades stay between 6 and 45 seconds; in-run bonuses can
     // extend the live countdown only as far as the separate 60-second cap.
@@ -2138,6 +2256,10 @@ function createBaseMetaStats() {
     timerDrainReduction: 0,
     timerDrainMultiplier: 1,
     chronoOverclock: false,
+    chronoOverdrive: false,
+    chronoOverflowThreshold: 45,
+    chronoOverflowSpeedBonus: 0,
+    chronoOverflowRepeatEvery: 0,
 
     // Gadgets.
     bombChance: 0,
@@ -2163,6 +2285,14 @@ function createBaseMetaStats() {
     droneBombChance: 0,
     crewBeaconUnlocked: false,
     crewBeaconOverkillCarry: 0,
+    magneticFieldEnabled: false,
+    magneticFieldDuration: 0,
+    magneticFieldRadiusTiles: 0,
+    magneticFieldTargetingBonus: 0,
+    demolitionComboEnabled: false,
+    demolitionComboMarkDuration: 0,
+    demolitionComboFinishPower: 0,
+    demolitionComboVeinRadiusTiles: 0,
 
     // Tool progression.
     tool: "pickaxe",
@@ -2182,23 +2312,60 @@ function createBaseMetaStats() {
     laserSuperPickEchoRadiusTiles: 0,
     laserSuperPickEchoPower: 0,
     laserSuperPickEchoNoProcs: false,
+    superFieldEnabled: false,
+    superFieldRadiusTiles: 0,
+    superFieldPower: 0,
+    superFieldDuration: 0,
+    superFieldLaserPersistent: false,
+    laserHeatEdgePower: 0,
+    laserHeatDuration: 0,
+    laserHeatNextHitBonus: 0,
+    solarDrillEnabled: false,
+    solarDrillProcEvery: 0,
+    solarDrillBeamDuration: 0,
+    solarDrillFinalBurstPower: 0,
 
     // Rewards and procedural fortune. Consumers combine `luck` and explicit
     // proc chances; this module does not roll random values itself.
     oreValueMultiplier: 1,
     luck: 0,
     rareOreChance: 0,
+    rareOreAdditiveChance: 0,
     gemValueMultiplier: 1,
     richVeinChance: 0,
+    richVeinWholeChance: 0,
+    richVeinYieldBonus: 0,
+    richVeinCompletionBonus: 0,
     doubleDropChance: 0,
     extraYieldChance: 0,
     tripleDropChance: 0,
+    tripleSampleEvery: 0,
+    tripleSampleBonusYield: 0,
+    tripleSampleNextNodeDamage: 0,
     oreConversionBonus: 0,
+    trueOverkillEnabled: false,
+    overkillReservoirRatio: 0,
+    overkillReservoirYieldThreshold: 0,
     depthValueBonus: 0,
+    depthContractStep: 0,
+    depthContractBonusPerStack: 0,
+    depthContractMaxStacks: 0,
     goldenOreChance: 0,
+    goldenOreAdditiveChance: 0,
     relicChance: 0,
+    relicEffectChance: 0,
+    relicEffectDuration: 0,
+    relicEffectPower: 0,
     fortuneProcChance: 0,
+    fortuneWheelEnabled: false,
+    fortunePityThreshold: 0,
+    fortuneWheelCycleLength: 0,
     motherlodeChance: 0,
+    motherlodeGuaranteed: false,
+    motherlodeTriggerBreaks: 0,
+    motherlodeYieldMultiplier: 1,
+    motherlodeCompletionCache: 0,
+    motherlodeCompletionTimeBonus: 0,
     oreDiversityBonusPerType: 0,
   };
 }
@@ -2218,12 +2385,16 @@ const probabilityKeys = [
   "droneBombChance",
   "luck",
   "rareOreChance",
+  "rareOreAdditiveChance",
   "richVeinChance",
+  "richVeinWholeChance",
   "doubleDropChance",
   "extraYieldChance",
   "tripleDropChance",
   "goldenOreChance",
+  "goldenOreAdditiveChance",
   "relicChance",
+  "relicEffectChance",
   "fortuneProcChance",
   "motherlodeChance",
   "focusedOreHardnessReduction",
@@ -2231,23 +2402,61 @@ const probabilityKeys = [
 
 function normalizeMetaStats(stats) {
   stats.senseRadius = Math.max(1, stats.senseRadius * stats.senseRadiusMultiplier);
+  stats.echoPingCooldown = Math.max(0, stats.echoPingCooldown);
+  stats.echoPingRadiusMultiplier = Math.max(1, stats.echoPingRadiusMultiplier);
+  stats.echoPingTargetHold = Math.max(0, stats.echoPingTargetHold);
+  stats.veinTrailRangeMultiplier = Math.max(1, stats.veinTrailRangeMultiplier);
+  stats.veinTrailMoveSpeedBonus = Math.max(0, stats.veinTrailMoveSpeedBonus);
+  stats.veinLockRangeMultiplier = Math.max(1, stats.veinLockRangeMultiplier);
+  stats.veinLockMoveSpeedBonus = Math.max(0, stats.veinLockMoveSpeedBonus);
+  stats.seismicRouteSlots = Math.max(0, Math.floor(stats.seismicRouteSlots));
+  stats.ghostTrailDuration = Math.max(0, stats.ghostTrailDuration);
+  stats.ghostTrailMaxLayers = Math.max(0, Math.floor(stats.ghostTrailMaxLayers));
+  stats.focusVeinSizeBias = Math.max(0, stats.focusVeinSizeBias);
+  stats.focusVeinMoveSpeedPerNode = Math.max(0, stats.focusVeinMoveSpeedPerNode);
   stats.moveSpeed = Math.max(1, stats.moveSpeed * stats.moveSpeedMultiplier);
   stats.mineMoveMultiplier = Math.max(0.1, stats.mineMoveMultiplier);
   stats.digReach = Math.max(1, stats.digReach * stats.digReachMultiplier);
   stats.digRadius = Math.max(1, stats.digRadius);
   stats.digArc = clamp(stats.digArc, Math.PI / 18, Math.PI * 2);
   stats.digSpeed = Math.max(0.1, stats.digSpeed * stats.digSpeedMultiplier);
+  stats.sideChipEvery = Math.max(0, Math.floor(stats.sideChipEvery));
+  stats.sideChipTargets = Math.max(0, Math.floor(stats.sideChipTargets));
+  stats.sideChipPower = clamp(stats.sideChipPower, 0, 1);
+  stats.approachStrikeTravelTime = Math.max(0, stats.approachStrikeTravelTime);
+  stats.approachStrikePower = Math.max(0, stats.approachStrikePower);
+  stats.approachStrikeSideChipPower = clamp(stats.approachStrikeSideChipPower, 0, 1);
+  stats.impactWaveEvery = Math.max(0, Math.floor(stats.impactWaveEvery));
+  stats.impactWaveRadiusTiles = Math.max(0, stats.impactWaveRadiusTiles);
+  stats.impactWavePower = clamp(stats.impactWavePower, 0, 1);
+  stats.quarryModeRequiredBreaks = Math.max(0, Math.floor(stats.quarryModeRequiredBreaks));
+  stats.quarryModeWindow = Math.max(0, stats.quarryModeWindow);
+  stats.quarryModeDuration = Math.max(0, stats.quarryModeDuration);
+  stats.quarryModeMoveSpeedBonus = Math.max(0, stats.quarryModeMoveSpeedBonus);
+  stats.quarryModeDigSpeedBonus = Math.max(0, stats.quarryModeDigSpeedBonus);
+  stats.quarryModeSideFracturePower = clamp(stats.quarryModeSideFracturePower, 0, 1);
   stats.pickPower = Math.max(0.1, stats.pickPower * stats.pickPowerMultiplier);
+  stats.faultLineMaxBlocks = Math.max(0, Math.floor(stats.faultLineMaxBlocks));
+  stats.faultLinePower = clamp(stats.faultLinePower, 0, 1);
   stats.maxRunDuration = clamp(stats.maxRunDuration, 6, 45);
   stats.runDuration = clamp(stats.runDuration, 6, stats.maxRunDuration);
   stats.bonusRunDurationCap = clamp(stats.bonusRunDurationCap, stats.maxRunDuration, 60);
   stats.discoveryTimeBonus = Math.max(0, stats.discoveryTimeBonus);
+  stats.chronoOverflowThreshold = clamp(stats.chronoOverflowThreshold, 45, 60);
+  stats.chronoOverflowSpeedBonus = Math.max(0, stats.chronoOverflowSpeedBonus);
+  stats.chronoOverflowRepeatEvery = Math.max(0, Math.floor(stats.chronoOverflowRepeatEvery));
   stats.timerDrainReduction = clamp(stats.timerDrainReduction, 0, 0.5);
   stats.timerDrainMultiplier = 1 - stats.timerDrainReduction;
   stats.timeRefundAmount *= stats.timeRefundMultiplier;
   stats.bombPower = Math.max(0, stats.bombPower);
   stats.directionalBombConeTiles = Math.max(0, Math.floor(stats.directionalBombConeTiles));
   stats.crewBeaconOverkillCarry = clamp(stats.crewBeaconOverkillCarry, 0, 1);
+  stats.magneticFieldDuration = Math.max(0, stats.magneticFieldDuration);
+  stats.magneticFieldRadiusTiles = Math.max(0, stats.magneticFieldRadiusTiles);
+  stats.magneticFieldTargetingBonus = Math.max(0, stats.magneticFieldTargetingBonus);
+  stats.demolitionComboMarkDuration = Math.max(0, stats.demolitionComboMarkDuration);
+  stats.demolitionComboFinishPower = Math.max(0, stats.demolitionComboFinishPower);
+  stats.demolitionComboVeinRadiusTiles = Math.max(0, stats.demolitionComboVeinRadiusTiles);
   stats.chainPower = Math.max(0, stats.chainPower);
   stats.dronePower = Math.max(0, stats.dronePower);
   stats.laserPower = Math.max(0, stats.laserPower);
@@ -2272,6 +2481,33 @@ function normalizeMetaStats(stats) {
   stats.laserSuperPickEchoEvery = Math.max(0, Math.floor(stats.laserSuperPickEchoEvery));
   stats.laserSuperPickEchoRadiusTiles = Math.max(0, stats.laserSuperPickEchoRadiusTiles);
   stats.laserSuperPickEchoPower = clamp(stats.laserSuperPickEchoPower, 0, 1);
+  stats.superFieldRadiusTiles = Math.max(0, stats.superFieldRadiusTiles);
+  stats.superFieldPower = clamp(stats.superFieldPower, 0, 1);
+  stats.superFieldDuration = Math.max(0, stats.superFieldDuration);
+  stats.laserHeatEdgePower = clamp(stats.laserHeatEdgePower, 0, 1);
+  stats.laserHeatDuration = Math.max(0, stats.laserHeatDuration);
+  stats.laserHeatNextHitBonus = Math.max(0, stats.laserHeatNextHitBonus);
+  stats.solarDrillProcEvery = Math.max(0, Math.floor(stats.solarDrillProcEvery));
+  stats.solarDrillBeamDuration = Math.max(0, stats.solarDrillBeamDuration);
+  stats.solarDrillFinalBurstPower = Math.max(0, stats.solarDrillFinalBurstPower);
+  stats.richVeinYieldBonus = Math.max(0, stats.richVeinYieldBonus);
+  stats.richVeinCompletionBonus = Math.max(0, Math.floor(stats.richVeinCompletionBonus));
+  stats.tripleSampleEvery = Math.max(0, Math.floor(stats.tripleSampleEvery));
+  stats.tripleSampleBonusYield = Math.max(0, Math.floor(stats.tripleSampleBonusYield));
+  stats.tripleSampleNextNodeDamage = clamp(stats.tripleSampleNextNodeDamage, 0, 1);
+  stats.overkillReservoirRatio = clamp(stats.overkillReservoirRatio, 0, 1);
+  stats.overkillReservoirYieldThreshold = Math.max(0, stats.overkillReservoirYieldThreshold);
+  stats.depthContractStep = Math.max(0, stats.depthContractStep);
+  stats.depthContractBonusPerStack = Math.max(0, stats.depthContractBonusPerStack);
+  stats.depthContractMaxStacks = Math.max(0, Math.floor(stats.depthContractMaxStacks));
+  stats.relicEffectDuration = Math.max(0, stats.relicEffectDuration);
+  stats.relicEffectPower = Math.max(0, stats.relicEffectPower);
+  stats.fortunePityThreshold = Math.max(0, Math.floor(stats.fortunePityThreshold));
+  stats.fortuneWheelCycleLength = Math.max(0, Math.floor(stats.fortuneWheelCycleLength));
+  stats.motherlodeTriggerBreaks = Math.max(0, Math.floor(stats.motherlodeTriggerBreaks));
+  stats.motherlodeYieldMultiplier = Math.max(1, stats.motherlodeYieldMultiplier);
+  stats.motherlodeCompletionCache = Math.max(0, Math.floor(stats.motherlodeCompletionCache));
+  stats.motherlodeCompletionTimeBonus = Math.max(0, stats.motherlodeCompletionTimeBonus);
 
   for (const key of probabilityKeys) {
     stats[key] = clamp(stats[key], 0, 0.95);

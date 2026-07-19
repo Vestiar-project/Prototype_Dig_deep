@@ -4048,6 +4048,54 @@ summary:focus-visible,
   letter-spacing: 0.045em;
 }
 
+.perk-status-rail {
+  position: fixed;
+  z-index: 26;
+  top: calc(var(--safe-top) + 99px);
+  left: 50%;
+  display: flex;
+  max-width: min(720px, calc(100vw - var(--safe-left) - var(--safe-right) - 24px));
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.perk-status-rail__item {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--perk-color, #83e7d4) 55%, #14363a);
+  color: #e9fff8;
+  background: rgba(3, 18, 23, 0.86);
+  box-shadow: inset 0 0 12px color-mix(in srgb, var(--perk-color, #83e7d4) 10%, transparent);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.055em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.perk-status-rail__item > i {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--perk-color, #83e7d4);
+  box-shadow: 0 0 8px var(--perk-color, #83e7d4);
+}
+
+.perk-status-rail__item > strong {
+  color: var(--perk-color, #83e7d4);
+  font-variant-numeric: tabular-nums;
+}
+
+.perk-status-rail__item:nth-child(n + 4) { display: none; }
+
 /* Geological sector selection */
 
 .sector-select-screen {
@@ -5007,6 +5055,13 @@ summary:focus-visible,
   }
 
   .micro-event-banner__timer { min-width: 42px; font-size: 11px; }
+  .perk-status-rail {
+    top: calc(var(--safe-top) + 78px);
+    max-width: calc(100vw - var(--safe-left) - var(--safe-right) - 14px);
+    gap: 3px;
+  }
+  .perk-status-rail__item { padding: 3px 5px; font-size: 7px; }
+  .perk-status-rail__item:nth-child(n + 3) { display: none; }
   .sector-select,
   .collection-shell,
   .balance-lab { width: 100%; max-height: calc(100dvh - 16px); }
