@@ -104,10 +104,12 @@
       <aside
         id="tutorialCoach"
         class="context-tutorial panel-frame hidden"
-        role="status"
+        role="dialog"
+        aria-modal="true"
         aria-live="polite"
         aria-atomic="true"
         aria-labelledby="tutorialTitle"
+        aria-describedby="tutorialText"
       >
         <div class="context-tutorial__marker" aria-hidden="true">
           <span>01</span>
@@ -380,6 +382,19 @@
               <kbd>/</kbd>
             </label>
 
+            <aside id="nextBreakthrough" class="next-breakthrough" aria-live="polite">
+              <span class="next-breakthrough__mark" aria-hidden="true">◎</span>
+              <span class="next-breakthrough__copy">
+                <small>СЛЕДУЮЩИЙ ПРОРЫВ</small>
+                <strong id="nextBreakthroughName">ВЫБЕРИТЕ УЗЕЛ</strong>
+                <span id="nextBreakthroughNeed">Нажмите на модуль в дереве, чтобы следить за его ценой.</span>
+              </span>
+              <span class="next-breakthrough__actions">
+                <button id="buyMaxSelectedUpgrade" class="next-breakthrough__max" type="button">КУПИТЬ MAX</button>
+                <button id="pinSelectedUpgrade" class="next-breakthrough__pin" type="button">ЗАКРЕПИТЬ</button>
+              </span>
+            </aside>
+
             <div id="oreFocusPanel" class="ore-focus-panel hidden" aria-label="Приоритет поиска руды">
               <span class="ore-focus-panel__title"><b>⌾ РУДНЫЙ ФОКУС</b><small>Игнорировать остальные жилы · радиус ×2,15</small></span>
               <div id="oreFocusChoices" class="ore-focus-choices" role="group" aria-label="Выберите приоритетную руду"></div>
@@ -424,7 +439,7 @@
           </div>
 
           <footer class="upgrade-footer">
-            <p><span class="mouse-key" aria-hidden="true">↖</span> наведите для описания <span>•</span> нажмите для установки <span>•</span> прокручивайте дерево</p>
+            <p><span class="mouse-key" aria-hidden="true">↖</span> наведите для описания <span>•</span> нажмите для установки <span>•</span> Shift + клик — купить максимум <span>•</span> прокручивайте дерево</p>
             <button id="wipeSave" class="danger-link" type="button">СБРОСИТЬ ПРОГРЕСС</button>
           </footer>
         </div>

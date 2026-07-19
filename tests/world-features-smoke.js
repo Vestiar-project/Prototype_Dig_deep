@@ -293,6 +293,45 @@ assert.equal(eventWorld.triggerMicroEvent(second.id), null);
 eventWorld.reset("micro-event-probe", { sectorId: "ore_ridge" });
 assert.deepEqual(eventWorld.getMicroEvents(), eventTwin.getMicroEvents(), "reset must restore deterministic ready events");
 
+const stagedFingerprint = tileFingerprint(eventWorld);
+const stagedEvent = eventWorld.stageMicroEventNearSpawn();
+const stagedTwin = eventTwin.stageMicroEventNearSpawn();
+const stagedSpawn = eventWorld.getSpawn();
+assert.ok(stagedEvent, "a dry-shift pity event must be stageable near the landing chamber");
+assert.deepEqual(stagedEvent, stagedTwin, "staged pity events must stay deterministic");
+assert.ok(
+  Math.hypot(stagedEvent.tx - stagedSpawn.tx, stagedEvent.ty - stagedSpawn.ty) <= 6,
+  "a staged event must fit inside early sense range",
+);
+assert.ok(
+  !["air", "bedrock"].includes(eventWorld.getTile(stagedEvent.tx, stagedEvent.ty)?.kind),
+  "a staged event must remain a physical underground target",
+);
+if (stagedEvent.type === "ancient_container") assertContainerLoot(eventWorld, stagedEvent);
+assert.equal(eventWorld.getMicroEvents().length, UNDERGROUND_EVENT_TYPES.length);
+assert.equal(tileFingerprint(eventWorld), stagedFingerprint, "staging an event must not change rock or ore density");
+
+let checkedStagedEvents = 0;
+for (let seed = 0; seed < 12; seed += 1) {
+  for (const definition of UNDERGROUND_EVENT_TYPES) {
+    const surfaceWorld = new MineWorld(ORE_TYPES, `surface-pity-${seed}-${definition.id}`);
+    const surfaceStaged = surfaceWorld.stageMicroEventNearSpawn(definition.id, surfaceWorld.getSpawn());
+    assert.ok(surfaceStaged, `surface pity must stage ${definition.id} for seed ${seed}`);
+
+    const liftWorld = new MineWorld(ORE_TYPES, `lift-pity-${seed}-${definition.id}`);
+    const lift = liftWorld.getLiftStart(180, 0.65, 180, { unlockedTierCap: 9 });
+    assert.ok(lift, `lift fixture must exist for ${definition.id} seed ${seed}`);
+    const liftStaged = liftWorld.stageMicroEventNearSpawn(definition.id, lift);
+    assert.ok(liftStaged, `lift pity must stage ${definition.id} for seed ${seed}`);
+    assert.ok(
+      Math.hypot(liftStaged.tx - lift.tx, liftStaged.ty - lift.ty) <= 8
+        || (lift.target && liftStaged.tx === lift.target.tx && liftStaged.ty === lift.target.ty),
+      "lift pity must stay near the current landing or its guaranteed target",
+    );
+    checkedStagedEvents += 2;
+  }
+}
+
 // Every sector and seed starts with the same short, mineable economy seam:
 // copper is visible immediately, coal follows behind it, and another copper
 // tile rewards continuing down the newly opened shaft.
@@ -439,6 +478,7 @@ console.log(JSON.stringify({
   diagnosticProfiles: legacyProfiles.length,
   microEventTypes: events.length,
   checkedStarterSeams,
+  checkedStagedEvents,
   maxExpectedNodeBudgetDrift: Number(maxExpectedNodeBudgetDrift.toFixed(4)),
   maxGeneratedNodeBudgetDrift: Number(maxGeneratedNodeBudgetDrift.toFixed(4)),
   cavernAir: cavern.undergroundAir,

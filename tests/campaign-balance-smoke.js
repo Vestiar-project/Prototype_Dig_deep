@@ -2,6 +2,16 @@
 
 const assert = require("node:assert/strict");
 
+// Production stepping derives a synthetic timestamp from performance.now().
+// Freeze the clock before loading the runtime: sub-millisecond process-uptime
+// differences at a 50 ms boundary can otherwise add or remove one strike and
+// cascade into a different campaign purchase order for the same seed.
+Object.defineProperty(globalThis, "performance", {
+  value: Object.freeze({ now: () => 0 }),
+  configurable: true,
+});
+Date.now = () => 1_700_000_000_000;
+
 // Reuse the real headless runtime: this keeps movement, targeting, exact ore
 // recipes, purchases, timers, procs and save progression in the simulation.
 require("./runtime-smoke.js");
@@ -17,15 +27,75 @@ function seededRandom(seed) {
   };
 }
 
-function simulateCampaign(seed, maxRuns = 360) {
+const MECHANIC_UNLOCKS = Object.freeze([
+  ["sense_echo_pulse", 1], ["sense_clear_signal", 1], ["sense_vein_whisper", 1],
+  ["sense_seismic_memory", 1], ["sense_ore_focus", 1], ["sense_priority_tuning", 1],
+  ["sense_ghost_outline", 1], ["sense_second_fix", 1], ["sense_frequency_swing", 1],
+  ["sense_deaf_knock", 1], ["sense_triangular_fix", 1], ["sense_earth_call", 1],
+  ["sense_triangular_fix", 2],
+  ["dig_sweeping_arc", 1], ["dig_twin_stroke", 1], ["dig_precision_path", 1],
+  ["dig_wall_bite", 1], ["dig_omni_swing", 1], ["dig_least_resistance", 1],
+  ["dig_mine_lift", 1], ["dig_quarry_presence", 1],
+  ["power_furious_swing", 1], ["power_shatterpoint", 1], ["power_momentum", 1],
+  ["power_overcharge_strike", 1], ["power_one_hit_legend", 1],
+  ["power_sample_calibration", 1], ["power_corebreaker", 2], ["power_mountain_splitter", 1],
+  ["time_clockwork_heart", 3], ["time_clockwork_heart", 6], ["time_clockwork_heart", 8],
+  ["time_capsule", 1], ["time_capsule", 5], ["time_thirty_second_oath", 1],
+  ["gadgets_powder_pocket", 1], ["gadgets_cluster_shell", 1], ["gadgets_sticky_charge", 1],
+  ["gadgets_chain_spark", 1], ["gadgets_shock_capsule", 1], ["gadgets_magnet_mine", 1],
+  ["gadgets_scout_drone", 1], ["gadgets_drone_swarm", 1], ["gadgets_volatile_jackpot", 1],
+  ["gadgets_geo_charge", 1], ["gadgets_crew_beacon", 1], ["gadgets_demolition_orchestra", 1],
+  ["tools_iron_pick", 1], ["tools_steel_pick", 1], ["tools_pneumatic_pick", 1],
+  ["tools_super_pick", 1], ["tools_super_field", 1], ["tools_laser_emitter", 1],
+  ["tools_laser_width", 1], ["tools_laser_splitter", 1], ["tools_mirror_crystal", 1],
+  ["tools_super_pick_echo", 1], ["tools_solar_drill", 1],
+  ["fortune_glimmer_hunter", 1], ["fortune_rich_vein", 1], ["fortune_double_yield", 1],
+  ["fortune_triple_seam", 1], ["fortune_alchemist_scales", 1], ["fortune_deep_market", 1],
+  ["fortune_golden_touch", 1], ["fortune_relic_magnet", 1], ["fortune_wheel", 1],
+  ["fortune_findings_catalog", 1], ["fortune_motherlode_covenant", 1],
+]);
+
+const FEATURED_MECHANICS = new Set([
+  "gadgets_powder_pocket@1", "dig_sweeping_arc@1", "tools_iron_pick@1",
+  "dig_least_resistance@1", "dig_omni_swing@1", "tools_steel_pick@1",
+  "gadgets_scout_drone@1", "tools_pneumatic_pick@1", "sense_ore_focus@1",
+  "sense_priority_tuning@1", "sense_second_fix@1", "sense_frequency_swing@1",
+  "sense_triangular_fix@1", "fortune_triple_seam@1", "power_sample_calibration@1",
+  "sense_triangular_fix@2",
+  "sense_deaf_knock@1", "time_capsule@1", "time_clockwork_heart@6",
+  "tools_super_pick@1", "tools_super_field@1",
+  "power_corebreaker@2",
+  "dig_mine_lift@1", "tools_laser_emitter@1", "gadgets_geo_charge@1",
+  "gadgets_crew_beacon@1", "fortune_relic_magnet@1", "tools_mirror_crystal@1",
+  "tools_super_pick_echo@1",
+  "sense_earth_call@1", "dig_quarry_presence@1", "power_mountain_splitter@1",
+  "time_thirty_second_oath@1", "gadgets_demolition_orchestra@1",
+  "fortune_motherlode_covenant@1", "tools_solar_drill@1",
+]);
+
+const CAPSTONES = [
+  "sense_earth_call", "dig_quarry_presence", "power_mountain_splitter",
+  "time_thirty_second_oath", "gadgets_demolition_orchestra",
+  "fortune_motherlode_covenant", "tools_solar_drill",
+];
+
+function simulateCampaign(seed, maxRuns = 420) {
   api.debugResetProgress();
   Math.random = seededRandom(seed);
   const firstOreSeconds = {};
   const milestones = {};
+  const mechanicSeconds = {};
   let activeSeconds = 0;
   let elapsedSeconds = 0;
   let completed = false;
   let runs = 0;
+  let maxWorkshopLevels = 0;
+  let maxWorkshopMechanics = 0;
+  let maxWorkshop = null;
+  const solarApproachWindow = [];
+  let solarApproach = null;
+  const frequencyApproachWindow = [];
+  let frequencyApproach = null;
 
   for (let run = 1; run <= maxRuns; run += 1) {
     api.startRun({ seed: `campaign-${seed}-${run}` });
@@ -34,9 +104,6 @@ function simulateCampaign(seed, maxRuns = 360) {
     const report = snapshot.lastRunReport;
     assert.equal(snapshot.mode, "result", `run ${run} must end normally`);
     activeSeconds += report?.duration || 0;
-    // A first-time player needs time to read the haul, inspect icon tooltips,
-    // choose/buy a node and launch the next shift. Ten seconds is still a
-    // conservative surface interval for a 102-node tree.
     elapsedSeconds += (report?.duration || 0) + 10;
     runs = run;
 
@@ -44,30 +111,120 @@ function simulateCampaign(seed, maxRuns = 360) {
       if (amount > 0 && firstOreSeconds[oreId] == null) firstOreSeconds[oreId] = elapsedSeconds;
     }
 
-    api.debugAutoBuyAffordable(300);
+    const beforeCatalog = api.getUpgradeCatalog();
+    const beforeLevels = Object.fromEntries(beforeCatalog.map((definition) => [definition.id, definition.level || 0]));
+    if (process.env.CAMPAIGN_SNAPSHOT_FREQUENCY === "1" && (beforeLevels.sense_ore_focus > 0) && !(beforeLevels.sense_frequency_swing > 0)) {
+      const frequency = beforeCatalog.find((definition) => definition.id === "sense_frequency_swing");
+      const inventory = { ...(snapshot.inventory || {}) };
+      const recipe = { ...(frequency?.recipe || {}) };
+      frequencyApproachWindow.push({
+        run,
+        minute: Number((elapsedSeconds / 60).toFixed(1)),
+        priorityLevel: beforeLevels.sense_priority_tuning || 0,
+        secondFixLevel: beforeLevels.sense_second_fix || 0,
+        available: Boolean(frequency?.available),
+        affordable: Boolean(frequency?.affordable),
+        focusedOreId: snapshot.focusedOreId,
+        inventory,
+        recipe,
+        deficits: Object.fromEntries(Object.entries(recipe).map(([oreId, amount]) => (
+          [oreId, Math.max(0, amount - (inventory[oreId] || 0))]
+        ))),
+      });
+      if (frequencyApproachWindow.length > 4) frequencyApproachWindow.shift();
+    }
+    if (process.env.CAMPAIGN_SNAPSHOT_SOLAR === "1" && !(beforeLevels.tools_solar_drill > 0)) {
+      const solar = beforeCatalog.find((definition) => definition.id === "tools_solar_drill");
+      const inventory = { ...(snapshot.inventory || {}) };
+      const recipe = { ...(solar?.recipe || {}) };
+      const gateIds = ["tools_laser_splitter", "power_corebreaker", "tools_mirror_crystal", "tools_super_pick_echo", "tools_solar_drill"];
+      const gates = Object.fromEntries(gateIds.map((id) => {
+        const definition = beforeCatalog.find((candidate) => candidate.id === id);
+        const gateRecipe = { ...(definition?.recipe || {}) };
+        return [id, {
+          level: definition?.level || 0,
+          available: Boolean(definition?.available),
+          affordable: Boolean(definition?.affordable),
+          recipe: gateRecipe,
+          deficits: Object.fromEntries(Object.entries(gateRecipe).map(([oreId, amount]) => (
+            [oreId, Math.max(0, amount - (inventory[oreId] || 0))]
+          ))),
+        }];
+      }));
+      solarApproachWindow.push({
+        run,
+        minute: Number((elapsedSeconds / 60).toFixed(1)),
+        available: Boolean(solar?.available),
+        affordable: Boolean(solar?.affordable),
+        focusedOreId: snapshot.focusedOreId,
+        inventory,
+        recipe,
+        deficits: Object.fromEntries(Object.entries(recipe).map(([oreId, amount]) => (
+          [oreId, Math.max(0, amount - (inventory[oreId] || 0))]
+        ))),
+        gates,
+      });
+      if (solarApproachWindow.length > 3) solarApproachWindow.shift();
+    }
+    const purchase = api.debugAutoBuyAffordable(300);
+    if (process.env.CAMPAIGN_SNAPSHOT_SOLAR === "1" && purchase.bought.includes("tools_solar_drill")) {
+      solarApproach = solarApproachWindow.map((entry) => ({ ...entry }));
+    }
+    if (process.env.CAMPAIGN_SNAPSHOT_FREQUENCY === "1" && purchase.bought.includes("sense_frequency_swing")) {
+      frequencyApproach = frequencyApproachWindow.map((entry) => ({ ...entry }));
+    }
+    if (purchase.bought.length > maxWorkshopLevels) {
+      maxWorkshopLevels = purchase.bought.length;
+      maxWorkshop = { run, minute: Number((elapsedSeconds / 60).toFixed(1)), bought: [...purchase.bought] };
+    }
     snapshot = api.getSnapshot();
     const catalog = api.getUpgradeCatalog();
     const levelOf = (id) => catalog.find((definition) => definition.id === id)?.level || 0;
-    if (!milestones.ironPick && levelOf("tools_iron_pick") > 0) milestones.ironPick = elapsedSeconds;
-    if (!milestones.steelPick && levelOf("tools_steel_pick") > 0) milestones.steelPick = elapsedSeconds;
-    if (!milestones.pneumaticPick && levelOf("tools_pneumatic_pick") > 0) milestones.pneumaticPick = elapsedSeconds;
-    if (!milestones.scoutDrone && levelOf("gadgets_scout_drone") > 0) milestones.scoutDrone = elapsedSeconds;
-    if (!milestones.superPick && levelOf("tools_super_pick") > 0) milestones.superPick = elapsedSeconds;
-    if (!milestones.focus && levelOf("sense_ore_focus") > 0) milestones.focus = elapsedSeconds;
-    if (!milestones.laser && levelOf("tools_laser_emitter") > 0) milestones.laser = elapsedSeconds;
-    if (!milestones.solarDrill && levelOf("tools_solar_drill") > 0) milestones.solarDrill = elapsedSeconds;
-    if (!milestones.secondFix && levelOf("sense_second_fix") > 0) milestones.secondFix = elapsedSeconds;
-    if (!milestones.deafKnock && levelOf("sense_deaf_knock") > 0) milestones.deafKnock = elapsedSeconds;
-    if (!milestones.mineLift && levelOf("dig_mine_lift") > 0) milestones.mineLift = elapsedSeconds;
-    if (!milestones.leastResistance && levelOf("dig_least_resistance") > 0) milestones.leastResistance = elapsedSeconds;
-    if (!milestones.triangularFix && levelOf("sense_triangular_fix") > 0) milestones.triangularFix = elapsedSeconds;
-    if (!milestones.geoCharge && levelOf("gadgets_geo_charge") > 0) milestones.geoCharge = elapsedSeconds;
-    if (!milestones.sampleCalibration && levelOf("power_sample_calibration") > 0) milestones.sampleCalibration = elapsedSeconds;
-    if (!milestones.frequencySwing && levelOf("sense_frequency_swing") > 0) milestones.frequencySwing = elapsedSeconds;
-    if (!milestones.mirrorCrystal && levelOf("tools_mirror_crystal") > 0) milestones.mirrorCrystal = elapsedSeconds;
-    if (!milestones.superPickEcho && levelOf("tools_super_pick_echo") > 0) milestones.superPickEcho = elapsedSeconds;
-    if (!milestones.crewBeacon && levelOf("gadgets_crew_beacon") > 0) milestones.crewBeacon = elapsedSeconds;
-    if (!milestones.finalPerk && levelOf("core_bon_voyage") > 0) milestones.finalPerk = elapsedSeconds;
+    let workshopMechanics = 0;
+    for (const [id, level] of MECHANIC_UNLOCKS) {
+      const key = `${id}@${level}`;
+      if ((beforeLevels[id] || 0) < level && levelOf(id) >= level) {
+        mechanicSeconds[key] = elapsedSeconds;
+        workshopMechanics += 1;
+      }
+    }
+    maxWorkshopMechanics = Math.max(maxWorkshopMechanics, workshopMechanics);
+
+    const track = (key, id, level = 1) => {
+      if (!milestones[key] && levelOf(id) >= level) milestones[key] = elapsedSeconds;
+    };
+    track("ironPick", "tools_iron_pick");
+    track("steelPick", "tools_steel_pick");
+    track("pneumaticPick", "tools_pneumatic_pick");
+    track("scoutDrone", "gadgets_scout_drone");
+    track("superPick", "tools_super_pick");
+    track("focus", "sense_ore_focus");
+    track("priorityTuning", "sense_priority_tuning");
+    track("laser", "tools_laser_emitter");
+    track("solarDrill", "tools_solar_drill");
+    track("secondFix", "sense_second_fix");
+    track("frequencySwing", "sense_frequency_swing");
+    track("sampleCalibration", "power_sample_calibration");
+    track("timeCapsule", "time_capsule");
+    track("heartSix", "time_clockwork_heart", 6);
+    track("impactWave", "dig_omni_swing");
+    track("mineLift", "dig_mine_lift");
+    track("mineLiftTwo", "dig_mine_lift", 2);
+    track("mineLiftThree", "dig_mine_lift", 3);
+    track("leastResistance", "dig_least_resistance");
+    track("triangularFix", "sense_triangular_fix");
+    track("triangularFixTwo", "sense_triangular_fix", 2);
+    track("geoCharge", "gadgets_geo_charge");
+    track("mirrorCrystal", "tools_mirror_crystal");
+    track("superPickEcho", "tools_super_pick_echo");
+    track("crewBeacon", "gadgets_crew_beacon");
+    track("earthCall", "sense_earth_call");
+    track("quarry", "dig_quarry_presence");
+    track("mountainSplitter", "power_mountain_splitter");
+    track("chrono", "time_thirty_second_oath");
+    track("orchestra", "gadgets_demolition_orchestra");
+    track("motherlode", "fortune_motherlode_covenant");
+    track("finalPerk", "core_bon_voyage");
     if (snapshot.campaign.ready) {
       completed = true;
       break;
@@ -75,42 +232,109 @@ function simulateCampaign(seed, maxRuns = 360) {
   }
 
   const snapshot = api.getSnapshot();
+  const featuredEntries = Object.entries(mechanicSeconds)
+    .filter(([key]) => FEATURED_MECHANICS.has(key))
+    .sort((left, right) => left[1] - right[1]);
+  const featuredTimes = featuredEntries.map(([, seconds]) => seconds);
+  const featuredGaps = featuredTimes.slice(1).map((seconds, index) => seconds - featuredTimes[index]);
+  const maxFeaturedGapIndex = featuredGaps.indexOf(Math.max(...featuredGaps));
+  const mechanicTimes = Object.values(mechanicSeconds);
+  const lastTwentyStart = elapsedSeconds * 0.8;
   return {
     seed,
     completed,
     runs,
     activeMinutes: Number((activeSeconds / 60).toFixed(1)),
-    elapsedMinutes: Number((elapsedSeconds / 60).toFixed(1)),
+    elapsedMinutes: Number((elapsedSeconds / 60).toFixed(2)),
     purchasedLevels: snapshot.purchasedLevels,
     lifetimeChunks: snapshot.campaign.lifetimeChunks,
+    maxWorkshopLevels,
+    maxWorkshopMechanics,
+    maxWorkshop,
+    ...(solarApproach ? { solarApproach } : {}),
+    ...(frequencyApproach ? { frequencyApproach } : {}),
+    maxFeaturedGapMinutes: Number(((featuredGaps.length ? Math.max(...featuredGaps) : 0) / 60).toFixed(1)),
+    maxFeaturedGapBetween: maxFeaturedGapIndex >= 0
+      ? [featuredEntries[maxFeaturedGapIndex][0], featuredEntries[maxFeaturedGapIndex + 1][0]]
+      : [],
+    mechanicsFirstHalfShare: Number((mechanicTimes.filter((seconds) => seconds <= elapsedSeconds * 0.5).length / mechanicTimes.length).toFixed(3)),
+    mechanicsLastTwentyShare: Number((mechanicTimes.filter((seconds) => seconds >= lastTwentyStart).length / mechanicTimes.length).toFixed(3)),
     firstOreMinutes: Object.fromEntries(Object.entries(firstOreSeconds).map(([id, seconds]) => [id, Number((seconds / 60).toFixed(1))])),
-    milestoneMinutes: Object.fromEntries(Object.entries(milestones).map(([id, seconds]) => [id, Number((seconds / 60).toFixed(1))])),
+    milestoneMinutes: Object.fromEntries(Object.entries(milestones).map(([id, seconds]) => [id, Number((seconds / 60).toFixed(2))])),
   };
 }
 
-const seeds = [17, 73, 211];
+const seeds = process.env.CAMPAIGN_SINGLE_SEED
+  ? [Number(process.env.CAMPAIGN_SINGLE_SEED)]
+  : [17, 43, 73, 137, 211, 353];
 const campaigns = seeds.map((seed) => simulateCampaign(seed));
+if (process.env.CAMPAIGN_AUDIT_ONLY === "1") {
+  console.log(JSON.stringify({ auditOnly: true, campaigns }));
+  process.exit(0);
+}
 for (const campaign of campaigns) {
   const progressAt = (milestone) => (campaign.milestoneMinutes[milestone] || 0) / campaign.elapsedMinutes;
   assert.ok(campaign.firstOreMinutes.coal <= 0.4, "starter coal must arrive in the first two shifts");
   assert.ok(campaign.firstOreMinutes.iron <= 15, "iron must enter the economy during the opening phase");
   assert.ok(campaign.milestoneMinutes.focus >= campaign.firstOreMinutes.amethyst, "ore focus must unlock only after its post-T5 sample appears");
-  assert.ok(
-    campaign.milestoneMinutes.focus >= campaign.elapsedMinutes * 0.3,
-    `ore focus should sit beyond the opening 30% of progression: ${JSON.stringify(campaign)}`,
-  );
+  assert.ok(progressAt("focus") >= 0.3, `ore focus should sit beyond the opening 30%: ${JSON.stringify(campaign)}`);
   assert.equal(campaign.completed, true, `campaign ${campaign.seed} must be completable`);
-  // This is an optimized bot with only ten seconds of surface reading and
-  // purchasing per shift; 50+ simulated minutes maps to roughly 1–2 hours for
-  // a human first playthrough.
-  assert.ok(campaign.elapsedMinutes >= 50, `campaign ${campaign.seed} must not collapse into a short session`);
-  assert.ok(campaign.elapsedMinutes <= 135, `campaign ${campaign.seed} must stay near the one-to-two-hour target`);
-  assert.ok(progressAt("steelPick") >= 0.2 && progressAt("steelPick") <= 0.45, `steel pick needs a distinct early phase: ${JSON.stringify(campaign)}`);
-  assert.ok(progressAt("pneumaticPick") >= 0.32 && progressAt("pneumaticPick") <= 0.58, `pneumatic pick must land around the first half: ${JSON.stringify(campaign)}`);
-  assert.ok(progressAt("scoutDrone") >= 0.3 && progressAt("scoutDrone") <= 0.55, `scout drone must join before the middle game closes: ${JSON.stringify(campaign)}`);
-  assert.ok(progressAt("superPick") >= 0.58 && progressAt("superPick") <= 0.78, `super pick needs its own late-middle phase: ${JSON.stringify(campaign)}`);
-  assert.ok(progressAt("laser") >= 0.75 && progressAt("laser") <= 0.94, `laser must arrive before the final cleanup: ${JSON.stringify(campaign)}`);
-  assert.ok(progressAt("solarDrill") >= 0.86 && progressAt("solarDrill") <= 0.98, `solar drill must remain a visible prefinal reward: ${JSON.stringify(campaign)}`);
+  assert.ok(campaign.elapsedMinutes >= 50 && campaign.elapsedMinutes <= 82, `campaign ${campaign.seed} should remain a 50-82 minute optimized run: ${JSON.stringify(campaign)}`);
+  assert.ok(progressAt("leastResistance") >= 0.08 && progressAt("leastResistance") <= 0.3, `route planning should fill the early progression gap: ${JSON.stringify(campaign)}`);
+  assert.ok(progressAt("impactWave") >= 0.15 && progressAt("impactWave") <= 0.42, `impact wave should arrive before midgame: ${JSON.stringify(campaign)}`);
+  assert.ok(progressAt("mineLift") >= 0.45 && progressAt("mineLift") <= 0.72, `mine lift should land around the middle 55-65% band: ${JSON.stringify(campaign)}`);
+  for (const followup of ["priorityTuning", "sampleCalibration", "frequencySwing", "secondFix"]) {
+    assert.ok(
+      campaign.milestoneMinutes[followup] >= campaign.milestoneMinutes.focus
+        && campaign.milestoneMinutes[followup] - campaign.milestoneMinutes.focus <= 10,
+      `${followup} should become useful within ten minutes after ore focus: ${JSON.stringify(campaign)}`,
+    );
+  }
+  const capstoneProgress = CAPSTONES.map((id) => {
+    const key = ({
+      sense_earth_call: "earthCall",
+      dig_quarry_presence: "quarry",
+      power_mountain_splitter: "mountainSplitter",
+      time_thirty_second_oath: "chrono",
+      gadgets_demolition_orchestra: "orchestra",
+      fortune_motherlode_covenant: "motherlode",
+      tools_solar_drill: "solarDrill",
+    })[id];
+    return progressAt(key);
+  }).sort((left, right) => left - right);
+  // Workshops advance in whole shifts, so a 0.5-1.2 minute purchase quantum
+  // needs a small tolerance around the intended 68% late-game boundary.
+  assert.ok(capstoneProgress[0] >= 0.675, `capstones should start in the late game: ${JSON.stringify(campaign)}`);
+  const lastCapstoneMinute = Math.max(
+    campaign.milestoneMinutes.earthCall,
+    campaign.milestoneMinutes.quarry,
+    campaign.milestoneMinutes.mountainSplitter,
+    campaign.milestoneMinutes.chrono,
+    campaign.milestoneMinutes.orchestra,
+    campaign.milestoneMinutes.motherlode,
+    campaign.milestoneMinutes.solarDrill,
+  );
+  assert.ok(
+    campaign.milestoneMinutes.finalPerk - lastCapstoneMinute >= 0.9,
+    `the finale must wait for at least one full preparation shift after the last capstone: ${JSON.stringify(campaign)}`,
+  );
+  assert.ok(capstoneProgress.at(-1) - capstoneProgress[0] >= 0.12, `capstones must not arrive as one late cascade: ${JSON.stringify(campaign)}`);
+  assert.ok(campaign.maxWorkshopLevels <= 40, `one haul must not collapse dozens of late levels at once: ${JSON.stringify(campaign)}`);
+  assert.ok(campaign.maxWorkshopMechanics <= 5, `one haul must not introduce more than five mechanics: ${JSON.stringify(campaign)}`);
+  assert.ok(campaign.maxFeaturedGapMinutes <= 10, `featured mechanics should arrive about every 4-6 minutes without a long drought: ${JSON.stringify(campaign)}`);
+  assert.ok(campaign.mechanicsFirstHalfShare >= 0.3, `the first half needs a meaningful share of mechanics: ${JSON.stringify(campaign)}`);
+  assert.ok(campaign.mechanicsLastTwentyShare <= 0.4, `the final fifth must not contain most mechanics: ${JSON.stringify(campaign)}`);
 }
 
-console.log(JSON.stringify({ ok: true, campaigns }));
+const elapsed = campaigns.map((campaign) => campaign.elapsedMinutes).sort((left, right) => left - right);
+const median = elapsed[Math.floor(elapsed.length / 2)];
+console.log(JSON.stringify({
+  ok: true,
+  sampleSize: campaigns.length,
+  elapsedRangeMinutes: [elapsed[0], elapsed.at(-1)],
+  medianElapsedMinutes: median,
+  worstWorkshopLevels: Math.max(...campaigns.map((campaign) => campaign.maxWorkshopLevels)),
+  worstWorkshopMechanics: Math.max(...campaigns.map((campaign) => campaign.maxWorkshopMechanics)),
+  worstFeaturedGapMinutes: Math.max(...campaigns.map((campaign) => campaign.maxFeaturedGapMinutes)),
+  campaigns,
+}));

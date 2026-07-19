@@ -527,6 +527,83 @@ class MineWorld {
       .map((event) => this._publicMicroEvent(event));
   }
 
+  /**
+   * Moves one still-unused event into a short, reachable side passage near the
+   * landing chamber. Campaign pacing calls this only after several dry shifts;
+   * normal world generation and ore/rock density remain untouched.
+   */
+  stageMicroEventNearSpawn(preferredType = null, anchor = null) {
+    const candidates = this._undergroundEvents.filter((event) => (
+      !event.consumed && (!preferredType || event.type === preferredType)
+    ));
+    if (!candidates.length) return null;
+    const event = candidates[hashSeed(`${this.seed}:staged-event:${preferredType || "any"}`) % candidates.length];
+    const origin = anchor && Number.isFinite(Number(anchor.tx)) && Number.isFinite(Number(anchor.ty))
+      ? { tx: Math.floor(Number(anchor.tx)), ty: Math.floor(Number(anchor.ty)) }
+      : this._spawn;
+    const offsets = [
+      [0, 2], [2, 2], [-2, 2], [0, 3], [2, 1], [-2, 1], [1, 3], [-1, 3],
+    ];
+    const coordinates = offsets.map(([offsetX, offsetY]) => ({
+      tx: origin.tx + offsetX,
+      ty: origin.ty + offsetY,
+    }));
+    if (anchor?.target && Number.isFinite(Number(anchor.target.tx)) && Number.isFinite(Number(anchor.target.ty))) {
+      coordinates.push({ tx: Math.floor(Number(anchor.target.tx)), ty: Math.floor(Number(anchor.target.ty)) });
+    }
+    // A lift chamber or a cave-heavy surface seed can make every hand-picked
+    // offset air. Deterministic square rings guarantee a solid fallback while
+    // keeping the nearest viable location first.
+    for (let radius = 2; radius <= 7; radius += 1) {
+      for (let offsetY = 0; offsetY <= radius; offsetY += 1) {
+        for (let offsetX = -radius; offsetX <= radius; offsetX += 1) {
+          if (Math.max(Math.abs(offsetX), Math.abs(offsetY)) !== radius) continue;
+          coordinates.push({ tx: origin.tx + offsetX, ty: origin.ty + offsetY });
+        }
+      }
+      for (let offsetY = -1; offsetY >= -radius; offsetY -= 1) {
+        for (let offsetX = -radius; offsetX <= radius; offsetX += 1) {
+          if (Math.max(Math.abs(offsetX), Math.abs(offsetY)) !== radius) continue;
+          coordinates.push({ tx: origin.tx + offsetX, ty: origin.ty + offsetY });
+        }
+      }
+    }
+    let location = null;
+    const checked = new Set();
+    for (const coordinate of coordinates) {
+      const tx = clamp(coordinate.tx, 2, WORLD_CONFIG.WIDTH - 3);
+      const ty = clamp(coordinate.ty, 2, WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 2);
+      const key = `${tx}:${ty}`;
+      if (checked.has(key)) continue;
+      checked.add(key);
+      const tile = this.getTile(tx, ty);
+      if (!tile || tile.kind === "air" || tile.kind === "bedrock") continue;
+      const occupied = this._undergroundEvents.some((other) => (
+        other !== event
+        && !other.consumed
+        && Math.hypot(tx - other.tx, ty - other.ty) < event.radiusTiles + other.radiusTiles + 2
+      ));
+      if (!occupied) {
+        location = { tx, ty };
+        break;
+      }
+    }
+    if (!location) return null;
+    event.tx = location.tx;
+    event.ty = location.ty;
+    event.x = (location.tx + 0.5) * WORLD_CONFIG.TILE_SIZE;
+    event.y = (location.ty + 0.5) * WORLD_CONFIG.TILE_SIZE;
+    event.depthTiles = Math.max(0, location.ty - this._spawn.ty);
+    if (event.effect === "chest") {
+      event.loot = this._createContainerLoot(
+        location.tx,
+        location.ty,
+        new SeededRandom(`${this.seed}:staged-container:${location.tx}:${location.ty}`),
+      );
+    }
+    return this._publicMicroEvent(event);
+  }
+
   listUndergroundEvents(options = {}) {
     return this.getMicroEvents(options);
   }

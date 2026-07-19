@@ -50,6 +50,7 @@ const MIN_RUN_SECONDS = 6;
 const DIRECT_MAX_RUN_SECONDS = 45;
 const BONUS_MAX_RUN_SECONDS = 60;
 const EXPLORATION_SCAN_TILES = 18;
+const WORKSHOP_FIRST_RANK_CAP = 4;
 const STORAGE_KEY = 'depth-zero-save-v1';
 const CAMPAIGN = Object.freeze({
   requiredLifetimeChunks: 4_000,
@@ -64,6 +65,14 @@ const CAMPAIGN = Object.freeze({
     'fortune_motherlode_covenant',
   ]),
 });
+const CAMPAIGN_PROGRESS_TOOLS = Object.freeze([
+  'tools_iron_pick',
+  'tools_steel_pick',
+  'tools_pneumatic_pick',
+  'tools_super_pick',
+  'tools_laser_emitter',
+  'tools_solar_drill',
+]);
 // The headless campaign buyer represents a player who deliberately works
 // toward transformative tool tiers instead of exhausting every cheap flat
 // level first. Target levels cover only the prerequisites needed for the next
@@ -104,8 +113,78 @@ const CAMPAIGN_AUTOBUY_WEIGHTS = Object.freeze({
   power_corebreaker: 0.22,
   tools_solar_drill: 0.12,
 });
+// First ranks that visibly change play instead of only increasing a scalar.
+// The workshop remains free-choice; this marker only helps diagnostics and
+// simulated buyers spend their four new-node slots on actual breakthroughs.
+const BREAKTHROUGH_FIRST_RANK_IDS = new Set([
+  'sense_echo_pulse',
+  'sense_clear_signal',
+  'sense_vein_whisper',
+  'sense_seismic_memory',
+  'sense_ore_focus',
+  'sense_priority_tuning',
+  'sense_ghost_outline',
+  'sense_second_fix',
+  'sense_frequency_swing',
+  'sense_deaf_knock',
+  'sense_triangular_fix',
+  'sense_earth_call',
+  'dig_sweeping_arc',
+  'dig_twin_stroke',
+  'dig_precision_path',
+  'dig_wall_bite',
+  'dig_omni_swing',
+  'dig_least_resistance',
+  'dig_mine_lift',
+  'dig_quarry_presence',
+  'power_furious_swing',
+  'power_momentum',
+  'power_shatterpoint',
+  'power_overcharge_strike',
+  'power_one_hit_legend',
+  'power_sample_calibration',
+  'power_mountain_splitter',
+  'time_clockwork_heart',
+  'time_capsule',
+  'time_thirty_second_oath',
+  'gadgets_powder_pocket',
+  'gadgets_cluster_shell',
+  'gadgets_sticky_charge',
+  'gadgets_chain_spark',
+  'gadgets_shock_capsule',
+  'gadgets_magnet_mine',
+  'gadgets_scout_drone',
+  'gadgets_drone_swarm',
+  'gadgets_volatile_jackpot',
+  'gadgets_geo_charge',
+  'gadgets_crew_beacon',
+  'gadgets_demolition_orchestra',
+  'tools_iron_pick',
+  'tools_steel_pick',
+  'tools_pneumatic_pick',
+  'tools_super_pick',
+  'tools_super_field',
+  'tools_laser_emitter',
+  'tools_laser_width',
+  'tools_laser_splitter',
+  'tools_mirror_crystal',
+  'tools_super_pick_echo',
+  'tools_solar_drill',
+  'fortune_glimmer_hunter',
+  'fortune_rich_vein',
+  'fortune_double_yield',
+  'fortune_triple_seam',
+  'fortune_alchemist_scales',
+  'fortune_deep_market',
+  'fortune_golden_touch',
+  'fortune_relic_magnet',
+  'fortune_wheel',
+  'fortune_findings_catalog',
+  'fortune_motherlode_covenant',
+  'core_bon_voyage',
+]);
 const DEFAULT_SAVE = Object.freeze({
-  version: 7,
+  version: 10,
   inventory: createOreBag(),
   lifetimeOres: createOreBag(),
   lifetimeChunks: 0,
@@ -124,6 +203,14 @@ const DEFAULT_SAVE = Object.freeze({
   bestRunReport: null,
   preferredSectorId: null,
   balanceHistory: [],
+  pinnedUpgradeId: null,
+  pendingShowcases: {},
+  runsSinceEvent: 0,
+  totalEvents: 0,
+  workshopEligibilityRun: -1,
+  workshopEligibleIds: [],
+  workshopInstallRun: -1,
+  workshopInstalledIds: [],
 });
 
 function createDefaultSave() {
@@ -138,6 +225,10 @@ function createDefaultSave() {
     bestRunReport: null,
     preferredSectorId: null,
     balanceHistory: [],
+    pinnedUpgradeId: null,
+    pendingShowcases: {},
+    workshopEligibleIds: [],
+    workshopInstalledIds: [],
   };
 }
 
@@ -206,19 +297,22 @@ function migrateUpgradeLevels(source = {}, storedVersion = 0) {
   );
   const oldOath = owned('time_thirty_second_oath') > 0;
   let remainingSeconds = oldOath ? 39 : directSeconds;
-  const extraLevel = Math.min(12, Math.ceil(Math.min(6, remainingSeconds) / 0.5));
-  remainingSeconds = Math.max(0, remainingSeconds - extraLevel * 0.5);
-  let heartLevel = Math.min(12, Math.ceil(Math.min(9, remainingSeconds) / 0.75));
-  remainingSeconds = Math.max(0, remainingSeconds - heartLevel * 0.75);
-  let capsuleLevel = Math.min(12, Math.ceil(remainingSeconds / 2));
-  if (owned('time_frozen_moment') > 0) heartLevel = Math.max(heartLevel, 4);
-  if (owned('time_aftershock_clock') > 0) heartLevel = Math.max(heartLevel, 8);
-  if (owned('time_last_second') > 0) heartLevel = 12;
-  if (owned('time_discovery_bonus') > 0) capsuleLevel = Math.max(capsuleLevel, owned('time_discovery_bonus') * 4);
-  if (owned('time_chrono_shard') > 0 || owned('time_elastic_second') > 0) capsuleLevel = Math.max(capsuleLevel, 8);
-  setLevel('time_extra_breath', oldOath ? 12 : extraLevel, 12);
-  setLevel('time_clockwork_heart', oldOath ? 12 : heartLevel, 12);
-  setLevel('time_capsule', oldOath ? 12 : capsuleLevel, 12);
+  const extraLevel = Math.min(8, Math.ceil(Math.min(6, remainingSeconds) / 0.75));
+  remainingSeconds = Math.max(0, remainingSeconds - extraLevel * 0.75);
+  let heartLevel = Math.min(8, Math.ceil(Math.min(9, remainingSeconds) / 1.125));
+  remainingSeconds = Math.max(0, remainingSeconds - heartLevel * 1.125);
+  let capsuleLevel = Math.min(6, Math.ceil(remainingSeconds / 4));
+  if (owned('time_frozen_moment') > 0) heartLevel = Math.max(heartLevel, 3);
+  if (owned('time_aftershock_clock') > 0) heartLevel = Math.max(heartLevel, 6);
+  if (owned('time_last_second') > 0) heartLevel = 8;
+  if (owned('time_discovery_bonus') > 0) {
+    capsuleLevel = Math.max(capsuleLevel, Math.ceil(owned('time_discovery_bonus') * 0.15 / 0.08));
+  }
+  if (owned('time_chrono_shard') > 0) capsuleLevel = Math.max(capsuleLevel, 5);
+  if (owned('time_elastic_second') > 0) capsuleLevel = 6;
+  setLevel('time_extra_breath', oldOath ? 8 : extraLevel, 8);
+  setLevel('time_clockwork_heart', oldOath ? 8 : heartLevel, 8);
+  setLevel('time_capsule', oldOath ? 6 : capsuleLevel, 6);
   if (owned('time_clockwork_heart') > 0) {
     setLevel('dig_arm_swing', 1, 18);
     setLevel('dig_light_footwork', 3, 8);
@@ -253,7 +347,8 @@ function loadSave() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (!stored || typeof stored !== 'object') return createDefaultSave();
-    const levels = migrateUpgradeLevels(stored.levels, stored.version);
+    const storedVersion = Math.max(0, Math.floor(Number(stored.version) || 0));
+    const levels = migrateUpgradeLevels(stored.levels, storedVersion);
     const hasLegacyBranchProgress = Object.entries(levels).some(([id, level]) => (
       id !== 'core_first_descent'
       && id !== 'core_bon_voyage'
@@ -291,6 +386,24 @@ function loadSave() {
       bestRunReport: stored.bestRunReport && typeof stored.bestRunReport === 'object' ? { ...stored.bestRunReport } : null,
       preferredSectorId: typeof stored.preferredSectorId === 'string' ? stored.preferredSectorId : null,
       balanceHistory: Array.isArray(stored.balanceHistory) ? stored.balanceHistory.slice(-12) : [],
+      pinnedUpgradeId: typeof stored.pinnedUpgradeId === 'string' ? stored.pinnedUpgradeId : null,
+      pendingShowcases: stored.pendingShowcases && typeof stored.pendingShowcases === 'object'
+        ? { ...stored.pendingShowcases }
+        : {},
+      runsSinceEvent: Math.max(0, Math.floor(Number(stored.runsSinceEvent) || 0)),
+      totalEvents: Math.max(0, Math.floor(Number(stored.totalEvents) || 0)),
+      workshopEligibilityRun: storedVersion >= 9 && Number.isFinite(Number(stored.workshopEligibilityRun))
+        ? Math.max(-1, Math.floor(Number(stored.workshopEligibilityRun)))
+        : -1,
+      workshopEligibleIds: storedVersion >= 9 && Array.isArray(stored.workshopEligibleIds)
+        ? [...new Set(stored.workshopEligibleIds.filter((id) => typeof id === 'string'))]
+        : [],
+      workshopInstallRun: storedVersion >= 10 && Number.isFinite(Number(stored.workshopInstallRun))
+        ? Math.max(-1, Math.floor(Number(stored.workshopInstallRun)))
+        : -1,
+      workshopInstalledIds: storedVersion >= 10 && Array.isArray(stored.workshopInstalledIds)
+        ? [...new Set(stored.workshopInstalledIds.filter((id) => typeof id === 'string'))]
+        : [],
     };
     delete merged.currency;
     delete merged.lifetimeOre;
@@ -467,6 +580,15 @@ function getCampaignProgress() {
   const capstoneFraction = completedCapstones / CAMPAIGN.capstones.length;
   const finalFraction = finalInstalled ? 1 : 0;
   const oreFraction = clamp(save.lifetimeChunks / CAMPAIGN.requiredLifetimeChunks, 0, 1);
+  const discoveredOres = ORE_TYPES.filter((ore) => (save.lifetimeOres?.[ore.id] || 0) > 0).length;
+  const discoveryFraction = discoveredOres / Math.max(1, ORE_TYPES.length);
+  const unlockedTools = CAMPAIGN_PROGRESS_TOOLS.filter((id) => (save.levels[id] || 0) >= 1).length;
+  const toolFraction = unlockedTools / CAMPAIGN_PROGRESS_TOOLS.length;
+  const totalLevels = UPGRADE_DEFS.reduce((sum, definition) => sum + definition.maxLevel, 0);
+  // A focused route reaches the finale without buying every numeric level.
+  // This target therefore measures meaningful breadth, not 100% completion.
+  const levelGoal = Math.min(totalLevels, 170);
+  const levelFraction = clamp(purchasedLevels / Math.max(1, levelGoal), 0, 1);
   const ready = Boolean(save.campaignComplete) || (
     finalInstalled
     && completedCapstones === CAMPAIGN.capstones.length
@@ -476,14 +598,22 @@ function getCampaignProgress() {
   return {
     ready,
     percent: ready ? 100 : Math.min(99, Math.floor((
-      finalFraction * 0.2
-      + capstoneFraction * 0.5
-      + oreFraction * 0.3
+      oreFraction * 0.18
+      + levelFraction * 0.22
+      + discoveryFraction * 0.15
+      + toolFraction * 0.15
+      + capstoneFraction * 0.25
+      + finalFraction * 0.05
     ) * 100)),
     finalInstalled,
     completedCapstones,
     totalCapstones: CAMPAIGN.capstones.length,
     purchasedLevels,
+    levelGoal,
+    discoveredOres,
+    totalOres: ORE_TYPES.length,
+    unlockedTools,
+    totalTools: CAMPAIGN_PROGRESS_TOOLS.length,
     lifetimeChunks: save.lifetimeChunks,
     requiredLifetimeChunks: CAMPAIGN.requiredLifetimeChunks,
   };
@@ -620,6 +750,11 @@ const ui = {
   upgradeNodes: $('#upgradeNodes'),
   upgradeLive: $('#upgradeMapStatus'),
   upgradeSearch: $('#upgradeSearch'),
+  nextBreakthrough: $('#nextBreakthrough'),
+  nextBreakthroughName: $('#nextBreakthroughName'),
+  nextBreakthroughNeed: $('#nextBreakthroughNeed'),
+  pinSelectedUpgrade: $('#pinSelectedUpgrade'),
+  buyMaxSelectedUpgrade: $('#buyMaxSelectedUpgrade'),
   oreInventory: $('#oreInventory'),
   oreFocusPanel: $('#oreFocusPanel'),
   oreFocusChoices: $('#oreFocusChoices'),
@@ -708,6 +843,11 @@ const state = {
   upgradeQuery: '',
   selectedUpgradeId: null,
   visibleUpgradeIds: new Set(),
+  availableUpgradeIds: new Set(),
+  workshopEligibilityRun: -1,
+  workshopEligibleIds: new Set(),
+  workshopInstallRun: -1,
+  workshopInstalledIds: new Set(),
   paused: false,
   lastChanceUsed: 0,
   lastHaul: createOreBag(),
@@ -788,6 +928,9 @@ const state = {
   balanceReport: null,
   tutorialQueue: [],
   activeTutorialId: null,
+  activeTutorial: null,
+  pityEventArmed: false,
+  stagedEventId: null,
   journalFilter: 'all',
   lastFocusedElement: null,
 };
@@ -890,25 +1033,72 @@ function addBonusTime(seconds, x, y, label = 'БОНУС') {
   return granted;
 }
 
-function showTutorial(id, title, text, hint = '') {
+function tutorialModeAllowed(lesson, mode = state.mode) {
+  return !lesson?.validModes?.length || lesson.validModes.includes(mode);
+}
+
+function activateTutorialLesson(lesson) {
+  if (!lesson || !ui.tutorialCoach || !tutorialModeAllowed(lesson)) return false;
+  state.activeTutorialId = lesson.id;
+  state.activeTutorial = lesson;
+  if (ui.tutorialTitle) ui.tutorialTitle.textContent = lesson.title;
+  if (ui.tutorialText) ui.tutorialText.textContent = lesson.text;
+  if (ui.tutorialHint) {
+    ui.tutorialHint.textContent = lesson.hint;
+    ui.tutorialHint.classList.toggle('hidden', !lesson.hint);
+  }
+  ui.tutorialCoach.dataset.lesson = lesson.id;
+  ui.tutorialCoach.classList.remove('hidden');
+  requestAnimationFrame(() => {
+    if (state.activeTutorialId === lesson.id) ui.tutorialNext?.focus?.({ preventScroll: true });
+  });
+  return true;
+}
+
+function activateNextTutorial() {
+  if (state.activeTutorialId || !state.tutorialQueue.length) return false;
+  const index = state.tutorialQueue.findIndex((lesson) => tutorialModeAllowed(lesson));
+  if (index < 0) return false;
+  const [next] = state.tutorialQueue.splice(index, 1);
+  return activateTutorialLesson(next);
+}
+
+function deactivateActiveTutorial(markSeen = false) {
+  if (markSeen) markTutorialSeen(state.activeTutorialId);
+  ui.tutorialCoach?.classList.add('hidden');
+  state.activeTutorialId = null;
+  state.activeTutorial = null;
+}
+
+function deferActiveTutorialForMode(nextMode) {
+  const lesson = state.activeTutorial;
+  if (!lesson || tutorialModeAllowed(lesson, nextMode)) return false;
+  deactivateActiveTutorial(false);
+  if (!save.tutorialSeen?.[lesson.id] && !state.tutorialQueue.some((queued) => queued.id === lesson.id)) {
+    state.tutorialQueue.unshift(lesson);
+  }
+  return true;
+}
+
+function showTutorial(id, title, text, hint = '', options = {}) {
   if (!id || save.tutorialSeen?.[id]) return false;
   if (state.activeTutorialId === id || state.tutorialQueue.some((lesson) => lesson.id === id)) return false;
   if (!ui.tutorialCoach) return false;
-  const lesson = { id, title, text, hint };
-  if (state.activeTutorialId) {
+  const fallbackModes = state.mode === 'run' ? ['result', 'title'] : [state.mode];
+  const lesson = {
+    id,
+    title,
+    text,
+    hint,
+    validModes: Array.isArray(options.validModes) ? [...options.validModes] : fallbackModes,
+  };
+  // A tutorial must never steal seconds from an active shift. Context earned
+  // underground is delivered on the result/title screen instead.
+  if (state.mode === 'run' || state.activeTutorialId || !tutorialModeAllowed(lesson)) {
     state.tutorialQueue.push(lesson);
     return true;
   }
-  state.activeTutorialId = id;
-  if (ui.tutorialTitle) ui.tutorialTitle.textContent = title;
-  if (ui.tutorialText) ui.tutorialText.textContent = text;
-  if (ui.tutorialHint) {
-    ui.tutorialHint.textContent = hint;
-    ui.tutorialHint.classList.toggle('hidden', !hint);
-  }
-  ui.tutorialCoach.dataset.lesson = id;
-  ui.tutorialCoach.classList.remove('hidden');
-  return true;
+  return activateTutorialLesson(lesson);
 }
 
 function markTutorialSeen(id) {
@@ -919,24 +1109,16 @@ function markTutorialSeen(id) {
 function dismissTutorial(skipQueued = false) {
   markTutorialSeen(state.activeTutorialId);
   if (skipQueued) {
-    state.tutorialQueue.forEach((lesson) => markTutorialSeen(lesson.id));
-    state.tutorialQueue.length = 0;
+    const deferred = [];
+    for (const lesson of state.tutorialQueue) {
+      if (tutorialModeAllowed(lesson)) markTutorialSeen(lesson.id);
+      else deferred.push(lesson);
+    }
+    state.tutorialQueue = deferred;
   }
   persistSave();
-  ui.tutorialCoach?.classList.add('hidden');
-  state.activeTutorialId = null;
-  const next = state.tutorialQueue.shift();
-  if (next) {
-    state.activeTutorialId = next.id;
-    if (ui.tutorialTitle) ui.tutorialTitle.textContent = next.title;
-    if (ui.tutorialText) ui.tutorialText.textContent = next.text;
-    if (ui.tutorialHint) {
-      ui.tutorialHint.textContent = next.hint;
-      ui.tutorialHint.classList.toggle('hidden', !next.hint);
-    }
-    ui.tutorialCoach.dataset.lesson = next.id;
-    ui.tutorialCoach.classList.remove('hidden');
-  }
+  deactivateActiveTutorial(false);
+  activateNextTutorial();
 }
 
 const ONBOARDING_LESSONS = Object.freeze([
@@ -961,7 +1143,11 @@ const ONBOARDING_LESSONS = Object.freeze([
 ]);
 
 function startOnboarding(force = false) {
-  clearTutorialCoach();
+  const onboardingIds = new Set(ONBOARDING_LESSONS.map((lesson) => lesson.id));
+  const preserved = state.tutorialQueue.filter((lesson) => !onboardingIds.has(lesson.id));
+  if (state.activeTutorial && !onboardingIds.has(state.activeTutorial.id)) preserved.unshift(state.activeTutorial);
+  clearTutorialCoach(false, true);
+  state.tutorialQueue = preserved;
   if (force) {
     for (const lesson of ONBOARDING_LESSONS) delete save.tutorialSeen[lesson.id];
     persistSave();
@@ -971,10 +1157,11 @@ function startOnboarding(force = false) {
   }
 }
 
-function clearTutorialCoach() {
-  ui.tutorialCoach?.classList.add('hidden');
-  state.activeTutorialId = null;
-  state.tutorialQueue.length = 0;
+function clearTutorialCoach(markActive = false, clearQueue = true) {
+  if (markActive) markTutorialSeen(state.activeTutorialId);
+  deactivateActiveTutorial(false);
+  if (clearQueue) state.tutorialQueue.length = 0;
+  if (markActive) persistSave();
 }
 
 function trapOverlayFocus(event) {
@@ -1025,6 +1212,25 @@ function getRunSeed() {
 function requestRunStart() {
   const seed = getRunSeed();
   startRun({ seed });
+}
+
+const EVENT_PITY_TYPES = Object.freeze([
+  'ancient_container',
+  'gas_pocket',
+  'fragile_cavity',
+  'rich_lens',
+  'underground_flow',
+]);
+
+function getEventPityThreshold() {
+  return 4 + ((save.totalEvents || 0) * 7 + 1) % 3;
+}
+
+function stageCampaignPityEvent() {
+  if (!state.world || typeof state.world.stageMicroEventNearSpawn !== 'function') return null;
+  if (save.runs < 4 || (save.runsSinceEvent || 0) < getEventPityThreshold()) return null;
+  const preferredType = EVENT_PITY_TYPES[(save.totalEvents || 0) % EVENT_PITY_TYPES.length];
+  return state.world.stageMicroEventNearSpawn(preferredType, state.spawn);
 }
 
 function newWorld(seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0, options = {}) {
@@ -1080,12 +1286,16 @@ function startRun(options = {}) {
   const runOptions = options && typeof options === 'object' && !('currentTarget' in options)
     ? options
     : {};
+  // Defensive path for programmatic starts and a click racing the onboarding
+  // animation frame: no modal is allowed to remain over a ticking shift.
+  if (state.activeTutorialId) dismissTutorial(true);
   sound.unlock();
   stats = normalizeStats(calculateMetaStats(save.levels));
   newWorld(runOptions.seed ?? getRunSeed(), {
     useLift: true,
     sectorId: runOptions.sectorId || null,
   });
+  const stagedPityEvent = stageCampaignPityEvent();
   persistSave();
   Object.assign(state, {
     mode: 'run',
@@ -1181,6 +1391,8 @@ function startRun(options = {}) {
     solarDrillBursts: [],
     superFields: [],
     tripleSampleVeins: new Map(),
+    pityEventArmed: Boolean(stagedPityEvent),
+    stagedEventId: stagedPityEvent?.id || null,
   });
   if (state.liftDepth > 1) state.metrics.liftStarts = 1;
   state.particles.length = 0;
@@ -1192,12 +1404,13 @@ function startRun(options = {}) {
   ui.runHud?.classList.remove('hidden');
   $('#fieldGuide')?.classList.remove('hidden');
   updateHud();
-  toast(state.liftDepth > 1 ? `ЛИФТ: СТАРТ С ${Math.floor(state.liftDepth)} М` : 'ЧУТЬЁ АКТИВНО — ИЩЕМ ЖИЛУ', 'info');
-  showTutorial(
-    'first_run',
-    'СМЕНА НАЧАЛАСЬ',
-    'Шахтёр работает сам: чутьё выбирает цель, затем он идёт к ней и копает. Забег короткий — добыча остаётся навсегда.',
-    'Чутьё само обновляет цель: вмешиваться в поиск не требуется.',
+  toast(
+    stagedPityEvent
+      ? 'ЧУТЬЁ ПОЙМАЛО АНОМАЛЬНЫЙ СИГНАЛ'
+      : state.liftDepth > 1
+        ? `ЛИФТ: СТАРТ С ${Math.floor(state.liftDepth)} М`
+        : 'ЧУТЬЁ АКТИВНО — ИЩЕМ ЖИЛУ',
+    stagedPityEvent ? 'warning' : 'info',
   );
   sound.tone(145, 0.16, 'triangle', 0.04, 180);
 }
@@ -1228,6 +1441,34 @@ function applyCatalogBonus(sourceHaul) {
   return { haul, rawCount, bonusCount, multiplier, distinctTypes };
 }
 
+function describeRunGeology(profile = state.currentSector) {
+  if (!profile) return { label: 'Случайные пласты', detail: 'геология не определена' };
+  if (!profile.hidden) return { label: profile.label || 'Стабильные пласты', detail: profile.description || '' };
+  const biasedOre = profile.oreBias?.id ? oreById.get(profile.oreBias.id) : null;
+  const descriptions = {
+    cavernous: ['КАРСТОВЫЙ ПЛАСТ', 'Много естественных пустот'],
+    compact: ['ПЛОТНЫЙ ПЛАСТ', 'Меньше пещер и больше сплошной породы'],
+    ore_rich: ['РУДНЫЙ ПЛАСТ', 'Общая рудность этого участка повышена'],
+    ore_bias: [
+      `ПЕРЕКОС: ${(biasedOre?.name || 'НЕИЗВЕСТНАЯ РУДА').toUpperCase()}`,
+      'Рудный бюджет смещён в пользу одного ресурса',
+    ],
+    mixed: ['СМЕШАННЫЕ ПЛАСТЫ', 'Без выраженной геологической крайности'],
+  };
+  const [label, detail] = descriptions[profile.trait] || descriptions.mixed;
+  return { label, detail };
+}
+
+function expectedEfficiencyForProgress(profile = state.currentSector) {
+  const purchased = countPurchasedLevels(save.levels);
+  const toolOrder = ['pickaxe', 'ironPick', 'steelPick', 'pneumaticPick', 'superPick', 'miningLaser', 'prismaticLaser'];
+  const toolStage = Math.max(0, toolOrder.indexOf(stats.tool));
+  const abundance = clamp(Number(profile?.modifiers?.abundance) || 1, 0.75, 1.5);
+  const caves = clamp(Number(profile?.modifiers?.caves) || 1, 0.65, 1.6);
+  const topologyFactor = caves > 1.2 ? 1.06 : caves < 0.86 ? 0.94 : 1;
+  return Math.max(0.25, (0.34 + purchased * 0.012 + toolStage * 0.18) * abundance * topologyFactor);
+}
+
 function buildRunReport(catalog, haul, activeRunSeconds) {
   const sourceEntries = Object.entries(state.metrics.sourceBreaks || {})
     .sort((left, right) => right[1] - left[1]);
@@ -1237,14 +1478,20 @@ function buildRunReport(catalog, haul, activeRunSeconds) {
   const movement = Math.min(duration, state.metrics.movementSeconds || 0);
   const mining = Math.min(duration, state.metrics.miningSeconds || 0);
   const searching = Math.min(duration, state.metrics.searchingSeconds || 0);
-  const rarest = Object.entries(state.oreCounts)
+  const rarest = Object.entries(haul)
     .filter(([, amount]) => amount > 0)
     .sort(([a], [b]) => (oreById.get(b)?.tier || 0) - (oreById.get(a)?.tier || 0))[0];
+  const geology = describeRunGeology();
+  const efficiency = Number((haulCount / duration).toFixed(2));
+  const expectedEfficiency = Number(expectedEfficiencyForProgress().toFixed(2));
+  const previousEfficiency = Number(previous?.efficiency);
   const report = {
     seed: state.seed,
     run: save.runs + 1,
     sectorId: state.currentSector?.id || 'random_strata',
-    sectorLabel: state.currentSector?.label || 'Случайные пласты',
+    sectorLabel: geology.label,
+    geologyDetail: geology.detail,
+    geologyTrait: state.currentSector?.trait || 'mixed',
     haul: haulCount,
     rawHaul: catalog.rawCount,
     catalogBonus: catalog.bonusCount,
@@ -1254,7 +1501,9 @@ function buildRunReport(catalog, haul, activeRunSeconds) {
     oreTypes: state.discoveredOreIds?.size || 0,
     rarestOreId: rarest?.[0] || null,
     rarestAmount: rarest?.[1] || 0,
-    efficiency: Number((haulCount / duration).toFixed(2)),
+    efficiency,
+    expectedEfficiency,
+    efficiencyRatio: Number((efficiency / Math.max(0.01, expectedEfficiency)).toFixed(2)),
     movementSeconds: Number(movement.toFixed(2)),
     miningSeconds: Number(mining.toFixed(2)),
     searchingSeconds: Number(searching.toFixed(2)),
@@ -1271,32 +1520,87 @@ function buildRunReport(catalog, haul, activeRunSeconds) {
     superPickEchoes: state.metrics.superPickEchoes || 0,
     triangleBuffHits: state.metrics.triangleBuffHits || 0,
     deltaHaul: previous ? haulCount - (previous.haul || 0) : null,
+    deltaEfficiency: Number.isFinite(previousEfficiency)
+      ? Number((efficiency - previousEfficiency).toFixed(2))
+      : null,
     deltaDepth: previous ? Math.floor(state.deepest) - (previous.depth || 0) : null,
   };
   return report;
+}
+
+function getRunTimeSink(report) {
+  const entries = [
+    ['поиск', report.searchingSeconds || 0, ['sense', 'tools']],
+    ['движение', report.movementSeconds || 0, ['dig', 'tools', 'sense']],
+    ['разрушение породы', report.miningSeconds || 0, ['power', 'dig', 'gadgets', 'tools']],
+  ].sort((left, right) => right[1] - left[1]);
+  const [label, seconds, categories] = entries[0];
+  return {
+    label,
+    seconds,
+    share: clamp(seconds / Math.max(0.01, report.duration || 0.01), 0, 1),
+    categories,
+  };
+}
+
+function getReportUpgradeRecommendation(report) {
+  const sink = getRunTimeSink(report);
+  const candidates = getVisibleUpgradeDefinitions()
+    .filter((definition) => getUpgradeLevel(definition) < definition.maxLevel)
+    .filter(requirementsMet)
+    .map((definition) => {
+      const level = getUpgradeLevel(definition);
+      const recipe = getUpgradeRecipe(definition, level);
+      const categoryRank = sink.categories.indexOf(definition.category);
+      const missing = Object.entries(recipe)
+        .filter(([oreId, amount]) => (save.inventory[oreId] || 0) < amount)
+        .map(([oreId, amount]) => `${oreById.get(oreId)?.name || oreId} ×${amount - (save.inventory[oreId] || 0)}`);
+      return {
+        definition,
+        recipe,
+        missing,
+        score: (categoryRank < 0 ? 80 : categoryRank * 10)
+          + (missing.length ? 14 : 0)
+          + (definition.maxLevel === 1 ? -3 : 0),
+      };
+    })
+    .sort((left, right) => left.score - right.score || UPGRADE_DEFS.indexOf(left.definition) - UPGRADE_DEFS.indexOf(right.definition));
+  const choice = candidates[0] || null;
+  return {
+    sink,
+    choice,
+    text: choice
+      ? choice.missing.length
+        ? `До «${choice.definition.name}» не хватает: ${choice.missing.join(' · ')}.`
+        : `«${choice.definition.name}» уже можно установить в мастерской.`
+      : 'Доступные узлы этого направления уже установлены — продолжайте открывать дерево.',
+  };
 }
 
 function renderRunReport(report) {
   if (!report) return;
   ui.reportPanel?.classList.remove('hidden');
   const rare = report.rarestOreId ? oreById.get(report.rarestOreId) : null;
+  const advice = getReportUpgradeRecommendation(report);
   const deltaLabel = (value, suffix = '') => value == null
     ? 'первый замер'
     : `${value >= 0 ? '+' : ''}${value}${suffix} к прошлой смене`;
   if (ui.reportHighlights) {
     ui.reportHighlights.innerHTML = `
-      <article class="diagnosis-highlight is-positive"><span aria-hidden="true">↗</span><div><small>ЭФФЕКТИВНОСТЬ</small><strong>${report.efficiency.toFixed(1)} куск./с</strong><p>${deltaLabel(report.deltaHaul)}</p></div></article>
+      <article class="diagnosis-highlight is-positive"><span aria-hidden="true">↗</span><div><small>ЭФФЕКТИВНОСТЬ</small><strong>${report.efficiency.toFixed(1)} куск./с</strong><p>${deltaLabel(report.deltaEfficiency, ' куск./с')}</p></div></article>
       <article class="diagnosis-highlight is-warning"><span aria-hidden="true">⌛</span><div><small>ГЛУБИНА</small><strong>${report.depth} м</strong><p>${deltaLabel(report.deltaDepth, ' м')}</p></div></article>
-      <article class="diagnosis-highlight is-neutral"><span aria-hidden="true">◇</span><div><small>ГЛАВНАЯ НАХОДКА</small><strong>${rare ? `${rare.name} ×${report.rarestAmount}` : 'нет руды'}</strong><p>${report.sectorLabel}</p></div></article>`;
+      <article class="diagnosis-highlight is-neutral"><span aria-hidden="true">◇</span><div><small>ГЛАВНАЯ НАХОДКА</small><strong>${rare ? `${rare.name} ×${report.rarestAmount}` : 'нет руды'}</strong><p>${report.sectorLabel}${report.geologyDetail ? ` · ${report.geologyDetail}` : ''}</p></div></article>`;
   }
   if (ui.reportGrade) {
-    ui.reportGrade.textContent = report.efficiency >= 1.25
+    const ratio = report.efficiencyRatio || report.efficiency / Math.max(0.01, report.expectedEfficiency || 1);
+    ui.reportGrade.textContent = ratio >= 1.45
       ? 'A+'
-      : report.efficiency >= 0.7
+      : ratio >= 1.05
         ? 'A'
-        : report.efficiency >= 0.3
+        : ratio >= 0.75
           ? 'B'
-          : report.haul > 0 ? 'C' : 'D';
+          : ratio >= 0.5 && report.haul > 0 ? 'C' : 'D';
+    ui.reportGrade.title = `Оценка относительно текущего оборудования и геологии: ${(ratio * 100).toFixed(0)}% от ориентира`;
   }
   if (ui.reportDetails) {
     const sourceText = Object.entries(report.sourceBreaks)
@@ -1307,6 +1611,7 @@ function renderRunReport(report) {
     ui.reportDetails.innerHTML = `
       <summary>ПОДРОБНЫЕ ДАННЫЕ <span aria-hidden="true">⌄</span></summary>
       <div class="diagnosis-details__body">
+        <div class="diagnosis-advice"><span aria-hidden="true">◎</span><div><small>СЛЕДУЮЩИЙ ШАГ · ГЛАВНАЯ ПОТЕРЯ: ${advice.sink.label.toUpperCase()} ${Math.round(advice.sink.share * 100)}%</small><strong>${escapeHtml(advice.text)}</strong><p>Закрепите нужный узел в мастерской — панель покажет недостающую руду после каждой смены.</p></div></div>
         <div class="diagnosis-timeline" aria-label="Распределение времени смены">
           <span><small>КОПКА</small><i style="--share:${share(report.miningSeconds)}"></i><b>${share(report.miningSeconds)}</b></span>
           <span><small>ДВИЖЕНИЕ</small><i style="--share:${share(report.movementSeconds)}"></i><b>${share(report.movementSeconds)}</b></span>
@@ -1346,6 +1651,14 @@ function finishRun() {
   addOreBag(save.inventory, haul);
   addOreBag(save.lifetimeOres, haul);
   save.runs += 1;
+  invalidateWorkshopEligibility();
+  resetWorkshopInstallSession();
+  if ((state.metrics.eventCount || 0) > 0) {
+    save.totalEvents += state.metrics.eventCount;
+    save.runsSinceEvent = 0;
+  } else {
+    save.runsSinceEvent = (save.runsSinceEvent || 0) + 1;
+  }
   save.lifetimeChunks += haulCount;
   save.bestHaul = Math.max(save.bestHaul, haulCount);
   save.bestDepth = Math.max(save.bestDepth, Math.floor(state.deepest));
@@ -1353,7 +1666,7 @@ function finishRun() {
   if (!save.bestRunReport || report.haul > (save.bestRunReport.haul || 0)) save.bestRunReport = { ...report };
   persistSave();
 
-  const rarest = Object.entries(state.oreCounts)
+  const rarest = Object.entries(haul)
     .filter(([, amount]) => amount > 0)
     .sort(([a], [b]) => (oreById.get(b)?.tier || 0) - (oreById.get(a)?.tier || 0))[0];
   const rareText = rarest ? `${oreById.get(rarest[0])?.name || rarest[0]} ×${rarest[1]}` : 'руда не найдена';
@@ -1387,13 +1700,17 @@ function finishRun() {
   ui.resultScreen?.classList.remove('hidden');
   $('#fieldGuide')?.classList.add('hidden');
   updatePersistentLabels();
+  activateNextTutorial();
   showTutorial(
     'first_report',
     'РАЗБОР СМЕНЫ',
     'После каждого забега отчёт показывает, куда ушло время, что разрушало породу и насколько результат лучше прошлого.',
     'Геологический журнал хранит постоянные рекорды по каждому виду руды.',
   );
-  requestAnimationFrame(() => ui.retryRun?.focus({ preventScroll: true }));
+  requestAnimationFrame(() => {
+    if (state.activeTutorialId) ui.tutorialNext?.focus?.({ preventScroll: true });
+    else ui.retryRun?.focus?.({ preventScroll: true });
+  });
   sound.tone(220, 0.15, 'triangle', 0.04, -80);
 }
 
@@ -1402,8 +1719,8 @@ function refreshCampaignUI() {
   if (ui.campaignStatus) {
     ui.campaignStatus.textContent = progress.ready
       ? (save.endingSeen ? 'ФИНАЛ ОТКРЫТ' : 'РАКЕТА ГОТОВА')
-      : `РАКЕТА · ${progress.percent}% · ВЕРШИНЫ ${progress.completedCapstones}/${progress.totalCapstones} · РУДА ${formatNumber(progress.lifetimeChunks)}/${formatNumber(progress.requiredLifetimeChunks)}`;
-    ui.campaignStatus.title = `Верхушки веток ${progress.completedCapstones}/${progress.totalCapstones} · «В добрый путь» ${progress.finalInstalled ? 'установлен' : 'не установлен'} · добыто ${formatNumber(progress.lifetimeChunks)}/${formatNumber(progress.requiredLifetimeChunks)} кусков`;
+      : `РАКЕТА · ${progress.percent}% · ИНСТРУМЕНТЫ ${progress.unlockedTools}/${progress.totalTools} · ВЕРШИНЫ ${progress.completedCapstones}/${progress.totalCapstones}`;
+    ui.campaignStatus.title = `Непрерывный прогресс учитывает оборудование ${progress.purchasedLevels}/${progress.levelGoal}, руды ${progress.discoveredOres}/${progress.totalOres}, инструменты ${progress.unlockedTools}/${progress.totalTools}, верхушки ${progress.completedCapstones}/${progress.totalCapstones} и добычу ${formatNumber(progress.lifetimeChunks)}/${formatNumber(progress.requiredLifetimeChunks)}.`;
   }
   ui.launchRocket?.classList.toggle('hidden', !progress.ready);
   if (ui.launchLabel) ui.launchLabel.textContent = save.endingSeen ? 'СМОТРЕТЬ ФИНАЛ' : 'ЗАПУСТИТЬ РАКЕТУ';
@@ -1424,6 +1741,7 @@ function replayEnding() {
 function showEnding() {
   const progress = getCampaignProgress();
   if (!progress.ready && !save.campaignComplete) return;
+  deferActiveTutorialForMode('ending');
   state.mode = 'ending';
   updateUtilityNavState();
   save.campaignComplete = true;
@@ -1461,17 +1779,21 @@ function showTitle() {
   ui.startScreen?.classList.remove('hidden');
   updateUtilityNavState();
   updatePersistentLabels();
+  activateNextTutorial();
 }
 
 function openUpgradeScreen() {
   if (!['title', 'result'].includes(state.mode)) return;
   state.returnMode = state.mode === 'result' ? 'result' : 'title';
+  deferActiveTutorialForMode('upgrades');
   state.mode = 'upgrades';
+  ensureWorkshopEligibility();
   updateUtilityNavState();
   ui.startScreen?.classList.add('hidden');
   ui.resultScreen?.classList.add('hidden');
   ui.upgradeScreen?.classList.remove('hidden');
   renderUpgrades();
+  activateNextTutorial();
   showTutorial(
     'upgrade_tree',
     'ЕДИНОЕ ДЕРЕВО',
@@ -1481,18 +1803,24 @@ function openUpgradeScreen() {
   requestAnimationFrame(() => {
     const selected = state.selectedUpgradeId ? upgradeById.get(state.selectedUpgradeId) : null;
     scrollUpgradeIntoView(selected, false);
-    ui.closeUpgrades?.focus({ preventScroll: true });
+    if (state.activeTutorialId) ui.tutorialNext?.focus?.({ preventScroll: true });
+    else ui.closeUpgrades?.focus({ preventScroll: true });
   });
 }
 
 function closeUpgradeScreen() {
-  clearTutorialCoach();
+  if (state.activeTutorialId) {
+    deactivateActiveTutorial(true);
+    persistSave();
+  }
   ui.upgradeScreen?.classList.add('hidden');
   if (state.returnMode === 'result') {
     state.mode = 'result';
     updateUtilityNavState();
     if (ui.bankedOre) ui.bankedOre.textContent = `+${formatNumber(state.lastHaulCount)}`;
+    renderRunReport(save.lastRunReport);
     ui.resultScreen?.classList.remove('hidden');
+    activateNextTutorial();
   } else {
     showTitle();
   }
@@ -1588,11 +1916,13 @@ function updateUtilityNavState() {
 function openJournalScreen() {
   if (!['title', 'result', 'upgrades'].includes(state.mode)) return;
   rememberAuxiliaryReturnMode();
+  deferActiveTutorialForMode('journal');
   state.mode = 'journal';
   hideAllScreens();
   renderGeologicalJournal();
   ui.journalScreen?.classList.remove('hidden');
   updateUtilityNavState();
+  activateNextTutorial();
   requestAnimationFrame(() => ui.closeJournal?.focus({ preventScroll: true }));
 }
 
@@ -1611,7 +1941,11 @@ function closeAuxiliaryScreen() {
     showTitle();
   }
   updateUtilityNavState();
-  requestAnimationFrame(() => returnFocus?.focus?.({ preventScroll: true }));
+  activateNextTutorial();
+  requestAnimationFrame(() => {
+    if (state.activeTutorialId) ui.tutorialNext?.focus?.({ preventScroll: true });
+    else returnFocus?.focus?.({ preventScroll: true });
+  });
 }
 
 function profileLevels(percent) {
@@ -1723,7 +2057,7 @@ function estimateBalanceRun(seed, profilePercent, preparedStats = null) {
     * (simulatedStats.laserUnlocked ? (simulatedStats.laserChargeRate || 1) : 1)
     * overclock
     * chronoOverdriveEstimate;
-  const densityPower = 1 + Math.max(0, simulatedStats.hardnessPierce || 0) * 0.07;
+  const densityPower = hardnessPierceMultiplier(ORE_TYPES[4], simulatedStats.hardnessPierce);
   const directDps = simulatedStats.pickPower * attackRate * densityPower
     * (1 + Math.max(0, simulatedStats.oreDamageBonus || 0))
     * expectedCritical * expectedMulti * expectedCharged * expectedStreak * beamPower;
@@ -2085,12 +2419,14 @@ function runBalanceBench() {
 function openBalanceScreen() {
   if (!['title', 'result', 'upgrades'].includes(state.mode)) return;
   rememberAuxiliaryReturnMode();
+  deferActiveTutorialForMode('balance');
   state.mode = 'balance';
   hideAllScreens();
   ui.balanceScreen?.classList.remove('hidden');
   if (ui.balanceSeed && !ui.balanceSeed.value) ui.balanceSeed.value = 'depth-zero-bench';
   if (ui.balanceResults && !state.balanceReport) ui.balanceResults.innerHTML = '<p id="balanceResultsTitle">Задайте профиль и запустите локальную серию.</p>';
   updateUtilityNavState();
+  activateNextTutorial();
   requestAnimationFrame(() => ui.closeBalance?.focus({ preventScroll: true }));
 }
 
@@ -2248,19 +2584,179 @@ function requirementsMet(definition) {
   return dependenciesReady && sampleReady;
 }
 
-function buyUpgrade(id) {
+function invalidateWorkshopEligibility() {
+  state.workshopEligibilityRun = -1;
+  state.workshopEligibleIds = new Set();
+  save.workshopEligibilityRun = -1;
+  save.workshopEligibleIds = [];
+}
+
+function ensureWorkshopEligibility() {
+  const completedRuns = Math.max(0, Math.floor(Number(save.runs) || 0));
+  if (state.workshopEligibilityRun === completedRuns) return state.workshopEligibleIds;
+
+  const savedSnapshotIsCurrent = Number(save.workshopEligibilityRun) === completedRuns
+    && Array.isArray(save.workshopEligibleIds);
+  const eligibleIds = savedSnapshotIsCurrent
+    ? save.workshopEligibleIds.filter((id) => upgradeById.has(id))
+    : UPGRADE_DEFS
+      .filter((definition) => requirementsMet(definition) && getUpgradeLevel(definition) < definition.maxLevel)
+      .map((definition) => definition.id);
+
+  state.workshopEligibilityRun = completedRuns;
+  state.workshopEligibleIds = new Set(eligibleIds);
+  if (!savedSnapshotIsCurrent) {
+    save.workshopEligibilityRun = completedRuns;
+    save.workshopEligibleIds = [...state.workshopEligibleIds];
+    persistSave();
+  }
+  return state.workshopEligibleIds;
+}
+
+function invalidateWorkshopInstallSession() {
+  state.workshopInstallRun = -1;
+  state.workshopInstalledIds = new Set();
+  save.workshopInstallRun = -1;
+  save.workshopInstalledIds = [];
+}
+
+function resetWorkshopInstallSession() {
+  const completedRuns = Math.max(0, Math.floor(Number(save.runs) || 0));
+  state.workshopInstallRun = completedRuns;
+  state.workshopInstalledIds = new Set();
+  save.workshopInstallRun = completedRuns;
+  save.workshopInstalledIds = [];
+}
+
+function ensureWorkshopInstallSession() {
+  const completedRuns = Math.max(0, Math.floor(Number(save.runs) || 0));
+  if (state.workshopInstallRun === completedRuns) return state.workshopInstalledIds;
+
+  const savedSessionIsCurrent = Number(save.workshopInstallRun) === completedRuns
+    && Array.isArray(save.workshopInstalledIds);
+  const installedIds = savedSessionIsCurrent
+    ? [...new Set(save.workshopInstalledIds)]
+      .filter((id) => upgradeById.has(id) && getUpgradeLevel(upgradeById.get(id)) > 0)
+      .slice(0, WORKSHOP_FIRST_RANK_CAP)
+    : [];
+  const savedSessionNeedsRepair = !savedSessionIsCurrent
+    || save.workshopInstalledIds.length !== installedIds.length
+    || installedIds.some((id, index) => save.workshopInstalledIds[index] !== id);
+
+  state.workshopInstallRun = completedRuns;
+  state.workshopInstalledIds = new Set(installedIds);
+  save.workshopInstallRun = completedRuns;
+  save.workshopInstalledIds = [...state.workshopInstalledIds];
+  if (savedSessionNeedsRepair) persistSave();
+  return state.workshopInstalledIds;
+}
+
+function workshopInstallStatus() {
+  const installed = ensureWorkshopInstallSession().size;
+  return {
+    installed,
+    cap: WORKSHOP_FIRST_RANK_CAP,
+    remaining: Math.max(0, WORKSHOP_FIRST_RANK_CAP - installed),
+  };
+}
+
+function registerWorkshopFirstRank(definition) {
+  const installedIds = ensureWorkshopInstallSession();
+  if (installedIds.has(definition.id)) return;
+  if (installedIds.size >= WORKSHOP_FIRST_RANK_CAP) return;
+  installedIds.add(definition.id);
+  save.workshopInstallRun = state.workshopInstallRun;
+  save.workshopInstalledIds = [...installedIds];
+}
+
+function upgradePurchaseBlockReason(definition) {
+  if (!upgradeIsAvailable(definition) || getUpgradeLevel(definition) > 0) return null;
+  if (!ensureWorkshopEligibility().has(definition.id)) return 'preparation';
+  if (workshopInstallStatus().remaining <= 0) return 'capacity';
+  return null;
+}
+
+function upgradeIsPurchaseEligible(definition) {
+  if (!upgradeIsAvailable(definition)) return false;
+  // Once installation has started, every remaining rank stays available.
+  // Workshop preparation and capacity gates apply only to a new node's first rank.
+  if (getUpgradeLevel(definition) > 0) return true;
+  return upgradePurchaseBlockReason(definition) === null;
+}
+
+const UPGRADE_CEREMONIES = Object.freeze({
+  gadgets_powder_pocket: Object.freeze({
+    title: 'ПЕРВЫЙ ПОРОХОВОЙ ЗАРЯД',
+    text: 'Бомбы теперь могут вылетать при ударе. В следующей смене первый подходящий удар гарантированно покажет новый эффект.',
+    hint: 'Дальние узлы превратят случайный взрыв в управляемую систему подрыва.',
+  }),
+  sense_ore_focus: Object.freeze({
+    title: 'ОТКРЫТ РУДНЫЙ ФОКУС',
+    text: 'В мастерской появился выбор приоритетной руды. Выбранный ресурс ищется в расширенной зоне, а остальные жилы временно игнорируются.',
+    hint: 'Сначала выберите уже найденную руду в панели над деревом.',
+  }),
+  tools_iron_pick: Object.freeze({ title: 'ЖЕЛЕЗНАЯ КИРКА', text: 'Новый инструмент установлен и будет заметен уже в следующей смене.', hint: 'Смена инструмента меняет темп ударов и внешний вид шахтёра.' }),
+  tools_steel_pick: Object.freeze({ title: 'СТАЛЬНАЯ КИРКА', text: 'Инструмент перешёл на следующий технологический уровень.', hint: 'Теперь плотные пласты будут открываться заметно увереннее.' }),
+  tools_pneumatic_pick: Object.freeze({ title: 'ПНЕВМОКИРКА', text: 'Автоматика получила пневматический привод: серия ударов стала отдельной фазой прогрессии.', hint: 'Следующая смена сразу начнётся с новым инструментом.' }),
+  tools_super_pick: Object.freeze({ title: 'СУПЕРКИРКА', text: 'Собран первый сверхмощный инструмент поздней шахты.', hint: 'Её модули готовят переход к дистанционной добыче.' }),
+  tools_laser_emitter: Object.freeze({ title: 'ДАЛЬНОБОЙНЫЙ ЛАЗЕР', text: 'Шахтёр больше не обязан подходить к каждой жиле вплотную: добыча переходит на дистанционный режим.', hint: 'Дальность, ширина и расщепление луча развиваются отдельными узлами.' }),
+  tools_solar_drill: Object.freeze({ title: 'СОЛНЕЧНЫЙ БУР', text: 'Финальная форма инструмента собрана. Заряженные серии завершаются заметным призмовым импульсом.', hint: 'Осталось свести вершины дерева к общему стартовому протоколу.' }),
+});
+
+function showUpgradeCeremony(definition) {
+  const ceremony = UPGRADE_CEREMONIES[definition.id] || (CAMPAIGN.capstones.includes(definition.id)
+    ? {
+      title: 'ВЕРШИНА ВЕТВИ ОСВОЕНА',
+      text: `«${definition.name}» — один из семи ключевых модулей, необходимых для финального перка «В добрый путь».`,
+      hint: 'Индикатор ракеты учитывает эту вершину сразу после установки.',
+    }
+    : null);
+  if (!ceremony) return;
+  showTutorial(
+    `unlock_${definition.id}`,
+    ceremony.title,
+    ceremony.text,
+    ceremony.hint,
+    { validModes: ['upgrades'] },
+  );
+}
+
+function buyUpgrade(id, options = {}) {
   const definition = upgradeById.get(id);
   if (!definition) return;
   const campaignWasReady = getCampaignProgress().ready;
-  const level = getUpgradeLevel(definition);
+  const startingLevel = getUpgradeLevel(definition);
+  if (startingLevel >= definition.maxLevel) return;
   if (!requirementsMet(definition)) {
     toast('УСЛОВИЯ УЛУЧШЕНИЯ ЕЩЁ НЕ ВЫПОЛНЕНЫ', 'warning');
     sound.tone(90, 0.1, 'square', 0.025, -25);
     return;
   }
-  if (level >= definition.maxLevel) return;
-  const recipe = getUpgradeRecipe(definition, level);
-  if (!canAffordRecipe(save.inventory, recipe)) {
+  if (!upgradeIsPurchaseEligible(definition)) {
+    const blockReason = upgradePurchaseBlockReason(definition);
+    toast(
+      blockReason === 'capacity'
+        ? `ЛИМИТ МАСТЕРСКОЙ: ${WORKSHOP_FIRST_RANK_CAP} НОВЫХ УЗЛА ЗА СМЕНУ`
+        : 'НОВЫЙ УЗЕЛ БУДЕТ ГОТОВ ПОСЛЕ СЛЕДУЮЩЕЙ СМЕНЫ',
+      'warning',
+    );
+    sound.tone(105, 0.09, 'square', 0.022, -18);
+    return;
+  }
+  let level = startingLevel;
+  let purchased = 0;
+  const buyMaximum = Boolean(options.maxAffordable);
+  while (level < definition.maxLevel) {
+    const recipe = getUpgradeRecipe(definition, level);
+    if (!canAffordRecipe(save.inventory, recipe)) break;
+    if (!spendRecipe(save.inventory, recipe)) break;
+    level += 1;
+    purchased += 1;
+    save.levels[definition.id] = level;
+    if (!buyMaximum) break;
+  }
+  if (purchased <= 0) {
+    const recipe = getUpgradeRecipe(definition, level);
     const missing = Object.entries(recipe)
       .filter(([oreId, amount]) => (save.inventory[oreId] || 0) < amount)
       .map(([oreId, amount]) => `${oreById.get(oreId)?.name || oreId} ${amount - (save.inventory[oreId] || 0)}`)
@@ -2269,20 +2765,28 @@ function buyUpgrade(id) {
     sound.tone(85, 0.08, 'square', 0.025, -20);
     return;
   }
-  if (!spendRecipe(save.inventory, recipe)) return;
-  save.levels[definition.id] = level + 1;
+  if (startingLevel === 0) registerWorkshopFirstRank(definition);
+  if (startingLevel === 0 && definition.id === 'gadgets_powder_pocket') {
+    save.pendingShowcases = { ...(save.pendingShowcases || {}), bomb: true };
+  }
   stats = normalizeStats(calculateMetaStats(save.levels));
   if (!stats.oreFocusUnlocked) save.focusedOreId = null;
+  // Once an unpinned node is finished, keep the "next breakthrough" panel
+  // useful by advancing selection to the next available incomplete node.
+  if (level >= definition.maxLevel && save.pinnedUpgradeId !== definition.id) {
+    state.selectedUpgradeId = null;
+  }
   persistSave();
   sound.tone(330, 0.12, 'triangle', 0.04, 210);
   flash('#68e0c1', 0.18);
-  toast(`${definition.name.toUpperCase()} · УР. ${level + 1}`, 'success');
+  toast(`${definition.name.toUpperCase()} · УР. ${level}${purchased > 1 ? ` · +${purchased}` : ''}`, 'success');
   showTutorial(
     'first_upgrade',
     'УЗЕЛ УСТАНОВЛЕН',
     'Апгрейды постоянны и действуют со следующей смены. Некоторые узлы многоуровневые, а сложные требуют несколько родительских веток.',
     'Запас руды сверху показывает все ресурсы; название появляется при наведении.',
   );
+  if (startingLevel === 0) showUpgradeCeremony(definition);
   renderUpgrades();
   if (!campaignWasReady && getCampaignProgress().ready) {
     toast('РАКЕТА ГОТОВА — ЗАВЕРШИТЕ СМЕНУ', 'success');
@@ -2493,6 +2997,75 @@ function recipeMarkup(recipe, compact = false) {
   }).join('');
 }
 
+function renderNextBreakthrough() {
+  if (!ui.nextBreakthrough) return;
+  const pinned = save.pinnedUpgradeId ? upgradeById.get(save.pinnedUpgradeId) : null;
+  if (save.pinnedUpgradeId && !pinned) save.pinnedUpgradeId = null;
+  const selected = state.selectedUpgradeId ? upgradeById.get(state.selectedUpgradeId) : null;
+  const visible = getVisibleUpgradeDefinitions();
+  const definition = pinned
+    || selected
+    || visible.find(upgradeIsPurchaseEligible)
+    || visible.find(upgradeIsAvailable)
+    || null;
+  const level = definition ? getUpgradeLevel(definition) : 0;
+  const complete = Boolean(definition && level >= definition.maxLevel);
+  const purchaseEligible = Boolean(definition && upgradeIsPurchaseEligible(definition));
+  const pending = Boolean(definition && !complete && requirementsMet(definition) && !purchaseEligible);
+  const pendingReason = pending ? upgradePurchaseBlockReason(definition) : null;
+  const ready = Boolean(definition && !complete && purchaseEligible
+    && canAffordRecipe(save.inventory, getUpgradeRecipe(definition, level)));
+  let need = 'Нажмите на модуль в дереве, чтобы следить за его ценой.';
+  if (definition) {
+    if (complete) {
+      need = 'Модуль полностью установлен.';
+    } else if (!requirementsMet(definition)) {
+      need = `Сначала: ${requirementNames(definition) || 'откройте предыдущий слой'}.`;
+    } else if (pending) {
+      need = pendingReason === 'capacity'
+        ? `Мастерская занята: запущено новых узлов ${WORKSHOP_FIRST_RANK_CAP}/${WORKSHOP_FIRST_RANK_CAP}. Завершите смену; уровни уже начатых узлов остаются доступны.`
+        : 'Узел открыт. Завершите одну смену, чтобы подготовить его к установке.';
+    } else {
+      const recipe = getUpgradeRecipe(definition, level);
+      const missing = Object.entries(recipe)
+        .filter(([oreId, amount]) => (save.inventory[oreId] || 0) < amount)
+        .map(([oreId, amount]) => `${oreById.get(oreId)?.name || oreId} ×${amount - (save.inventory[oreId] || 0)}`);
+      need = missing.length ? `Не хватает: ${missing.join(' · ')}.` : 'Руда собрана — модуль можно установить.';
+    }
+  }
+  if (ui.nextBreakthroughName) {
+    ui.nextBreakthroughName.textContent = definition
+      ? `${definition.name.toUpperCase()} · ${level}/${definition.maxLevel}`
+      : 'ВЫБЕРИТЕ УЗЕЛ';
+  }
+  if (ui.nextBreakthroughNeed) ui.nextBreakthroughNeed.textContent = need;
+  ui.nextBreakthrough.classList.toggle('is-ready', ready);
+  ui.nextBreakthrough.classList.toggle('is-complete', complete);
+  ui.nextBreakthrough.classList.toggle('is-pending', pending);
+  const selectedDiffers = Boolean(pinned && selected && selected.id !== pinned.id);
+  if (ui.pinSelectedUpgrade) {
+    ui.pinSelectedUpgrade.disabled = !selected && !pinned;
+    ui.pinSelectedUpgrade.classList.toggle('is-pinned', Boolean(pinned));
+    ui.pinSelectedUpgrade.textContent = selectedDiffers ? 'СМЕНИТЬ ЦЕЛЬ' : pinned ? 'СНЯТЬ ЦЕЛЬ' : 'ЗАКРЕПИТЬ';
+    ui.pinSelectedUpgrade.title = selectedDiffers
+      ? `Закрепить «${selected.name}» вместо «${pinned.name}»`
+      : pinned
+        ? `Перестать следить за «${pinned.name}»`
+        : selected
+          ? `Следить за «${selected.name}» между сменами`
+          : 'Сначала выберите узел дерева';
+  }
+  if (ui.buyMaxSelectedUpgrade) {
+    ui.buyMaxSelectedUpgrade.disabled = !definition || complete || !purchaseEligible || !ready;
+    ui.buyMaxSelectedUpgrade.dataset.upgradeId = definition?.id || '';
+    ui.buyMaxSelectedUpgrade.title = definition
+      ? ready
+        ? `Купить все доступные уровни «${definition.name}»`
+        : need
+      : 'Сначала выберите узел дерева';
+  }
+}
+
 function oreBreakdownEntries(bag = {}) {
   return ORE_TYPES
     .map((ore) => ({ ore, amount: Math.max(0, Math.floor(Number(bag[ore.id]) || 0)) }))
@@ -2530,12 +3103,17 @@ function renderUpgrades() {
   const visibleIds = new Set(visible.map((definition) => definition.id));
   const newlyVisible = [...visibleIds].filter((id) => !previousVisible.has(id));
   state.visibleUpgradeIds = visibleIds;
+  const previousAvailable = state.availableUpgradeIds;
+  const availableIds = new Set(visible.filter(upgradeIsPurchaseEligible).map((definition) => definition.id));
+  const newlyAvailable = [...availableIds].filter((id) => !previousAvailable.has(id));
+  state.availableUpgradeIds = availableIds;
   if (!state.selectedUpgradeId || !visibleIds.has(state.selectedUpgradeId)) {
     const root = visible.find((definition) => definition.id === 'core_first_descent');
     const orderedAvailable = visible
-      .filter(upgradeIsAvailable)
+      .filter(upgradeIsPurchaseEligible)
       .sort((left, right) => UPGRADE_LANES.indexOf(left.category) - UPGRADE_LANES.indexOf(right.category));
-    state.selectedUpgradeId = root?.id || orderedAvailable[0]?.id || visible[0]?.id || null;
+    const pending = visible.find(upgradeIsAvailable);
+    state.selectedUpgradeId = orderedAvailable[0]?.id || pending?.id || root?.id || visible[0]?.id || null;
   }
 
   const layout = getUpgradeLayout();
@@ -2550,7 +3128,10 @@ function renderUpgrades() {
   for (const definition of visible) {
     const level = getUpgradeLevel(definition);
     const atMax = level >= definition.maxLevel;
-    const available = upgradeIsAvailable(definition);
+    const unlocked = upgradeIsAvailable(definition);
+    const available = upgradeIsPurchaseEligible(definition);
+    const pending = unlocked && !available && !atMax;
+    const pendingReason = pending ? upgradePurchaseBlockReason(definition) : null;
     const preview = upgradeIsPreview(definition);
     const owned = level > 0;
     const recipe = atMax ? {} : getUpgradeRecipe(definition, level);
@@ -2567,16 +3148,19 @@ function renderUpgrades() {
       definition.id === CAMPAIGN.finalUpgrade ? 'is-final' : '',
       available ? 'is-available' : '',
       affordable ? 'is-affordable' : '',
+      pending ? 'is-pending' : '',
       preview ? 'is-preview' : '',
       owned ? 'is-owned' : '',
       atMax ? 'is-maxed' : '',
       state.selectedUpgradeId === definition.id ? 'is-selected' : '',
+      save.pinnedUpgradeId === definition.id ? 'is-pinned' : '',
       !searchMatch || !categoryMatch ? 'is-dimmed' : '',
       newlyVisible.includes(definition.id) ? 'is-new' : '',
     ].filter(Boolean).join(' ');
     node.dataset.upgradeId = definition.id;
     node.dataset.category = definition.category;
-    node.dataset.state = atMax ? 'maxed' : preview ? 'preview' : owned ? 'owned' : 'available';
+    node.dataset.state = atMax ? 'maxed' : preview ? 'preview' : pending ? 'pending' : owned ? 'owned' : 'available';
+    if (pendingReason) node.dataset.pendingReason = pendingReason;
     if (available && !atMax) node.dataset.buyUpgrade = definition.id;
     if (position.x + getUpgradeNodeSize(definition).width * 0.5 > layout.centerX) node.dataset.tooltipSide = 'left';
     node.style.setProperty('--node-x', `${position.x}px`);
@@ -2591,10 +3175,14 @@ function renderUpgrades() {
       ? 'Модуль установлен'
       : preview
         ? `Сначала откройте: ${requirementNames(definition)}`
+        : pending
+          ? pendingReason === 'capacity'
+            ? `Лимит мастерской исчерпан: за одну паузу можно запустить ${WORKSHOP_FIRST_RANK_CAP} новых узла. Завершите смену; уже начатые узлы можно улучшать без ограничения`
+            : 'Узел открыт — завершите одну смену, чтобы подготовить его к установке'
         : affordable
-          ? 'Нажмите, чтобы установить'
+          ? `Нажмите, чтобы установить${definition.maxLevel - level > 1 ? '; Shift + клик — купить максимум' : ''}`
           : 'Не хватает руды — недостающие позиции отмечены красным';
-    node.setAttribute('aria-label', `${definition.name}. ${definition.description}. Уровень ${level} из ${definition.maxLevel}. ${requirements}. ${priceText}`);
+    node.setAttribute('aria-label', `${definition.name}. ${definition.description}. Уровень ${level} из ${definition.maxLevel}. ${requirements}. ${priceText}. ${actionHint}`);
     node.innerHTML = `
       <span class="upgrade-node__icon" aria-hidden="true">${definition.icon || '◆'}</span>
       <span class="upgrade-node__level">${atMax && definition.maxLevel === 1 ? '✓' : `${level}/${definition.maxLevel}`}</span>
@@ -2649,6 +3237,7 @@ function renderUpgrades() {
 
   renderOreInventory();
   renderOreFocusPanel();
+  renderNextBreakthrough();
   $('#upgradeEmpty')?.classList.toggle('hidden', matchingNodes > 0);
   const bought = countPurchasedLevels(save.levels);
   const totalLevels = UPGRADE_DEFS.reduce((sum, definition) => sum + definition.maxLevel, 0);
@@ -2657,7 +3246,14 @@ function renderUpgrades() {
   const miniProgress = ui.upgradeProgress?.closest('.upgrade-progress-wrap')?.querySelector('.mini-progress i');
   if (miniProgress) miniProgress.style.width = `${clamp(bought / totalLevels, 0, 1) * 100}%`;
   $$('.filter-btn[data-category]').forEach((button) => button.classList.toggle('is-active', button.dataset.category === state.upgradeFilter));
-  if (newlyVisible.length && ui.upgradeLive) ui.upgradeLive.textContent = `Открыто новых узлов: ${newlyVisible.length}`;
+  if (ui.upgradeLive) {
+    const installStatus = workshopInstallStatus();
+    ui.upgradeLive.textContent = newlyAvailable.length
+      ? `Доступно для установки новых узлов: ${newlyAvailable.length}`
+      : installStatus.remaining <= 0
+        ? `Лимит мастерской: ${installStatus.installed}/${installStatus.cap} новых узлов. Следующая смена освободит места.`
+        : '';
+  }
 }
 
 function scrollUpgradeIntoView(definition, smooth = true) {
@@ -2810,12 +3406,42 @@ function temporalOverclockMultiplier() {
 
 function dronesAreActive() {
   if (!stats.droneUnlocked || (stats.droneCount || 0) <= 0) return false;
-  const availableFor = stats.runDuration * clamp(stats.droneLifetime || 0, 0, 1);
+  const lifetimeShare = clamp(stats.droneLifetime || 0, 0, 1);
+  // A fully upgraded battery promises autonomy for the whole shift. Bonus
+  // seconds are still part of that shift, so the drones must not silently
+  // switch off at the direct 45-second timer cap.
+  if (lifetimeShare >= 1) {
+    return state.mode === 'run'
+      && state.timeLeft > 0
+      && state.activeWallElapsed < getBonusRunCap();
+  }
+  const availableFor = stats.runDuration * lifetimeShare;
   return state.elapsed <= availableFor;
 }
 
 function oreRank(ore) {
   return Math.max(0, ORE_TYPES.findIndex((item) => item.id === ore?.id));
+}
+
+function hardnessPierceMultiplier(target, pierce = stats.hardnessPierce) {
+  const ore = typeof target === 'string'
+    ? oreById.get(target)
+    : target?.oreId
+      ? oreById.get(target.oreId)
+      : target?.hardness
+        ? target
+        : null;
+  const amount = Math.max(0, Number(pierce) || 0);
+  if (!ore || amount <= 0) return 1;
+  const maximumDensity = Math.max(1, ...ORE_TYPES.map((candidate) => candidate.hardness || 1));
+  const density = Math.max(1, ore.hardness || 1);
+  const normalizedDensity = maximumDensity > 1
+    ? clamp(Math.log(density) / Math.log(maximumDensity), 0, 1)
+    : 0;
+  // Even soft ore has a little structure to pierce, while dense late ores
+  // expose the full benefit. Ordinary dirt/stone deliberately returns 1.
+  const densityWeight = 0.25 + normalizedDensity * 0.75;
+  return 1 + amount * 0.07 * densityWeight;
 }
 
 function collectVeinRemainingCounts() {
@@ -3010,7 +3636,7 @@ function findBestOreTargets(x, y, radius, focusedOreId = null, options = {}, lim
     const rarePower = 1 + (oreRank(ore) >= 4 ? (stats.rareOreDamageBonus || 0) : 0);
     const laserPower = stats.laserUnlocked ? (stats.laserPower || 1) * (1 + Math.max(0, (stats.laserBeams || 1) - 1) * 0.55) : 1;
     const focusedCalibration = focusedOreId ? focusedDamageMultiplier(tile) : 1;
-    const effectivePower = stats.pickPower * (1 + (stats.hardnessPierce || 0) * 0.07) * (1 + (stats.oreDamageBonus || 0)) * expectedCritical * expectedMulti * rarePower * laserPower * focusedCalibration;
+    const effectivePower = stats.pickPower * hardnessPierceMultiplier(tile) * (1 + (stats.oreDamageBonus || 0)) * expectedCritical * expectedMulti * rarePower * laserPower * focusedCalibration;
     const miningSeconds = (tile.hp || 1) / Math.max(0.1, effectivePower * stats.digSpeed);
     const score = (travelSeconds + miningSeconds) / (valueWeight * veinSizeWeight);
     const threshold = ranked.length >= resultLimit ? ranked[ranked.length - 1].score : Infinity;
@@ -3094,13 +3720,28 @@ function chooseOreTargets(x, y, radius, focusedOreId = null) {
     routeSampleSize,
   );
   const [primary = null, backup = null] = targets;
+  const seismicSlots = Math.max(0, stats.seismicRouteSlots || 0);
+  const distantRoutes = seismicSlots > 0
+    ? findBestOreTargets(
+      x,
+      y,
+      radius * 2.1,
+      focusedOreId,
+      {
+        ignoreSenseLine: true,
+        predicate: (candidate) => distance(x, y, candidate.x, candidate.y) > radius + TILE_SIZE * 0.25,
+      },
+      Math.min(12, seismicSlots * 4),
+    )
+    : [];
   if (primary) {
-    rememberSeismicRoutes(targets.slice(1), primary, focusedOreId);
+    rememberSeismicRoutes([...targets.slice(1), ...distantRoutes], primary, focusedOreId);
     return {
       primary: decorateRememberedTarget(primary),
       backup: (stats.backupTargetSlots || 0) > 0 ? backup : null,
     };
   }
+  if (distantRoutes.length) rememberSeismicRoutes(distantRoutes, null, focusedOreId);
   return {
     primary: takeGhostTrailTarget(focusedOreId) || takeRememberedVeinTarget(focusedOreId),
     backup: null,
@@ -3645,7 +4286,10 @@ function tagHighestExistingMotherlode(fallbackRuntime, x, y) {
   if (typeof state.world.forEachOreTileInBounds === 'function') {
     state.world.forEachOreTileInBounds(0, 0, WORLD_CONFIG.WIDTH - 1, WORLD_CONFIG.HEIGHT - 1, consider);
   }
-  const targetVeinId = best?.tile?.veinId || fallbackRuntime.veinId;
+  const fallbackVeinId = fallbackRuntime?.veinId || null;
+  const targetVeinId = best?.tile?.veinId
+    || (fallbackVeinId && countLiveVeinNodes(fallbackVeinId) > 0 ? fallbackVeinId : null);
+  if (!targetVeinId) return fallbackRuntime;
   let runtime = state.veinRuntime.get(targetVeinId);
   if (!runtime) {
     runtime = {
@@ -3712,9 +4356,6 @@ function getVeinRuntime(tile, x, y, allowProcs = true) {
       state.metrics.richVeins += 1;
       state.floaters.push({ x, y: y - 28, text: 'БОГАТАЯ ЖИЛА', color: '#ffe074', life: 1, maxLife: 1 });
     }
-  }
-  if (!state.motherlodeTriggered && stats.motherlodeGuaranteed && state.motherlodeBreaks >= stats.motherlodeTriggerBreaks) {
-    tagHighestExistingMotherlode(runtime, x, y);
   }
   return runtime;
 }
@@ -3912,7 +4553,6 @@ function noteToolBreakProgress(tile, x, y, source) {
 
 function resolveBrokenTile(tile, tx, ty, source = 'pick') {
   state.blocksBroken += 1;
-  const countsForDeafKnock = ['pick', 'laser', 'multi'].includes(source);
   state.metrics.sourceBreaks[source] = (state.metrics.sourceBreaks[source] || 0) + 1;
   if ((tile?.maxHp || 0) > state.metrics.maxBlockHp) {
     state.metrics.maxBlockHp = tile.maxHp || 0;
@@ -3927,6 +4567,7 @@ function resolveBrokenTile(tile, tx, ty, source = 'pick') {
   const noProcSource = source === 'event'
     || SECONDARY_NO_PROC_SOURCES.has(source)
     || (source === 'echo' && stats.laserSuperPickEchoNoProcs);
+  const countsForDeafKnock = !noProcSource && source !== 'shatter';
   if (!noProcSource && source !== 'shatter' && (stats.breakSplashChance || 0) > 0 && Math.random() < procChance(stats.breakSplashChance, 0.12)) {
     state.world.damageCircle(x, y, Math.max(TILE_SIZE, stats.splashRadius || TILE_SIZE), stats.pickPower * (stats.breakSplashPower || 0.25), (nearTile, nearTx, nearTy) => resolveBrokenTile(nearTile, nearTx, nearTy, 'shatter'));
   }
@@ -3938,9 +4579,6 @@ function resolveBrokenTile(tile, tx, ty, source = 'pick') {
     }
     return;
   }
-  if (countsForDeafKnock) state.dryRockBlocks = 0;
-
-  if (stats.motherlodeGuaranteed && !state.motherlodeTriggered) state.motherlodeBreaks += 1;
   const veinRuntime = getVeinRuntime(tile, x, y, !noProcSource);
 
   const firstOfType = !state.discoveredOreIds.has(ore.id);
@@ -3955,7 +4593,7 @@ function resolveBrokenTile(tile, tx, ty, source = 'pick') {
   state.combo = now <= state.comboExpires ? state.combo + 1 : 1;
   state.comboExpires = now + stats.comboWindow;
   let hadRareEffect = veinRuntime.richTaggedAtBreak === state.blocksBroken;
-  let yieldCount = 1 + advanceTripleSample(tile, x, y);
+  let yieldCount = 1 + (noProcSource ? 0 : advanceTripleSample(tile, x, y));
   const breakKey = `${tx}:${ty}`;
   if (state.overkillYieldReady && state.overkillYieldTargetKey === breakKey) {
     yieldCount += 1;
@@ -4040,9 +4678,10 @@ function resolveBrokenTile(tile, tx, ty, source = 'pick') {
   const overkill = Math.max(0, stats.pickPower - (tile.maxHp || 1)) / Math.max(1, tile.maxHp || 1);
   const conversionBonus = 1 + Math.min(1, overkill) * (stats.oreConversionBonus || 0);
   const sourceBonus = source === 'bomb' ? (stats.bombValueMultiplier || 1) : 1;
+  const richActiveForBreak = veinRuntime.rich && veinRuntime.richTaggedAtBreak !== state.blocksBroken;
   const veinYieldBonus = veinRuntime.motherlode
     ? stats.motherlodeYieldMultiplier
-    : veinRuntime.rich ? 1 + stats.richVeinYieldBonus : 1;
+    : richActiveForBreak ? 1 + stats.richVeinYieldBonus : 1;
   const pickupBonus = 1 + Math.max(0, (stats.pickupRadius || 46) - 46) / 1400;
   const eventYieldBonus = state.eventYieldBoostRemaining > 0 ? 1.5 : 1;
   const exactYield = Math.max(
@@ -4062,7 +4701,7 @@ function resolveBrokenTile(tile, tx, ty, source = 'pick') {
   const veinCompleted = !veinRuntime.completed && countLiveVeinNodes(veinRuntime.veinId) <= 0;
   if (veinCompleted) {
     veinRuntime.completed = true;
-    if (veinRuntime.rich) yieldCount += Math.floor(stats.richVeinCompletionBonus || 0);
+    if (richActiveForBreak) yieldCount += Math.floor(stats.richVeinCompletionBonus || 0);
   }
   state.runOre += yieldCount;
   state.oreCounts[rewardOre.id] = (state.oreCounts[rewardOre.id] || 0) + yieldCount;
@@ -4075,6 +4714,12 @@ function resolveBrokenTile(tile, tx, ty, source = 'pick') {
     state.runOre += 1;
     state.oreCounts[goldenBonusOre.id] = (state.oreCounts[goldenBonusOre.id] || 0) + 1;
     state.floaters.push({ x: x + 12, y: y - 46, text: `${goldenBonusOre.name.toUpperCase()} +1`, color: '#ffe477', life: 1, maxLife: 1 });
+  }
+  if (stats.motherlodeGuaranteed && !state.motherlodeTriggered) {
+    state.motherlodeBreaks += yieldCount;
+    if (state.motherlodeBreaks >= stats.motherlodeTriggerBreaks) {
+      tagHighestExistingMotherlode(veinRuntime, x, y);
+    }
   }
   if (veinCompleted && veinRuntime.motherlode) {
     awardMotherlodeCache(stats.motherlodeCompletionCache, x, y);
@@ -4479,7 +5124,7 @@ function attack(aimTarget = state.target) {
     ? Math.max(0, aimTile.hp || 0)
     : 0;
   const streakBonus = 1 + Math.min(state.hitStreak, stats.streakCap || 0) * (stats.streakPower || 0);
-  const densityBonus = 1 + (stats.hardnessPierce || 0) * 0.07;
+  const densityBonus = hardnessPierceMultiplier(aimTile);
   const oreBonus = 1 + (targetOre ? (stats.oreDamageBonus || 0) : 0);
   const rareBonus = 1 + (oreRank(targetOre) >= 4 ? (stats.rareOreDamageBonus || 0) : 0);
   const focusedCalibration = focusedDamageMultiplier(aimTile);
@@ -4783,7 +5428,13 @@ function attack(aimTarget = state.target) {
 
   const impactX = player.x + nx * Math.min(length, Math.max(stats.digReach, TILE_SIZE));
   const impactY = player.y + ny * Math.min(length, Math.max(stats.digReach, TILE_SIZE));
-  if (stats.bombChance > 0 && Math.random() < procChance(stats.bombChance, 0.18)) {
+  const guaranteedBomb = Boolean(save.pendingShowcases?.bomb);
+  if (stats.bombChance > 0 && hadToolImpact && (guaranteedBomb || Math.random() < procChance(stats.bombChance, 0.18))) {
+    if (guaranteedBomb) {
+      save.pendingShowcases = { ...(save.pendingShowcases || {}), bomb: false };
+      persistSave();
+      toast('ПЕРВЫЙ ЗАРЯД · ГАРАНТИРОВАННЫЙ ПОКАЗ', 'success');
+    }
     detonate(impactX, impactY, nx, ny);
   }
   if (stats.chainCount > 0 && stats.chainChance > 0 && Math.random() < procChance(stats.chainChance, 0.16)) {
@@ -4922,6 +5573,10 @@ function collectCircleGadgetOverkill(brokenTiles, snapshot, damage, x, y) {
 function damageBombShape(x, y, radius, power, directionX, directionY, source = 'bomb') {
   const magnitude = Math.hypot(directionX, directionY);
   const directional = Boolean(stats.directionalBombs && stats.directionalBombConeTiles > 0 && magnitude > 0.001);
+  // The sector is sampled once per blast. Destroying one of its endpoint
+  // nodes during the AoE must not revoke the bonus from later candidates in
+  // that same explosion.
+  const triangleSnapshot = getTriangulationTriangle();
   if (directional) state.metrics.directionalBlasts += 1;
   const nx = directional ? directionX / magnitude : 0;
   const ny = directional ? directionY / magnitude : 1;
@@ -4970,7 +5625,7 @@ function damageBombShape(x, y, radius, power, directionX, directionY, source = '
     const hpBefore = tile.hp || 0;
     const oreId = tile.oreId;
     const veinId = tile.veinId;
-    const triangularBonus = tileInsideTriangulation(candidate.tx, candidate.ty)
+    const triangularBonus = tileInsideTriangulation(candidate.tx, candidate.ty, triangleSnapshot)
       ? stats.triangularFixGadgetDamageBonus
       : 0;
     if (triangularBonus > 0) state.metrics.triangleBuffHits += 1;
@@ -5033,6 +5688,18 @@ function detonate(x, y, directionX = 0, directionY = 1, options = {}) {
   let blastDirectionX = directionX;
   let blastDirectionY = directionY;
   const focusedOre = getFocusedOre();
+  const stickySearchRadius = Math.max(stats.bombRadius * 2.5, TILE_SIZE * 2.5);
+  const stickyTarget = sticky
+    ? beacon || findBestOreTarget(
+      x,
+      y,
+      stickySearchRadius,
+      focusedOre?.id || null,
+      { ignoreSenseLine: true },
+    ) || (focusedOre
+      ? findBestOreTarget(x, y, stickySearchRadius, null, { ignoreSenseLine: true })
+      : null)
+    : null;
   const activeFieldTarget = findMagneticFieldTarget(focusedOre);
   const prospectiveField = stats.magneticFieldEnabled && stats.magneticFieldRadiusTiles > 0
     ? { x, y, radius: stats.magneticFieldRadiusTiles * TILE_SIZE }
@@ -5045,11 +5712,11 @@ function detonate(x, y, directionX = 0, directionY = 1, options = {}) {
     blastDirectionY = guidedTarget.y - y;
     blastX = guidedTarget.x;
     blastY = guidedTarget.y;
-  } else if (sticky && beacon) {
-    blastDirectionX = beacon.x - x;
-    blastDirectionY = beacon.y - y;
-    blastX = beacon.x;
-    blastY = beacon.y;
+  } else if (stickyTarget) {
+    blastDirectionX = stickyTarget.x - x;
+    blastDirectionY = stickyTarget.y - y;
+    blastX = stickyTarget.x;
+    blastY = stickyTarget.y;
   }
   if (stats.magneticFieldEnabled && stats.magneticFieldDuration > 0 && stats.magneticFieldRadiusTiles > 0) {
     state.magneticField = {
@@ -5179,18 +5846,38 @@ function microEventIndicatorRemaining(event = state.activeMicroEvent) {
   return state.eventBannerTimer;
 }
 
+function fallbackTimedMicroEvent() {
+  const candidates = [
+    { type: 'fragile_cavity', remaining: state.eventSoftRockRemaining, indicatorText: 'МЯГКАЯ ПОРОДА · УРОН ПО ПОРОДЕ +65%', color: '#ffb45b' },
+    { type: 'gas_pocket', remaining: state.eventDigBoostRemaining, indicatorText: 'УСКОРЕНИЕ КОПКИ +50%', color: '#a8f06a' },
+    { type: 'rich_lens', remaining: state.eventYieldBoostRemaining, indicatorText: 'ВЫХОД РУДЫ ×1,5', color: '#ffe36e' },
+    { type: 'underground_flow', remaining: state.eventMoveBoostRemaining, indicatorText: 'СКОРОСТЬ ДВИЖЕНИЯ +35%', color: '#58c9ff' },
+  ].filter((event) => event.remaining > 0.001)
+    .sort((left, right) => right.remaining - left.remaining);
+  const event = candidates[0] || null;
+  return event ? { ...event, label: event.indicatorText, restoredIndicator: true } : null;
+}
+
 function formatMicroEventTimer(seconds) {
   return `${Math.max(0, seconds).toFixed(1).replace('.', ',')} С`;
 }
 
 function updateMicroEventIndicator() {
   if (!ui.microEventBanner) return;
-  const remaining = microEventIndicatorRemaining();
-  if (state.mode !== 'run' || !state.activeMicroEvent || remaining <= 0) {
+  let event = state.activeMicroEvent;
+  let remaining = microEventIndicatorRemaining(event);
+  if (!event || remaining <= 0) {
+    event = fallbackTimedMicroEvent();
+    state.activeMicroEvent = event;
+    remaining = microEventIndicatorRemaining(event);
+  }
+  if (state.mode !== 'run' || !event || remaining <= 0) {
     ui.microEventBanner.classList.add('hidden');
     if (remaining <= 0) state.activeMicroEvent = null;
     return;
   }
+  if (ui.microEventTitle) ui.microEventTitle.textContent = event.indicatorText || event.label || event.type;
+  ui.microEventBanner.style.setProperty('--event-color', event.color || '#ffd170');
   if (ui.microEventTimer) ui.microEventTimer.textContent = formatMicroEventTimer(remaining);
   ui.microEventBanner.classList.remove('hidden');
 }
@@ -5329,6 +6016,10 @@ function applyMicroEvent(event) {
   state.metrics.microEvents[triggered.type] = (state.metrics.microEvents[triggered.type] || 0) + 1;
   const bannerDuration = Math.max(2.2, duration);
   state.activeMicroEvent = { ...triggered, indicatorText };
+  if (triggered.id === state.stagedEventId) {
+    state.pityEventArmed = false;
+    state.stagedEventId = null;
+  }
   state.eventBannerTimer = bannerDuration;
   if (typeof state.world.consumeMicroEvent === 'function') state.world.consumeMicroEvent(triggered.id);
   showMicroEventIndicator(triggered, indicatorText);
@@ -5340,7 +6031,11 @@ function findPriorityChestTarget() {
   if (!state.player || !state.world || typeof state.world.getMicroEventsNear !== 'function') return null;
   const point = state.world.worldToTile(state.player.x, state.player.y);
   const senseTiles = Math.max(1, effectiveSenseRadius() / TILE_SIZE);
-  const chest = state.world.getMicroEventsNear(
+  const stagedEvent = state.pityEventArmed && state.stagedEventId
+    ? state.world.getMicroEvents().find((event) => event.id === state.stagedEventId) || null
+    : null;
+  const stagedChest = stagedEvent?.type === 'ancient_container' ? stagedEvent : null;
+  const chest = stagedChest || state.world.getMicroEventsNear(
     point.tx,
     point.ty,
     senseTiles,
@@ -7202,7 +7897,8 @@ function bindEvents() {
   ui.upgradeGrid?.addEventListener('click', (event) => {
     const button = event.target.closest('[data-buy-upgrade]');
     if (button) {
-      buyUpgrade(button.dataset.buyUpgrade);
+      state.selectedUpgradeId = button.dataset.buyUpgrade;
+      buyUpgrade(button.dataset.buyUpgrade, { maxAffordable: event.shiftKey });
       return;
     }
     const node = event.target.closest('[data-upgrade-id]');
@@ -7210,6 +7906,37 @@ function bindEvents() {
       state.selectedUpgradeId = node.dataset.upgradeId;
       renderUpgrades();
     }
+  });
+  const previewUpgradeGoal = (event) => {
+    const node = event.target.closest?.('[data-upgrade-id]');
+    const id = node?.dataset.upgradeId;
+    if (!id || !state.visibleUpgradeIds.has(id) || state.selectedUpgradeId === id) return;
+    state.selectedUpgradeId = id;
+    ui.upgradeNodes?.querySelectorAll('[data-upgrade-id]').forEach((item) => {
+      item.classList.toggle('is-selected', item.dataset.upgradeId === id);
+    });
+    renderNextBreakthrough();
+  };
+  ui.upgradeGrid?.addEventListener('pointerover', previewUpgradeGoal);
+  ui.upgradeGrid?.addEventListener('focusin', previewUpgradeGoal);
+  ui.pinSelectedUpgrade?.addEventListener('click', () => {
+    const selected = state.selectedUpgradeId ? upgradeById.get(state.selectedUpgradeId) : null;
+    const pinned = save.pinnedUpgradeId ? upgradeById.get(save.pinnedUpgradeId) : null;
+    if (pinned && (!selected || selected.id === pinned.id)) {
+      save.pinnedUpgradeId = null;
+      toast('ЦЕЛЬ СНЯТА', 'info');
+    } else if (selected) {
+      save.pinnedUpgradeId = selected.id;
+      toast(`ЦЕЛЬ: ${selected.name.toUpperCase()}`, 'success');
+    }
+    persistSave();
+    renderUpgrades();
+  });
+  ui.buyMaxSelectedUpgrade?.addEventListener('click', () => {
+    const id = ui.buyMaxSelectedUpgrade.dataset.upgradeId;
+    if (!id || !upgradeById.has(id)) return;
+    state.selectedUpgradeId = id;
+    buyUpgrade(id, { maxAffordable: true });
   });
   ui.oreFocusChoices?.addEventListener('click', (event) => {
     const button = event.target.closest('[data-focus-ore]');
@@ -7241,7 +7968,10 @@ function bindEvents() {
       });
       if (state.upgradeFilter !== 'all') {
         const laneNodes = getVisibleUpgradeDefinitions().filter((definition) => definition.category === state.upgradeFilter);
-        state.selectedUpgradeId = laneNodes.find(upgradeIsAvailable)?.id || laneNodes[0]?.id || state.selectedUpgradeId;
+        state.selectedUpgradeId = laneNodes.find(upgradeIsPurchaseEligible)?.id
+          || laneNodes.find(upgradeIsAvailable)?.id
+          || laneNodes[0]?.id
+          || state.selectedUpgradeId;
       }
       renderUpgrades();
       if (state.upgradeFilter !== 'all') {
@@ -7281,6 +8011,11 @@ function bindEvents() {
       upgradeQuery: '',
       selectedUpgradeId: null,
       visibleUpgradeIds: new Set(),
+      availableUpgradeIds: new Set(),
+      workshopEligibilityRun: -1,
+      workshopEligibleIds: new Set(),
+      workshopInstallRun: -1,
+      workshopInstalledIds: new Set(),
       journalFilter: 'all',
       currentSector: null,
       dryRockBlocks: 0,
@@ -7294,6 +8029,8 @@ function bindEvents() {
       eventDigBoostRemaining: 0,
       eventSoftRockRemaining: 0,
       eventBannerTimer: 0,
+      pityEventArmed: false,
+      stagedEventId: null,
     });
     if (ui.upgradeSearch) ui.upgradeSearch.value = '';
     $$('.filter-btn[data-category]').forEach((button) => {
@@ -7307,6 +8044,8 @@ function bindEvents() {
     persistSave();
     renderUpgrades();
     updatePersistentLabels();
+    showTitle();
+    startOnboarding(false);
     toast('ПРОТОКОЛ ОЧИЩЕН', 'warning');
   });
 
@@ -7318,16 +8057,16 @@ function bindEvents() {
   });
 
   addEventListener('keydown', (event) => {
-    // Space is intentionally unbound. Prevent its native button activation so
-    // the former shortcut cannot survive through whichever control has focus.
-    if (event.code === 'Space') {
-      event.preventDefault();
-      return;
-    }
     if (trapOverlayFocus(event)) return;
     const tag = document.activeElement?.tagName;
     const interactive = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A', 'SUMMARY'].includes(tag)
       || Boolean(document.activeElement?.isContentEditable);
+    // Space has no game shortcut anymore, but keeps its native activation on
+    // focused buttons and disclosure controls for keyboard accessibility.
+    if (event.code === 'Space') {
+      if (!interactive) event.preventDefault();
+      return;
+    }
     if (event.key === 'Escape') {
       if (state.activeTutorialId) {
         dismissTutorial();
@@ -7417,6 +8156,16 @@ window.__DEPTH_ZERO__ = {
     sector: state.currentSector ? { ...state.currentSector } : null,
     microEventsRemaining: typeof state.world?.getMicroEvents === 'function' ? state.world.getMicroEvents().length : 0,
     activeMicroEvent: state.activeMicroEvent ? { ...state.activeMicroEvent } : null,
+    eventPity: {
+      armed: state.pityEventArmed,
+      stagedEventId: state.stagedEventId,
+      stagedEvent: state.stagedEventId && typeof state.world?.getMicroEvents === 'function'
+        ? state.world.getMicroEvents({ includeConsumed: true }).find((event) => event.id === state.stagedEventId) || null
+        : null,
+      dryRuns: save.runsSinceEvent || 0,
+      threshold: getEventPityThreshold(),
+      totalEvents: save.totalEvents || 0,
+    },
     laserShotCount: state.laserShotCount,
     deafKnockCooldown: state.deafKnockCooldown,
     deafKnockBoostRemaining: state.deafKnockBoostRemaining,
@@ -7429,6 +8178,15 @@ window.__DEPTH_ZERO__ = {
     perkStatus: perkStatusEntries().map((entry) => ({ ...entry })),
     overkillReservoir: state.overkillReservoir,
     overkillReservoirVeinId: state.overkillReservoirVeinId,
+    dryRockBlocks: state.dryRockBlocks,
+    motherlodeBreaks: state.motherlodeBreaks,
+    motherlodeVeinId: state.motherlodeVeinId,
+    rememberedVeins: (state.rememberedVeins || []).map((target) => ({
+      tx: target.tx,
+      ty: target.ty,
+      oreId: target.tile?.oreId || null,
+      veinId: target.tile?.veinId || null,
+    })),
     triangleActive: Boolean(getTriangulationTriangle()),
     triangleRememberedOre: [...(state.triangleOreMemory || new Map())]
       .filter(([, expires]) => expires >= state.elapsed)
@@ -7442,6 +8200,10 @@ window.__DEPTH_ZERO__ = {
   getUpgradeCatalog: () => UPGRADE_DEFS.map((definition) => {
     const level = getUpgradeLevel(definition);
     const recipe = level < definition.maxLevel ? getUpgradeRecipe(definition, level) : {};
+    const unlocked = requirementsMet(definition) && level < definition.maxLevel;
+    const available = upgradeIsPurchaseEligible(definition);
+    const pendingReason = unlocked && !available ? upgradePurchaseBlockReason(definition) : null;
+    const installStatus = workshopInstallStatus();
     return {
       id: definition.id,
       category: definition.category,
@@ -7451,8 +8213,13 @@ window.__DEPTH_ZERO__ = {
         id: typeof requirement === 'string' ? requirement : requirement.id,
         level: typeof requirement === 'string' ? 1 : (requirement.level || 1),
       })),
-      available: requirementsMet(definition) && level < definition.maxLevel,
-      affordable: level < definition.maxLevel && canAffordRecipe(save.inventory, recipe),
+      unlocked,
+      available,
+      breakthrough: BREAKTHROUGH_FIRST_RANK_IDS.has(definition.id),
+      capstone: CAMPAIGN.capstones.includes(definition.id),
+      pendingReason,
+      firstRankSlotsRemaining: installStatus.remaining,
+      affordable: available && canAffordRecipe(save.inventory, recipe),
       recipe: { ...recipe },
     };
   }),
@@ -7487,6 +8254,8 @@ window.__DEPTH_ZERO__ = {
     const definition = upgradeById.get(upgradeId);
     if (!definition) return false;
     save.levels[upgradeId] = clamp(Math.floor(Number(level) || 0), 0, definition.maxLevel);
+    invalidateWorkshopEligibility();
+    invalidateWorkshopInstallSession();
     stats = normalizeStats(calculateMetaStats(save.levels));
     persistSave();
     updatePersistentLabels();
@@ -7495,6 +8264,8 @@ window.__DEPTH_ZERO__ = {
   },
   setAllUpgrades: (enabled = true) => {
     for (const definition of UPGRADE_DEFS) save.levels[definition.id] = enabled ? definition.maxLevel : 0;
+    invalidateWorkshopEligibility();
+    invalidateWorkshopInstallSession();
     stats = normalizeStats(calculateMetaStats(save.levels));
     persistSave();
     updatePersistentLabels();
@@ -7516,6 +8287,8 @@ window.__DEPTH_ZERO__ = {
   },
   setCompletedRuns: (value = 0) => {
     save.runs = Math.max(0, Math.floor(Number(value) || 0));
+    invalidateWorkshopEligibility();
+    invalidateWorkshopInstallSession();
     persistSave();
     updatePersistentLabels();
     return true;
@@ -7622,6 +8395,13 @@ window.__DEPTH_ZERO__ = {
   debugGetTile: (tx, ty) => {
     const tile = state.world?.getTile(Math.floor(tx), Math.floor(ty));
     return tile ? { ...tile } : null;
+  },
+  debugSetEventPity: (dryRuns = 0, totalEvents = 0) => {
+    save.runs = Math.max(save.runs, 4);
+    save.runsSinceEvent = Math.max(0, Math.floor(Number(dryRuns) || 0));
+    save.totalEvents = Math.max(0, Math.floor(Number(totalEvents) || 0));
+    persistSave();
+    return { dryRuns: save.runsSinceEvent, totalEvents: save.totalEvents, threshold: getEventPityThreshold() };
   },
   debugSetPlayerTile: (tx, ty) => {
     if (state.mode !== 'run' || !state.player) return false;
@@ -7746,7 +8526,12 @@ window.__DEPTH_ZERO__ = {
       oreCounts: createOreBag(),
       discoveredOreIds: new Set(),
       visibleUpgradeIds: new Set(),
+      availableUpgradeIds: new Set(),
       selectedUpgradeId: null,
+      workshopEligibilityRun: -1,
+      workshopEligibleIds: new Set(),
+      workshopInstallRun: -1,
+      workshopInstalledIds: new Set(),
       metrics: createRunMetrics(),
     });
     persistSave();
@@ -7763,7 +8548,7 @@ window.__DEPTH_ZERO__ = {
       const candidates = UPGRADE_DEFS
         .filter((definition) => {
           const level = getUpgradeLevel(definition);
-          if (level >= definition.maxLevel || !requirementsMet(definition)) return false;
+          if (level >= definition.maxLevel || !upgradeIsPurchaseEligible(definition)) return false;
           return canAffordRecipe(save.inventory, getUpgradeRecipe(definition, level));
         })
         .map((definition) => {
@@ -7784,13 +8569,34 @@ window.__DEPTH_ZERO__ = {
             definition,
             level,
             recipe,
+            breakthrough: BREAKTHROUGH_FIRST_RANK_IDS.has(definition.id),
+            strategic: level < strategicTarget,
+            final: definition.id === CAMPAIGN.finalUpgrade,
             score: weightedCost * strategicWeight + depth * 4 + categoryLoad * 0.6 + corePriority + finalPriority,
           };
         })
-        .sort((left, right) => left.score - right.score || UPGRADE_DEFS.indexOf(left.definition) - UPGRADE_DEFS.indexOf(right.definition));
-      const candidate = candidates[0];
+        .sort((left, right) => (
+          left.score - right.score
+          || UPGRADE_DEFS.indexOf(left.definition) - UPGRADE_DEFS.indexOf(right.definition)
+        ));
+      let candidate = candidates[0];
+      const lastFirstRankSlot = workshopInstallStatus().remaining === 1;
+      const originalIsReplaceableScalar = candidate
+        && candidate.level === 0
+        && !candidate.breakthrough
+        && !candidate.strategic
+        && !candidate.final;
+      if (lastFirstRankSlot && originalIsReplaceableScalar) {
+        const breakthroughCandidate = candidates.find((entry) => (
+          entry.level === 0
+          && entry.breakthrough
+          && !CAMPAIGN.capstones.includes(entry.definition.id)
+        ));
+        if (breakthroughCandidate) candidate = breakthroughCandidate;
+      }
       if (!candidate || !spendRecipe(save.inventory, candidate.recipe)) break;
       save.levels[candidate.definition.id] = candidate.level + 1;
+      if (candidate.level === 0) registerWorkshopFirstRank(candidate.definition);
       bought.push(candidate.definition.id);
       stats = normalizeStats(calculateMetaStats(save.levels));
     }
@@ -7824,6 +8630,8 @@ window.__DEPTH_ZERO__ = {
     droneAttack();
     return true;
   },
+  debugDronesAreActive: () => dronesAreActive(),
+  debugHardnessPierceMultiplier: (oreId = null) => hardnessPierceMultiplier(oreId),
   debugTriggerDeafKnock: () => triggerDeafKnock(state.player?.x, state.player?.y),
   debugTriggerSuperPickEcho: (damage = stats.pickPower) => {
     if (state.mode !== 'run' || !state.target) return false;

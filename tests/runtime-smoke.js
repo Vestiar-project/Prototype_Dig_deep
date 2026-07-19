@@ -130,6 +130,148 @@ require(path.join(root, "js", "game.js"));
 const api = global.__DEPTH_ZERO__;
 assert.ok(api, "runtime diagnostics API should initialize");
 assert.equal(api.getSnapshot().upgrades, 102, "all selected upgrade nodes should be registered");
+const initialUpgradeCatalog = api.getUpgradeCatalog();
+assert.equal(
+  initialUpgradeCatalog.find((upgrade) => upgrade.id === "gadgets_shock_capsule").breakthrough,
+  true,
+  "Shock Capsule must be explicitly classified as a gameplay breakthrough",
+);
+assert.equal(
+  initialUpgradeCatalog.find((upgrade) => upgrade.id === "sense_instinct_spark").breakthrough,
+  false,
+  "plain scalar first ranks must not be mislabeled as breakthroughs",
+);
+
+function grantWorkshopBudget(targetApi, amount = 1_000_000) {
+  for (const ore of global.DepthZeroUpgrades.ORE_TYPES) targetApi.grantOre(ore.id, amount);
+}
+
+function maxWorkshopUpgrade(targetApi, upgradeId) {
+  let entry = targetApi.getUpgradeCatalog().find((upgrade) => upgrade.id === upgradeId);
+  while (entry.level < entry.maxLevel) {
+    assert.equal(targetApi.buyUpgrade(upgradeId), true, `test setup should finish ${upgradeId}`);
+    entry = targetApi.getUpgradeCatalog().find((upgrade) => upgrade.id === upgradeId);
+  }
+}
+
+// Completing an unpinned node must advance the persistent workshop guide;
+// otherwise "Next breakthrough" gets stuck on the finished root forever.
+api.debugResetProgress();
+api.grantOre("copper", 20);
+api.openUpgrades();
+const breakthroughBeforeRoot = elementFor("#nextBreakthroughName").textContent;
+assert.match(breakthroughBeforeRoot, /0\/1/, "fresh guide should point at the root purchase");
+assert.equal(api.buyUpgrade("core_first_descent"), true);
+const breakthroughAfterRoot = elementFor("#nextBreakthroughName").textContent;
+assert.notEqual(breakthroughAfterRoot, breakthroughBeforeRoot, "guide should advance after completing an unpinned node");
+assert.doesNotMatch(breakthroughAfterRoot, /1\/1/, "guide should describe an incomplete next node");
+assert.equal(elementFor("#upgradeMapStatus").textContent, "", "live status must not keep a stale available-node count while every child is pending");
+const pendingChild = api.getUpgradeCatalog().find((upgrade) => upgrade.id === "time_extra_breath");
+assert.equal(pendingChild.unlocked, true, "a child should become visible as soon as its prerequisite is installed");
+assert.equal(pendingChild.available, false, "a newly unlocked child should wait for the next completed shift");
+const savedPendingWorkshop = JSON.parse(localData.get("depth-zero-save-v1"));
+assert.equal(savedPendingWorkshop.workshopEligibilityRun, 0, "the workshop generation should be persisted");
+assert.equal(savedPendingWorkshop.workshopEligibleIds.includes("time_extra_breath"), false, "reload data must not bypass a pending child");
+assert.equal(api.buyUpgrade("time_extra_breath"), false, "the workshop gate should prevent same-shift dependency cascades");
+api.startRun({ seed: 14001 });
+api.stepRun(8);
+assert.equal(api.getSnapshot().mode, "result", "the gate should advance only after a completed shift");
+const preparedChild = api.getUpgradeCatalog().find((upgrade) => upgrade.id === "time_extra_breath");
+assert.equal(preparedChild.available, true, "the pending child should be installable after one completed shift");
+const savedPreparedWorkshop = JSON.parse(localData.get("depth-zero-save-v1"));
+assert.equal(savedPreparedWorkshop.workshopEligibilityRun, 1, "a completed shift should persist a fresh workshop generation");
+assert.equal(savedPreparedWorkshop.workshopEligibleIds.includes("time_extra_breath"), true, "the prepared child should remain ready after reload");
+assert.equal(api.buyUpgrade("time_extra_breath"), true, "the prepared child should purchase normally");
+
+// A workshop pause can start at most four previously-unowned nodes. Remaining
+// ranks on those nodes stay buyable, and a completed shift opens four fresh slots.
+grantWorkshopBudget(api);
+const workshopCandidates = api.getUpgradeCatalog()
+  .filter((upgrade) => upgrade.level === 0 && upgrade.available)
+  .slice(0, 4);
+assert.ok(workshopCandidates.length >= 4, "the first post-root workshop should expose enough distinct branches to exercise its cap");
+for (const candidate of workshopCandidates.slice(0, 3)) {
+  assert.equal(api.buyUpgrade(candidate.id), true, `the workshop should start ${candidate.id} before reaching its cap`);
+}
+const cappedCandidate = workshopCandidates[3];
+const startedBeforeExtraRank = api.getUpgradeCatalog().find((upgrade) => upgrade.id === "time_extra_breath");
+assert.ok(startedBeforeExtraRank.level > 0 && startedBeforeExtraRank.level < startedBeforeExtraRank.maxLevel);
+assert.equal(api.buyUpgrade("time_extra_breath"), true, "a started node must keep all later ranks available at the first-rank cap");
+const cappedCatalogEntry = api.getUpgradeCatalog().find((upgrade) => upgrade.id === cappedCandidate.id);
+assert.equal(cappedCatalogEntry.available, false, "a fifth distinct first rank must be blocked in the same workshop");
+assert.equal(cappedCatalogEntry.pendingReason, "capacity", "catalog diagnostics should distinguish capacity from preparation");
+assert.equal(cappedCatalogEntry.firstRankSlotsRemaining, 0);
+assert.equal(api.buyUpgrade(cappedCandidate.id), false, "the direct purchase path must enforce the four-node cap");
+const cappedWorkshopSave = JSON.parse(localData.get("depth-zero-save-v1"));
+assert.equal(cappedWorkshopSave.version, 10, "workshop capacity state requires save schema v10");
+assert.equal(cappedWorkshopSave.workshopInstallRun, 1);
+assert.equal(cappedWorkshopSave.workshopInstalledIds.length, 4, "the exact set of first-ranked nodes must persist");
+assert.match(elementFor("#upgradeMapStatus").textContent, /4\/4/, "the workshop tracker should explain the exhausted capacity");
+api.startRun({ seed: 14003 });
+api.stepRun(8);
+assert.equal(
+  api.getUpgradeCatalog().find((upgrade) => upgrade.id === cappedCandidate.id).available,
+  true,
+  "the next completed shift must reset first-rank capacity",
+);
+assert.equal(api.buyUpgrade(cappedCandidate.id), true);
+api.debugResetProgress();
+
+grantWorkshopBudget(api);
+api.openUpgrades();
+assert.equal(api.buyUpgrade("core_first_descent"), true);
+api.startRun({ seed: 14004 });
+api.stepRun(8);
+grantWorkshopBudget(api);
+const prioritizedWorkshopPurchase = api.debugAutoBuyAffordable(1);
+assert.deepEqual(
+  prioritizedWorkshopPurchase.bought,
+  ["sense_instinct_spark"],
+  "with multiple first-rank slots left, auto-buy must preserve the original economic ordering",
+);
+maxWorkshopUpgrade(api, "sense_instinct_spark");
+assert.equal(api.buyUpgrade("dig_arm_swing"), true);
+maxWorkshopUpgrade(api, "dig_arm_swing");
+assert.equal(api.buyUpgrade("time_extra_breath"), true);
+maxWorkshopUpgrade(api, "time_extra_breath");
+const lastSlotWorkshopPurchase = api.debugAutoBuyAffordable(1);
+assert.deepEqual(
+  lastSlotWorkshopPurchase.bought,
+  ["gadgets_powder_pocket"],
+  "the last contested first-rank slot should prefer a non-capstone mechanic to a cheaper new scalar",
+);
+const automatedWorkshop = api.debugAutoBuyAffordable(199);
+const automatedWorkshopSave = JSON.parse(localData.get("depth-zero-save-v1"));
+assert.ok(automatedWorkshop.bought.length > 0, "auto-buy should continue buying ranks after opening four nodes");
+assert.equal(automatedWorkshopSave.workshopInstalledIds.length, 4, "auto-buy must obey the distinct first-rank cap");
+assert.equal(new Set(automatedWorkshopSave.workshopInstalledIds).size, 4);
+assert.equal(automatedWorkshopSave.workshopInstalledIds[3], "gadgets_powder_pocket", "the mechanic reservation belongs only to the final slot");
+api.debugResetProgress();
+
+// Branch capstones are milestones, not last-slot reservation candidates.
+api.setAllUpgrades(true);
+api.setUpgradeLevel("sense_earth_call", 0);
+api.setUpgradeLevel("sense_instinct_spark", 0);
+api.setUpgradeLevel("dig_arm_swing", 0);
+api.setUpgradeLevel("time_extra_breath", 0);
+api.setUpgradeLevel("power_sharpened_edge", 0);
+grantWorkshopBudget(api);
+const capstoneCatalog = api.getUpgradeCatalog();
+assert.equal(capstoneCatalog.find((upgrade) => upgrade.id === "sense_earth_call").capstone, true);
+assert.equal(capstoneCatalog.find((upgrade) => upgrade.id === "sense_earth_call").breakthrough, true);
+assert.equal(capstoneCatalog.find((upgrade) => upgrade.id === "gadgets_shock_capsule").capstone, false);
+assert.equal(api.buyUpgrade("dig_arm_swing"), true);
+maxWorkshopUpgrade(api, "dig_arm_swing");
+assert.equal(api.buyUpgrade("time_extra_breath"), true);
+maxWorkshopUpgrade(api, "time_extra_breath");
+assert.equal(api.buyUpgrade("power_sharpened_edge"), true);
+maxWorkshopUpgrade(api, "power_sharpened_edge");
+assert.deepEqual(
+  api.debugAutoBuyAffordable(1).bought,
+  ["sense_instinct_spark"],
+  "a capstone must not displace the original scalar candidate in the last slot",
+);
+api.debugResetProgress();
 
 function placeOre(tx, ty, oreId, veinId, hp = 1000) {
   return api.debugPatchTile(tx, ty, {
@@ -594,25 +736,33 @@ snapshot = api.getSnapshot();
 assert.equal(snapshot.sector.id, "ore_ridge");
 assert.equal(api.debugGetMicroEvents().length, 5);
 
-// Deaf Knock needs eight consecutive main-tool rock breaks at max level. A
-// remote drone ore break must not erase that streak, and focus must filter the
-// enlarged pulse to the chosen ore.
+// Deaf Knock counts ordinary rock destroyed by any normal proc-capable source.
+// Ore between those breaks does not erase progress, while recursive/no-proc
+// Echo damage cannot charge it. Focus still filters the enlarged pulse.
 api.setFocusedOre("gold");
 api.debugSetPlayerTile(40, 20);
 placeOre(42, 20, "copper", "deaf-decoy", 1_000_000);
 placeOre(46, 20, "gold", "deaf-focus", 1_000_000);
 const deafBefore = api.getSnapshot().metrics.deafKnocks;
-for (let index = 0; index < 7; index += 1) {
+const firstDeafSources = ["pick", "bomb", "chain", "drone"];
+for (let index = 0; index < firstDeafSources.length; index += 1) {
   placeRock(70 + index, 12);
-  assert.ok(api.debugBreakTileWithSource(70 + index, 12, "laser"));
+  assert.ok(api.debugBreakTileWithSource(70 + index, 12, firstDeafSources[index]));
 }
-assert.equal(api.getSnapshot().metrics.deafKnocks, deafBefore, "the pulse must not fire before the eighth dry break");
-placeOre(78, 12, "coal", "remote-drone-find", 1);
-assert.ok(api.debugBreakTileWithSource(78, 12, "drone"));
-placeRock(77, 12);
-assert.ok(api.debugBreakTileWithSource(77, 12, "laser"));
+placeOre(74, 12, "coal", "deaf-interleaved-ore", 1);
+assert.ok(api.debugBreakTileWithSource(74, 12, "pick"));
+placeRock(75, 12);
+assert.ok(api.debugBreakTileWithSource(75, 12, "echo"));
+assert.equal(api.getSnapshot().dryRockBlocks, 4, "no-proc Echo rock must not charge or reset the four stored knocks");
+for (let index = 0; index < 3; index += 1) {
+  placeRock(76 + index, 12);
+  assert.ok(api.debugBreakTileWithSource(76 + index, 12, ["bomb", "chain", "drone"][index]));
+}
+assert.equal(api.getSnapshot().metrics.deafKnocks, deafBefore, "the pulse must not fire before the eighth ordinary-rock break");
+placeRock(79, 12);
+assert.ok(api.debugBreakTileWithSource(79, 12, "pick"));
 snapshot = api.getSnapshot();
-assert.equal(snapshot.metrics.deafKnocks, deafBefore + 1, "the eighth main-tool rock must fire Deaf Knock");
+assert.equal(snapshot.metrics.deafKnocks, deafBefore + 1, "the eighth qualifying rock must fire Deaf Knock");
 assert.equal(snapshot.target.oreId, "gold", "focused Deaf Knock must ignore every wrong ore");
 assert.ok(snapshot.deafKnockBoostRemaining > 1.1, "a successful pulse must grant the movement window");
 assert.ok(snapshot.deafKnockCooldown > 2.9, "a successful pulse must start the three-second cooldown");
@@ -683,6 +833,24 @@ assert.ok((snapshot.metrics.sourceBreaks.echo || 0) > echoBreaksBefore, "Echo mu
 assert.equal(snapshot.metrics.sourceBreaks.shatter || 0, shattersBefore, "Echo must not proc break splash");
 api.finishRun();
 
+// Echo's no-proc contract also covers deterministic perk counters. Breaking
+// three nodes of one vein must not advance or pay out Triple Sample.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("tools_super_pick_echo", 2);
+api.setUpgradeLevel("fortune_triple_seam", 3);
+api.startRun({ seed: "echo-no-triple-sample", sectorId: "stable_strata" });
+api.debugSetPlayerTile(40, 20);
+for (let ty = 18; ty <= 22; ty += 1) {
+  for (let tx = 39; tx <= 44; tx += 1) clearTile(tx, ty);
+}
+placeOre(42, 20, "copper", "echo-no-sample-vein", 1);
+placeOre(42, 19, "copper", "echo-no-sample-vein", 1);
+placeOre(42, 21, "copper", "echo-no-sample-vein", 1);
+assert.ok(api.debugSetTargetTile(42, 20));
+assert.equal(api.debugTriggerSuperPickEcho(10), true);
+assert.equal(api.getSnapshot().runOre, 3, "three no-proc Echo breaks must yield only their three base pieces");
+api.finishRun();
+
 // Triangular Fix remembers ore, directs drones into the marked sector, keeps
 // that priority for 1.5 seconds after geometry disappears, and adds exactly
 // 25% drone damage at level two.
@@ -734,6 +902,30 @@ assert.match(reportDetailsHtml, /Усиления триангуляции/);
 assert.match(reportDetailsHtml, /Дроны:/, "break sources must use readable Russian labels");
 assert.doesNotMatch(reportDetailsHtml, /drone:/);
 assert.ok(Object.keys(snapshot.oreRecords).length > 0, "journal records should persist a mined ore sample");
+
+// One bomb snapshots the triangulation sector. Its first endpoint can break
+// early in candidate order without stripping the 25% bonus from the second.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("sense_triangular_fix", 2);
+api.startRun({ seed: "triangle-aoe-snapshot", sectorId: "stable_strata" });
+api.debugSetPlayerTile(40, 20);
+for (let ty = 18; ty <= 23; ty += 1) {
+  for (let tx = 39; tx <= 43; tx += 1) clearTile(tx, ty);
+}
+placeOre(41, 20, "copper", "triangle-blast-primary", 0.5);
+placeOre(39, 21, "copper", "triangle-blast-backup", 100);
+assert.ok(api.debugSetTargetTile(41, 20));
+assert.ok(api.debugSetBackupTile(39, 21));
+const triangleBlastBase = api.getStats().pickPower * api.getStats().bombPower * 1.8;
+const triangleBackupBefore = api.debugGetTile(39, 21).hp;
+assert.equal(api.forceDetonate(1, 0), true);
+assert.equal(api.debugGetTile(41, 20).kind, "air", "the first endpoint must be destroyed during the AoE");
+const triangleBackupDamage = triangleBackupBefore - api.debugGetTile(39, 21).hp;
+assert.ok(
+  Math.abs(triangleBackupDamage - triangleBlastBase * 1.25) < 1e-9,
+  `the later endpoint must retain the snapshotted triangulation bonus (damage ${triangleBackupDamage}, base ${triangleBlastBase})`,
+);
+api.finishRun();
 
 // Every micro-event gets a natural proximity trigger or an explicit semantic
 // assertion for its compact top-line timer and concrete gameplay result.
@@ -797,6 +989,19 @@ assert.ok(elementFor("#microEventBanner").classList.contains("hidden"), "the eve
 api.finishRun();
 assert.ok(elementFor("#microEventBanner").classList.contains("hidden"), "event notices must not leak onto the result screen");
 
+// A short chest notice may temporarily cover a global-effect timer, but the
+// still-active effect must return instead of disappearing for its final seconds.
+api.startRun({ seed: "runtime-stacked-event-indicator", sectorId: "stable_strata" });
+assert.equal(api.debugTriggerMicroEvent("gas_pocket"), true);
+api.stepRun(1);
+assert.equal(api.debugTriggerMicroEvent("ancient_container"), true);
+api.stepRun(2.25);
+snapshot = api.getSnapshot();
+assert.ok(snapshot.eventDigBoostRemaining > 1.7);
+assert.match(elementFor("#microEventTitle").textContent, /УСКОРЕНИЕ КОПКИ/);
+assert.ok(!elementFor("#microEventBanner").classList.contains("hidden"));
+api.finishRun();
+
 // Resonant Ping must acquire ore that the ordinary scanner cannot reach. The
 // debug world is cleared locally so an unrelated generated node cannot mask
 // the enlarged scan.
@@ -843,6 +1048,56 @@ assert.equal(
 assert.equal(rememberedVeinTargets?.primary?.ty, 20);
 api.finishRun();
 
+// Stress Map scans beyond the ordinary sense circle and stores that distant
+// vein while a nearer primary is still being mined.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("sense_seismic_memory", 1);
+api.startRun({ seed: "runtime-stress-map-outside-sense", sectorId: "stable_strata" });
+api.debugSetPlayerTile(40, 20);
+for (let ty = 15; ty <= 25; ty += 1) {
+  for (let tx = 35; tx <= 49; tx += 1) clearTile(tx, ty);
+}
+placeOre(42, 20, "copper", "stress-map-primary", 1);
+placeOre(45, 20, "copper", "stress-map-distant", 1000);
+let stressTargets = api.acquireTargets();
+assert.equal(stressTargets?.primary?.tx, 42);
+assert.ok(
+  api.getSnapshot().rememberedVeins.some((target) => target.veinId === "stress-map-distant"),
+  "the map must store a suitable vein outside ordinary sense",
+);
+assert.ok(api.breakCurrentTarget());
+stressTargets = api.acquireTargets();
+assert.equal(stressTargets?.primary?.tx, 45, "the stored distant vein must become the next route immediately");
+api.finishRun();
+
+// Density piercing is target-aware: it does nothing to ordinary rock, gives a
+// smaller benefit to soft copper, and reaches its full value on star core.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("power_tempered_steel", 7);
+api.startRun({ seed: "runtime-density-pierce", sectorId: "stable_strata" });
+api.debugSetPlayerTile(40, 20);
+for (let ty = 18; ty <= 22; ty += 1) {
+  for (let tx = 39; tx <= 43; tx += 1) clearTile(tx, ty);
+}
+placeRock(41, 20, 100);
+assert.ok(api.debugSetClearanceTargetTile(41, 20));
+assert.ok(api.attackNow());
+const rockPierceDamage = 100 - api.debugGetTile(41, 20).hp;
+placeOre(41, 20, "copper", "pierce-copper", 100);
+assert.ok(api.debugSetTargetTile(41, 20));
+assert.ok(api.attackNow());
+const copperPierceDamage = 100 - api.debugGetTile(41, 20).hp;
+placeOre(41, 20, "star_core", "pierce-star", 100);
+assert.ok(api.debugSetTargetTile(41, 20));
+assert.ok(api.attackNow());
+const starPierceDamage = 100 - api.debugGetTile(41, 20).hp;
+assert.equal(rockPierceDamage, api.getStats().pickPower, "ordinary rock must not receive density-pierce power");
+assert.ok(copperPierceDamage > rockPierceDamage, "soft ore should receive a small density-pierce benefit");
+assert.ok(starPierceDamage > copperPierceDamage, "denser ore must expose more of the piercing benefit");
+assert.ok(Math.abs(copperPierceDamage / api.getStats().pickPower - api.debugHardnessPierceMultiplier("copper")) < 1e-9);
+assert.ok(Math.abs(starPierceDamage / api.getStats().pickPower - api.debugHardnessPierceMultiplier("star_core")) < 1e-9);
+api.finishRun();
+
 // Side Chip is an actual two-sided hit, including at level three where it
 // fires on every swing instead of merely widening a decorative arc.
 api.setAllUpgrades(false);
@@ -882,6 +1137,22 @@ assert.equal(api.debugGetTile(42, 20).kind, "air", "the fifth chrono strike shou
 assert.equal(snapshot.metrics.sourceBreaks["chrono-overdrive"], 1);
 api.finishRun();
 
+// Full drone autonomy follows the actual bonus-extended end of a shift rather
+// than switching off at the direct timer duration.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("gadgets_scout_drone", 1);
+api.setUpgradeLevel("gadgets_drone_battery", 3);
+api.startRun({ seed: "runtime-drone-bonus-autonomy", sectorId: "stable_strata" });
+assert.equal(api.getStats().droneLifetime, 1);
+assert.ok(api.grantBonusTime(4) > 0);
+api.stepRun(6.2);
+assert.equal(api.getSnapshot().mode, "run");
+assert.ok(api.getSnapshot().timeLeft > 0, "bonus seconds must keep the shift alive beyond its direct duration");
+assert.equal(api.debugDronesAreActive(), true, "full-autonomy drones must remain active in bonus time");
+api.setUpgradeLevel("gadgets_drone_battery", 2);
+assert.equal(api.debugDronesAreActive(), false, "a partial battery must still use its advertised duration share");
+api.finishRun();
+
 // Fortune Wheel is a visible pity cycle, not another hidden percentage roll:
 // with every random proc suppressed, the fifth dry ore break must still fire.
 api.setAllUpgrades(false);
@@ -895,19 +1166,32 @@ snapshot = api.getSnapshot();
 assert.equal(snapshot.metrics.fortuneWheelProcs, 1, "the pity threshold must guarantee the fifth proc");
 api.finishRun();
 
-// The covenant marks an already existing highest-tier vein after twenty ore
-// breaks. Completing that exact vein must grant its cache/time reward.
+// The covenant counts yielded pieces rather than physical nodes. A newly
+// discovered tier on the threshold piece is eligible for the mark immediately.
 api.setAllUpgrades(false);
 api.setUpgradeLevel("fortune_motherlode_covenant", 1);
+api.setUpgradeLevel("fortune_double_yield", 6);
 api.startRun({ seed: "runtime-motherlode", sectorId: "stable_strata" });
+api.debugSetAttackCooldown(100);
+assert.ok(api.grantBonusTime(20) > 0);
 for (let tx = 90; tx <= 92; tx += 1) placeOre(tx, 12, "star_core", "motherlode-candidate", 1);
-assert.ok(api.debugBreakTileWithSource(90, 12, "debug"), "the first sample should reveal the candidate tier");
-for (let index = 0; index < 19; index += 1) {
+const savedMotherlodeRandom = Math.random;
+Math.random = () => 0;
+try {
+for (let index = 0; index < 9; index += 1) {
   placeOre(100 + index, 12, "copper", `motherlode-feed-${index}`, 1);
   assert.ok(api.debugBreakTileWithSource(100 + index, 12, "debug"));
+  if (index < 8) api.stepRun(0.8);
+}
+assert.equal(api.getSnapshot().motherlodeBreaks, 18, "nine doubled drops must count as eighteen covenant pieces");
+assert.equal(api.getSnapshot().metrics.motherlodes, 0);
+assert.ok(api.debugBreakTileWithSource(90, 12, "debug"), "the doubled threshold sample should reveal its tier");
+} finally {
+  Math.random = savedMotherlodeRandom;
 }
 snapshot = api.getSnapshot();
-assert.equal(snapshot.metrics.motherlodes, 1, "the twentieth break must mark one existing motherlode");
+assert.equal(snapshot.metrics.motherlodes, 1, "the twentieth yielded piece must mark one existing motherlode");
+assert.equal(snapshot.motherlodeVeinId, "motherlode-candidate", "the threshold's newly discovered top tier must be eligible");
 const motherlodeBonusBefore = snapshot.bonusTimeEarned;
 assert.ok(api.debugBreakTileWithSource(91, 12, "debug"));
 assert.ok(api.debugBreakTileWithSource(92, 12, "debug"));
@@ -983,6 +1267,24 @@ try {
   Math.random = savedRichRandom;
 }
 assert.equal(api.getSnapshot().metrics.richVeins, 1, "the first allowed break must still resolve the vein-rich roll");
+api.finishRun();
+
+// The roll is resolved by the first eligible node, but its +50% yield starts
+// only on nodes that remain after that discovery hit.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("fortune_rich_vein", 6);
+api.startRun({ seed: "runtime-rich-remaining-nodes", sectorId: "stable_strata" });
+placeOre(70, 12, "copper", "remaining-rich-vein", 1);
+placeOre(71, 12, "copper", "remaining-rich-vein", 1);
+Math.random = () => 0;
+try {
+  assert.ok(api.debugBreakTileWithSource(70, 12, "debug"));
+} finally {
+  Math.random = savedRichRandom;
+}
+assert.equal(api.getSnapshot().runOre, 1, "the discovery node itself must not receive rich yield");
+assert.ok(api.debugBreakTileWithSource(71, 12, "debug"));
+assert.equal(api.getSnapshot().runOre, 8, "only the remaining node plus the six-piece completion cache should be rich");
 api.finishRun();
 
 // Relic status uses the real soft-rock timer and represents an enhanced chest
@@ -1069,6 +1371,27 @@ function assertLargestBlastReserve({ directional, seed }) {
 }
 assertLargestBlastReserve({ directional: false, seed: "runtime-circle-reserve" });
 assertLargestBlastReserve({ directional: true, seed: "runtime-directional-reserve" });
+
+// Sticky Charge is useful before Crew Beacon: on a successful roll it moves
+// the epicenter to a nearby ore that the original blast could not reach.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("gadgets_sticky_charge", 5);
+api.startRun({ seed: "runtime-sticky-without-beacon", sectorId: "stable_strata" });
+api.debugSetPlayerTile(40, 20);
+for (let ty = 17; ty <= 23; ty += 1) {
+  for (let tx = 37; tx <= 45; tx += 1) clearTile(tx, ty);
+}
+placeOre(43, 20, "copper", "sticky-local-target", 1);
+assert.equal(api.getSnapshot().crewBeacon, null);
+const savedStickyRandom = Math.random;
+Math.random = () => 0;
+try {
+  assert.equal(api.forceDetonate(1, 0), true);
+} finally {
+  Math.random = savedStickyRandom;
+}
+assert.equal(api.debugGetTile(43, 20).kind, "air", "sticky charge must attach to ore without Crew Beacon");
+api.finishRun();
 
 // A detonation with Magnetic Field installed must create the local field even
 // when random bomb procs are suppressed. The first bomb is already guided: a
@@ -1206,11 +1529,28 @@ assert.notEqual(advancedBalanceReport.profileBuild.tool, "pickaxe", "the advance
 assert.ok(advancedBalanceReport.profileBuild.droneCount > 0, "the advanced profile must include working drones");
 assert.ok(advancedBalanceReport.rows.every((row) => row.averageHaul > 0 && row.averageBlocks > 0));
 
-elementFor("#balanceProfile").value = "90";
+elementFor("#balanceProfile").value = "95";
 elementFor("#balanceRuns").value = "1";
 const prefinalBalanceReport = api.runBalanceBench();
 assert.deepEqual(prefinalBalanceReport.profileBuild.invalidRequirements, []);
 assert.equal(prefinalBalanceReport.profileBuild.laserUnlocked, true, "the prefinal profile must exercise the laser model");
+
+// Four to six eventless shifts arm one physical, locally rendered event near
+// the current start (including lift starts) and make it the next sense target.
+api.setAllUpgrades(false);
+const pitySetup = api.debugSetEventPity(5, 0);
+assert.equal(pitySetup.threshold, 5);
+api.startRun({ seed: "runtime-event-pity", sectorId: "stable_strata" });
+let pitySnapshot = api.getSnapshot();
+assert.equal(pitySnapshot.eventPity.armed, true);
+assert.ok(pitySnapshot.eventPity.stagedEventId);
+api.stepRun(0.2);
+pitySnapshot = api.getSnapshot();
+assert.ok(
+  pitySnapshot.target?.kind === "micro_event" || pitySnapshot.metrics.eventCount > 0,
+  `the staged chest must be targeted or already collected: ${JSON.stringify({ pity: pitySnapshot.eventPity, target: pitySnapshot.target, metrics: pitySnapshot.metrics })}`,
+);
+api.finishRun();
 
 // Once projected wall-clock end already reaches 60 seconds, a late bonus must
 // grant/log nothing and must not recharge Chrono Overdrive past the real cap.
@@ -1238,6 +1578,50 @@ snapshot = api.getSnapshot();
 assert.equal(snapshot.mode, "result", "absolute bonus wall-clock cap should end the run");
 assert.ok(snapshot.activeWallElapsed <= 60 + 0.051);
 
+// Recreate the complete game runtime against the same localStorage map. This
+// catches reload-only regressions that a serialized-field assertion cannot.
+api.debugResetProgress();
+api.grantOre("copper", 20);
+api.openUpgrades();
+assert.equal(api.buyUpgrade("core_first_descent"), true);
+assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === "time_extra_breath").available, false);
+const gameModulePath = require.resolve(path.join(root, "js", "game.js"));
+delete require.cache[gameModulePath];
+require(gameModulePath);
+const reloadedApi = global.__DEPTH_ZERO__;
+assert.notEqual(reloadedApi, api, "reload regression should use a fresh game runtime");
+assert.equal(
+  reloadedApi.getUpgradeCatalog().find((upgrade) => upgrade.id === "time_extra_breath").available,
+  false,
+  "a real runtime reload must preserve the pending child gate",
+);
+reloadedApi.startRun({ seed: 14002 });
+reloadedApi.stepRun(8);
+assert.equal(
+  reloadedApi.getUpgradeCatalog().find((upgrade) => upgrade.id === "time_extra_breath").available,
+  true,
+  "one completed shift after reload must prepare the pending child",
+);
+grantWorkshopBudget(reloadedApi);
+const reloadCapCandidates = reloadedApi.getUpgradeCatalog()
+  .filter((upgrade) => upgrade.level === 0 && upgrade.available)
+  .slice(0, 5);
+assert.equal(reloadCapCandidates.length, 5);
+for (const candidate of reloadCapCandidates.slice(0, 4)) {
+  assert.equal(reloadedApi.buyUpgrade(candidate.id), true);
+}
+assert.equal(reloadedApi.buyUpgrade(reloadCapCandidates[4].id), false);
+delete require.cache[gameModulePath];
+require(gameModulePath);
+const capReloadedApi = global.__DEPTH_ZERO__;
+const reloadBlocked = capReloadedApi.getUpgradeCatalog().find((upgrade) => upgrade.id === reloadCapCandidates[4].id);
+assert.equal(reloadBlocked.available, false, "reloading the runtime must not restore a consumed first-rank slot");
+assert.equal(reloadBlocked.pendingReason, "capacity");
+const reloadStarted = reloadCapCandidates.find((candidate) => candidate.maxLevel > 1);
+assert.ok(reloadStarted);
+assert.equal(capReloadedApi.buyUpgrade(reloadStarted.id), true, "reload must still allow later ranks on an already-started node");
+snapshot = capReloadedApi.getSnapshot();
+
 console.log(JSON.stringify({
   ok: true,
   nodes: snapshot.upgrades,
@@ -1263,25 +1647,35 @@ console.log(JSON.stringify({
     "catalog-final-bonus",
     "deaf-knock",
     "super-pick-echo",
+    "echo-no-triple-sample",
     "triangular-fix",
+    "triangle-aoe-snapshot",
     "random-geology-without-sector-choice",
     "short-global-micro-events",
     "resonant-ping",
     "vein-memory-through-rock",
+    "stress-map-outside-sense",
+    "target-aware-density-pierce",
     "side-chip",
     "chrono-overdrive",
+    "drone-bonus-autonomy",
     "fortune-pity-cycle",
     "motherlode-covenant",
     "golden-touch-gating",
+    "rich-remaining-nodes",
+    "sticky-without-beacon",
     "magnetic-field",
     "multi-vein-gadget-reserve",
     "thermal-edge-falloff",
     "approach-side-choice",
     "fault-line-clearance",
     "priority-depth-scaled-chest",
+    "dry-shift-event-pity",
     "run-diagnostics",
     "geological-journal",
     "local-balance-bench",
+    "persistent-workshop-session-gate",
+    "workshop-first-rank-cap",
     "absolute-60-second-cap",
   ],
 }));

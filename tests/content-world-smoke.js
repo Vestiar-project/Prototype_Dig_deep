@@ -15,7 +15,7 @@ const ids = new Set(UPGRADE_DEFS.map((definition) => definition.id));
 
 assert.equal(UPGRADE_DEFS.length, 102);
 assert.equal(ids.size, UPGRADE_DEFS.length, "upgrade ids must be unique");
-assert.equal(UPGRADE_DEFS.reduce((sum, definition) => sum + definition.maxLevel, 0), 481);
+assert.equal(UPGRADE_DEFS.reduce((sum, definition) => sum + definition.maxLevel, 0), 330);
 for (const definition of UPGRADE_DEFS) {
   for (const requirement of definition.requires || []) {
     const id = typeof requirement === "string" ? requirement : requirement.id;
@@ -63,6 +63,8 @@ assert.equal(fullStats.superFieldLaserPersistent, true);
 assert.equal(fullStats.laserHeatNextHitBonus, 0.3);
 assert.equal(fullStats.rareOreAdditiveChance, 0.18);
 assert.equal(fullStats.goldenOreAdditiveChance, 0.075);
+assert.equal(fullStats.doubleDropChance, 0.18, "double yield must contribute exactly one independent roll");
+assert.equal(fullStats.extraYieldChance, 0.2, "double yield must not also leak into the generic extra-yield roll");
 assert.equal(fullStats.magneticFieldRadiusTiles, 3);
 assert.equal(fullStats.fortunePityThreshold, 5);
 assert.equal(fullStats.motherlodeTriggerBreaks, 20);
@@ -70,14 +72,122 @@ assert.equal(fullStats.demolitionComboEnabled, true);
 assert.equal(fullStats.solarDrillProcEvery, 5);
 const oreFocus = UPGRADE_DEFS.find((definition) => definition.id === "sense_ore_focus");
 assert.equal(oreFocus?.requiresOreDiscovery, "amethyst", "ore focus must wait for a post-T5 sample");
+const priorityTuning = UPGRADE_DEFS.find((definition) => definition.id === "sense_priority_tuning");
+assert.ok(priorityTuning?.requires.includes("sense_ore_focus"), "deposit appraisal must never unlock before ore focus");
+assert.deepEqual(
+  [0, 1, 2, 3].map((level) => getUpgradeRecipe(priorityTuning, level)),
+  [
+    { amethyst: 4, gold: 4, silver: 6 },
+    { amethyst: 1, gold: 1, silver: 2 },
+    { prism_crystal: 1, amethyst: 1, gold: 2 },
+    { prism_crystal: 8, amethyst: 10, gold: 12 },
+  ],
+  "ore appraisal ranks should deliberately stage the focus follow-up mechanics",
+);
+const requireIds = (upgradeId, expectedIds) => {
+  const definition = UPGRADE_DEFS.find((upgrade) => upgrade.id === upgradeId);
+  const requirementIds = (definition?.requires || []).map((requirement) => (
+    typeof requirement === "string" ? requirement : requirement.id
+  ));
+  for (const expectedId of expectedIds) {
+    assert.ok(
+      requirementIds.includes(expectedId),
+      `${upgradeId} must keep ${expectedId} in its final-path prerequisites`,
+    );
+  }
+};
+requireIds("sense_earth_call", ["sense_frequency_swing", "sense_triangular_fix"]);
+requireIds("dig_quarry_presence", ["dig_mine_lift"]);
+requireIds("power_mountain_splitter", ["power_sample_calibration", "power_corebreaker"]);
+requireIds("gadgets_demolition_orchestra", ["gadgets_geo_charge", "gadgets_crew_beacon"]);
+requireIds("tools_solar_drill", ["tools_mirror_crystal", "tools_super_pick_echo"]);
+requireIds("fortune_motherlode_covenant", ["fortune_findings_catalog"]);
+const requirementLevel = (upgradeId, requirementId) => {
+  const definition = UPGRADE_DEFS.find((upgrade) => upgrade.id === upgradeId);
+  const requirement = (definition?.requires || []).find((candidate) => (
+    (typeof candidate === "string" ? candidate : candidate.id) === requirementId
+  ));
+  return typeof requirement === "string" ? 1 : (requirement?.level || 0);
+};
+assert.equal(requirementLevel("sense_frequency_swing", "sense_priority_tuning"), 3, "frequency swing should retain its staged focus-tuning gate");
+assert.equal(requirementLevel("time_capsule", "time_clockwork_heart"), 4, "the capsule should retain its established midgame heart gate");
+assert.equal(requirementLevel("power_mountain_splitter", "power_corebreaker"), 2, "fault-line access should remain behind the second corebreaker rank");
+assert.equal(requirementLevel("tools_mirror_crystal", "sense_earth_call"), 0, "mirror ricochet should bridge the late gap before through-wall sense");
+assert.deepEqual(
+  getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "time_capsule"), 0),
+  { amber: 7, iron: 9, coal: 8 },
+  "the first capsule should retain its calibrated mixed opening recipe",
+);
+assert.deepEqual(
+  getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "sense_seismic_memory"), 0),
+  { amber: 5, iron: 7, coal: 6 },
+  "seismic memory should retain its calibrated early mixed recipe",
+);
+assert.deepEqual(
+  getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "sense_frequency_swing"), 0),
+  { prism_crystal: 1, amethyst: 1, gold: 4 },
+  "frequency swing should become affordable in the workshop before its observed focus-followup limit",
+);
+assert.deepEqual(
+  getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "tools_mirror_crystal"), 0),
+  { void_ore: 45, prism_crystal: 60, amethyst: 40 },
+  "mirror crystal should retain the calibrated resource order before the final tool tier",
+);
+const leastResistance = UPGRADE_DEFS.find((definition) => definition.id === "dig_least_resistance");
+assert.deepEqual(
+  getUpgradeRecipe(leastResistance, 0),
+  { copper: 6, coal: 6, iron: 1 },
+  "route planning should use an affordable early mixed recipe",
+);
+const mineLift = UPGRADE_DEFS.find((definition) => definition.id === "dig_mine_lift");
+assert.ok(
+  mineLift?.requires.some((requirement) => typeof requirement === "object" && requirement.id === "time_clockwork_heart" && requirement.level === 6),
+  "the lift should wait for the established midgame timer package",
+);
+assert.deepEqual(
+  getUpgradeRecipe(mineLift, 0),
+  { star_core: 1, amethyst: 1, gold: 1, silver: 1 },
+  "the lift's first rank should use one deep-route sample without becoming a late stockpile gate",
+);
 const superPick = UPGRADE_DEFS.find((definition) => definition.id === "tools_super_pick");
 assert.ok(superPick?.requires.includes("power_diamond_tip"), "the super pick must keep its thematic diamond-tip gate");
-assert.equal(superPick?.requiresOreDiscovery, "prism_crystal", "the super pick must remain a distinct late-middle tool phase");
+assert.equal(superPick?.requiresOreDiscovery, undefined, "the super pick's explicit prerequisites should be its only discovery gate");
+assert.deepEqual(
+  getUpgradeRecipe(superPick, 0),
+  { silver: 10, gold: 6, amethyst: 4 },
+  "the super pick should bridge into deep tools without requiring prism before it can be reached",
+);
+assert.deepEqual(
+  getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "tools_iron_pick"), 0),
+  { copper: 2, coal: 3, iron: 2 },
+  "the first tool tier must soften the opening iron/copper bottleneck",
+);
+assert.deepEqual(
+  getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "tools_pneumatic_pick"), 0),
+  { coal: 18, iron: 9, silver: 4 },
+  "midgame tools should restore coal as a relevant material",
+);
+const starterSense = UPGRADE_DEFS.find((definition) => definition.id === "sense_instinct_spark");
+assert.deepEqual(
+  Object.keys(getUpgradeRecipe(starterSense, starterSense.maxLevel - 1)).sort(),
+  ["coal", "copper"],
+  "later levels of an opening node must grow in quantity without jumping past the opening economy",
+);
+const laserRange = UPGRADE_DEFS.find((definition) => definition.id === "tools_laser_range");
+assert.ok(
+  !getUpgradeRecipe(laserRange, laserRange.maxLevel - 1).star_core,
+  "repeatable laser tuning must not wait and collapse into the first star-core haul",
+);
 const finalUpgrade = UPGRADE_DEFS.find((definition) => definition.id === "core_bon_voyage");
 assert.deepEqual(
   getUpgradeRecipe(finalUpgrade, 0),
-  { prism_crystal: 4600, void_ore: 2500, star_core: 650 },
+  { prism_crystal: 5300, void_ore: 1800, star_core: 260 },
   "the final recipe must preserve the calibrated multi-ore accumulation tail",
+);
+assert.deepEqual(
+  getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "tools_super_pick_echo"), 0),
+  { void_ore: 40, prism_crystal: 40, iron: 60 },
+  "the echo should not lose a full shift behind cheaper cleanup ranks before the solar drill",
 );
 
 const timerNodes = UPGRADE_DEFS.filter((definition) => definition.category === "time");
@@ -86,7 +196,7 @@ assert.deepEqual(
   ["time_extra_breath", "time_clockwork_heart", "time_capsule", "time_thirty_second_oath"],
   "timer progression must stay condensed into exactly four meaningful nodes",
 );
-assert.equal(timerNodes.reduce((sum, definition) => sum + definition.maxLevel, 0), 37);
+assert.equal(timerNodes.reduce((sum, definition) => sum + definition.maxLevel, 0), 23);
 
 const removedDuplicateIds = [
   "sense_ore_scent",
