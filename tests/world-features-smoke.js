@@ -351,4 +351,513 @@ const maximumPlayableDepth = (
 assert.ok(maximumPlayableDepth >= 800, `all eight 100 m depth-contract stacks need at least 800 m, got ${maximumPlayableDepth}`);
 
 const legacyProfiles = getSectorChoices("unused-menu-seed");
-assert.equal(legacyProfiles.lßMû¶‰žËkºwµçU‰Õ™™ÌµÕÍÐ‰”‘•Ñ•Éµ¥¹¥ÍÑ¥Œˆ¤ì(€…ÍÍ•ÉÐ¹½¬¡Í¡•‘Õ±•¤ì(€…ÍÍ•ÉÐ¹½¬¡1=	1}Y9Q}QeAL¹Í½µ” ¡‘•™¥¹¥Ñ¥½¸¤€ôø‘•™¥¹¥Ñ¥½¸¹¥€ôôôÍ¡•‘Õ±•¹ÑåÁ”¤¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡Í¡•‘Õ±•¹‘ÕÉ…Ñ¥½¹M•½¹‘Ì°€Ô¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡Í¡•‘Õ±•¹±½‰…°°ÑÉÕ”¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡Í¡•‘Õ±•¹Í¡•‘Õ±•°ÑÉÕ”¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡Í¡•‘Õ±•¹¥¹‘•à°¥¹‘•à¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡Í¡•‘Õ±•¹¹½Ñ¥•1•Ù•°°€‰¡¥ ˆ¤ì(€…ÍÍ•ÉÐ¹½¬¡Í¡•‘Õ±•¹…¹¹½Õ¹•µ•¹Ð¹¥¹±Õ‘•Ì¡Í¡•‘Õ±•¹±…‰•°¤¤ì(€™½È€¡½¹ÍÐ™¥•±½˜™½É‰¥‘‘•¹±½‰…±¥•±‘Ì¤ì(€€€…ÍÍ•ÉÐ¹•ÅÕ…° (€€€€€=‰©•Ð¹¡…Í=Ý¸¡Í¡•‘Õ±•°™¥•±¤°(€€€€€™…±Í”°(€€€€€Í¡•‘Õ±•€‘íÍ¡•‘Õ±•¹ÑåÁ•ôµÕÍÐ¹½Ð•áÁ½Í”™¥•±µ½¹±äÁÉ½Á•ÉÑä€‘í™¥•±‘õ€°(€€€€¤ì(€ô(€Í¡•‘Õ±•‘QåÁ•Ì¹…‘¡Í¡•‘Õ±•¹ÑåÁ”¤ì)ô)…ÍÍ•ÉÐ¹‘••ÁÅÕ…°¡Í¡•‘Õ±•‘QåÁ•Ì°¹•ÜM•Ð¡1=	1}Y9Q}QeAL¹µ…À ¡‘•™¥¹¥Ñ¥½¸¤€ôø‘•™¥¹¥Ñ¥½¸¹¥¤¤¤ì()½¹ÍÐ™¥á•‘1½½ÑI¹œ€ôì¥¹Ðè€¡µ¥¹¥µÕ´¤€ôøµ¥¹¥µÕ´ôì)½¹ÍÐ•Ù•¹ÑMÁ…Ý¸€ô•Ù•¹Ñ]½É±¹•ÑMÁ…Ý¸ ¤ì)½¹ÍÐ•…É±å1½½Ð€ô•Ù•¹Ñ]½É±¹}É•…Ñ•½¹Ñ…¥¹•É1½½Ð¡•Ù•¹ÑMÁ…Ý¸¹Ñà°•Ù•¹ÑMÁ…Ý¸¹Ñä€¬€ÄÈ°™¥á•‘1½½ÑI¹œ¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡=‰©•Ð¹­•åÌ¡•…É±å1½½Ð¤¹±•¹Ñ °€Ô°€‰½Á•¹¥¹œ½¹Ñ…¥¹•ÉÌµÕÍÐ…ÉÉä„Íµ…±°PÄµPÔÍÑ…ÉÑ•Èµ¥àˆ¤ì)…ÍÍ•ÉÐ¹½¬¡=‰©•Ð¹­•åÌ¡•…É±å1½½Ð¤¹•Ù•Éä ¡½É•%¤€ôø=I}QeAL¹™¥¹ ¡½É”¤€ôø½É”¹¥€ôôô½É•%¤ü¹Ñ¥•È€ðô€Ð¤¤ì)½¹ÍÐ‘••Á1½½ÑQä€ô]=I1}=9%¹!%!P€´]=I1}=9%¹	I=-}I=]L€´€àì)½¹ÍÐ‘••ÁÙ…¥±…‰±”€ô•Ù•¹Ñ]½É±¹•ÑÙ…¥±…‰±•=É•%‘ÍÐ¡•Ù•¹ÑMÁ…Ý¸¹Ñà°‘••Á1½½ÑQä¤ì)½¹ÍÐ‘••Á1½½Ð€ô•Ù•¹Ñ]½É±¹}É•…Ñ•½¹Ñ…¥¹•É1½½Ð¡•Ù•¹ÑMÁ…Ý¸¹Ñà°‘••Á1½½ÑQä°™¥á•‘1½½ÑI¹œ¤ì)…ÍÍ•ÉÐ¹½¬¡‘••ÁÙ…¥±…‰±”¹±•¹Ñ €ø€À¤ì)…ÍÍ•ÉÐ¹½¬ (€=‰©•Ð¹¡…Í=Ý¸¡‘••Á1½½Ð°‘••ÁÙ…¥±…‰±•m‘••ÁÙ…¥±…‰±”¹±•¹Ñ €´€Åt¤°(€€‰„‘••À¡•ÍÐµÕÍÐ¥¹±Õ‘”Ñ¡”¡¥¡•ÍÐ½É”Ñ¡…Ð¹…ÑÕÉ…±±ä•á¥ÍÑÌÑ¡•É”ˆ°(¤ì()½¹ÍÐÑ¥±•M•…É €ô•Ù•¹Ñ]½É±¹•Ñ5¥É½Ù•¹ÑÍ9•…È¡¡•ÍÐ¹Ñà°¡•ÍÐ¹Ñä°€À¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡Ñ¥±•M•…É¡lÁtü¹¥°¡•ÍÐ¹¥°€‰Ñ¥±”µÍÁ…”ÁÉ½á¥µ¥ÑäÍ•…É µÕÍÐ™¥¹Ñ¡”¡•ÍÐ…Ð¥ÑÌ•¹Ñ•Èˆ¤ì)½¹ÍÐÁ¥á•±M•…É €ô•Ù•¹Ñ]½É±¹™¥¹‘U¹‘•ÉÉ½Õ¹‘Ù•¹Ð¡¡•ÍÐ¹à°¡•ÍÐ¹ä°€À¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡Á¥á•±M•…É ü¹¥°¡•ÍÐ¹¥°€‰Ý½É±µÍÁ…”ÁÉ½á¥µ¥ÑäÍ•…É µÕÍÐ™¥¹Ñ¡”¡•ÍÐ…Ð¥ÑÌ•¹Ñ•Èˆ¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡Á¥á•±M•…É ü¹‘¥ÍÑ…¹”°€À¤ì((¼¼I•ÑÕÉ¹•É•½É‘Ì…É”‘•™•¹Í¥Ù”½Á¥•Ì¸)½¹ÍÐ½Á¥•‘Ù•¹ÑÌ€ô•Ù•¹Ñ]½É±¹•Ñ5¥É½Ù•¹ÑÌ ¤ì)½Á¥•‘Ù•¹ÑÍlÁt¹±…‰•°€ô€‰µÕÑ…Ñ•ˆì)½Á¥•‘Ù•¹ÑÍlÁt¹Ù¥ÍÕ…°¹½±½È€ô€ˆŒÀÀÀÀÀÀˆì)…ÍÍ•ÉÐ¹¹½ÑÅÕ…°¡•Ù•¹Ñ]½É±¹•Ñ5¥É½Ù•¹ÑÌ ¥lÁt¹±…‰•°°€‰µÕÑ…Ñ•ˆ¤ì)…ÍÍ•ÉÐ¹¹½ÑÅÕ…°¡•Ù•¹Ñ]½É±¹•Ñ5¥É½Ù•¹ÑÌ ¥lÁt¹Ù¥ÍÕ…°¹½±½È°€ˆŒÀÀÀÀÀÀˆ¤ì)½¹ÍÐ½Á¥•‘¡•ÍÐ€ô½Á¥•‘Ù•¹ÑÍlÁtì)½¹ÍÐ½Á¥•‘1½½Ñ%€ô=‰©•Ð¹­•åÌ¡½Á¥•‘¡•ÍÐ¹±½½Ðñðíô¥lÁtì)¥˜€¡½Á¥•‘1½½Ñ%¤½Á¥•‘¡•ÍÐ¹±½½Ñm½Á¥•‘1½½Ñ%‘t€ô€äääì)…ÍÍ•ÉÐ¹¹½ÑÅÕ…° (€•Ù•¹Ñ]½É±¹•Ñ5¥É½Ù•¹ÑÌ¡ìÑåÁ”è€‰…¹¥•¹Ñ}½¹Ñ…¥¹•Èˆô¥lÁtü¹±½½Ðü¹m½Á¥•‘1½½Ñ%‘t°(€€äää°(€€‰¡•ÍÐ±½½ÐµÕÍÐ…±Í¼‰”É•ÑÕÉ¹•…Ì„‘•™•¹Í¥Ù”½Áäˆ°(¤ì()½¹ÍÐÑÉ¥•É•€ô•Ù•¹Ñ]½É±¹ÑÉ¥•É5¥É½Ù•¹Ð¡¡•ÍÐ¹¥¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡ÑÉ¥•É•¹¥°¡•ÍÐ¹¥¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡ÑÉ¥•É•¹™¥ÉÍÑQÉ¥•È°ÑÉÕ”¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡ÑÉ¥•É•¹ÍÑ…Ñ”°€‰ÑÉ¥•É•ˆ¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡•Ù•¹Ñ]½É±¹ÑÉ¥•É5¥É½Ù•¹Ð¡¡•ÍÐ¹¥¤°¹Õ±°°€‰ÑÉ¥•ÈµÕÍÐ‰”½¹”µÍ¡½Ðˆ¤ì)½¹ÍÐ½¹ÍÕµ•€ô•Ù•¹Ñ]½É±¹½¹ÍÕµ•5¥É½Ù•¹Ð¡¡•ÍÐ¹¥¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡½¹ÍÕµ•¹¥°¡•ÍÐ¹¥¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡½¹ÍÕµ•¹Ý…ÍQÉ¥•É•°ÑÉÕ”¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡½¹ÍÕµ•¹™¥ÉÍÑ½¹ÍÕµ”°ÑÉÕ”¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡½¹ÍÕµ•¹ÍÑ…Ñ”°€‰½¹ÍÕµ•ˆ¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡•Ù•¹Ñ]½É±¹½¹ÍÕµ•5¥É½Ù•¹Ð¡¡•ÍÐ¹¥¤°¹Õ±°°€‰½¹ÍÕµ”µÕÍÐ‰”½¹”µÍ¡½Ðˆ¤ì)…ÍÍ•ÉÐ¹½¬ …•Ù•¹Ñ]½É±¹•Ñ5¥É½Ù•¹ÑÌ ¤¹Í½µ” ¡•Ù•¹Ð¤€ôø•Ù•¹Ð¹¥€ôôô¡•ÍÐ¹¥¤¤ì)…ÍÍ•ÉÐ¹½¬¡•Ù•¹Ñ]½É±¹•Ñ5¥É½Ù•¹ÑÌ¡ì¥¹±Õ‘•½¹ÍÕµ•èÑÉÕ”ô¤¹Í½µ” ¡•Ù•¹Ð¤€ôø•Ù•¹Ð¹¥€ôôô¡•ÍÐ¹¥¤¤ì()•Ù•¹Ñ]½É±¹É•Í•Ð ‰µ¥É¼µ•Ù•¹ÐµÁÉ½‰”ˆ°ìÍ•Ñ½É%è€‰½É•}É¥‘”ˆô¤ì)½¹ÍÐÕ¹Ñ½Õ¡•‘¡•ÍÐ€ô•Ù•¹Ñ]½É±¹•Ñ5¥É½Ù•¹ÑÌ ¥lÁtì)½¹ÍÐ‘¥É•Ñ±å½¹ÍÕµ•€ô•Ù•¹Ñ]½É±¹½¹ÍÕµ•5¥É½Ù•¹Ð¡Õ¹Ñ½Õ¡•‘¡•ÍÐ¹¥¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡‘¥É•Ñ±å½¹ÍÕµ•¹Ý…ÍQÉ¥•É•°™…±Í”°€‰½¹ÍÕµ”µ…ä…Ñ½µ¥…±±äÑÉ¥•È…¸Õ¹Ñ½Õ¡••Ù•¹Ðˆ¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡•Ù•¹Ñ]½É±¹ÑÉ¥•É5¥É½Ù•¹Ð¡Õ¹Ñ½Õ¡•‘¡•ÍÐ¹¥¤°¹Õ±°¤ì()•Ù•¹Ñ]½É±¹É•Í•Ð ‰µ¥É¼µ•Ù•¹ÐµÁÉ½‰”ˆ°ìÍ•Ñ½É%è€‰½É•}É¥‘”ˆô¤ì)…ÍÍ•ÉÐ¹‘••ÁÅÕ…°¡•Ù•¹Ñ]½É±¹•Ñ5¥É½Ù•¹ÑÌ ¤°•Ù•¹ÑQÝ¥¸¹•Ñ5¥É½Ù•¹ÑÌ ¤°€‰É•Í•ÐµÕÍÐÉ•ÍÑ½É”‘•Ñ•Éµ¥¹¥ÍÑ¥ŒÉ•…‘ä•Ù•¹ÑÌˆ¤ì()½¹ÍÐÍÑ…•‘¥¹•ÉÁÉ¥¹Ð€ôÑ¥±•¥¹•ÉÁÉ¥¹Ð¡•Ù•¹Ñ]½É±¤ì)½¹ÍÐÍÑ…•‘Ù•¹Ð€ô•Ù•¹Ñ]½É±¹ÍÑ…•5¥É½Ù•¹Ñ9•…ÉMÁ…Ý¸ ‰…¹¥•¹Ñ}½¹Ñ…¥¹•Èˆ¤ì)½¹ÍÐÍÑ…•‘QÝ¥¸€ô•Ù•¹ÑQÝ¥¸¹ÍÑ…•5¥É½Ù•¹Ñ9•…ÉMÁ…Ý¸ ‰…¹¥•¹Ñ}½¹Ñ…¥¹•Èˆ¤ì)½¹ÍÐÍÑ…•‘MÁ…Ý¸€ô•Ù•¹Ñ]½É±¹•ÑMÁ…Ý¸ ¤ì)…ÍÍ•ÉÐ¹½¬¡ÍÑ…•‘Ù•¹Ð°€‰„‘ÉäµÍ¡¥™ÐÁ¥Ñä•Ù•¹ÐµÕÍÐ‰”ÍÑ…•…‰±”¹•…ÈÑ¡”±…¹‘¥¹œ¡…µ‰•Èˆ¤ì)…ÍÍ•ÉÐ¹‘••ÁÅÕ…°¡ÍÑ…•‘Ù•¹Ð°ÍÑ…•‘QÝ¥¸°€‰ÍÑ…•Á¥Ñä•Ù•¹ÑÌµÕÍÐÍÑ…ä‘•Ñ•Éµ¥¹¥ÍÑ¥Œˆ¤ì)…ÍÍ•ÉÐ¹½¬ (€5…Ñ ¹¡åÁ½Ð¡ÍÑ…•‘Ù•¹Ð¹Ñà€´ÍÑ…•‘MÁ…Ý¸¹Ñà°ÍÑ…•‘Ù•¹Ð¹Ñä€´ÍÑ…•‘MÁ…Ý¸¹Ñä¤€ðô€Ø°(€€‰„ÍÑ…••Ù•¹ÐµÕÍÐ™¥Ð¥¹Í¥‘”•…É±äÍ•¹Í”É…¹”ˆ°(¤ì)…ÍÍ•ÉÐ¹½¬ (€€…l‰…¥Èˆ°€‰‰•‘É½¬‰t¹¥¹±Õ‘•Ì¡•Ù•¹Ñ]½É±¹•ÑQ¥±”¡ÍÑ…•‘Ù•¹Ð¹Ñà°ÍÑ…•‘Ù•¹Ð¹Ñä¤ü¹­¥¹¤°(€€‰„ÍÑ…••Ù•¹ÐµÕÍÐÉ•µ…¥¸„Á¡åÍ¥…°Õ¹‘•ÉÉ½Õ¹Ñ…É•Ðˆ°(¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡ÍÑ…•‘Ù•¹Ð¹ÑåÁ”°€‰…¹¥•¹Ñ}½¹Ñ…¥¹•Èˆ¤ì)…ÍÍ•ÉÑ½¹Ñ…¥¹•É1½½Ð¡•Ù•¹Ñ]½É±°ÍÑ…•‘Ù•¹Ð¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡•Ù•¹Ñ]½É±¹•Ñ5¥É½Ù•¹ÑÌ ¤¹±•¹Ñ °€Ä¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡Ñ¥±•¥¹•ÉÁÉ¥¹Ð¡•Ù•¹Ñ]½É±¤°ÍÑ…•‘¥¹•ÉÁÉ¥¹Ð°€‰ÍÑ…¥¹œ…¸•Ù•¹ÐµÕÍÐ¹½Ð¡…¹”É½¬½È½É”‘•¹Í¥Ñäˆ¤ì()±•Ð¡•­•‘MÑ…•‘Ù•¹ÑÌ€ô€Àì)™½È€¡±•ÐÍ••€ô€ÀìÍ••€ð€ÄÈìÍ••€¬ô€Ä¤ì(€½¹ÍÐÍÕÉ™…•]½É±€ô¹•Ü5¥¹•]½É±¡=I}QeAL°ÍÕÉ™…”µÁ¥Ñä´‘íÍ••‘ôµ…¹¥•¹Ðµ½¹Ñ…¥¹•É€¤ì(€½¹ÍÐÍÕÉ™…•MÑ…•€ôÍÕÉ™…•]½É±¹ÍÑ…•5¥É½Ù•¹Ñ9•…ÉMÁ…Ý¸ ‰…¹¥•¹Ñ}½¹Ñ…¥¹•Èˆ°ÍÕÉ™…•]½É±¹•ÑMÁ…Ý¸ ¤¤ì(€…ÍÍ•ÉÐ¹½¬¡ÍÕÉ™…•MÑ…•°ÍÕÉ™…”Á¥ÑäµÕÍÐÍÑ…”Ñ¡”¡•ÍÐ™½ÈÍ••€‘íÍ••‘õ€¤ì((€½¹ÍÐ±¥™Ñ]½É±€ô¹•Ü5¥¹•]½É±¡=I}QeAL°±¥™ÐµÁ¥Ñä´‘íÍ••‘ôµ…¹¥•¹Ðµ½¹Ñ…¥¹•É€¤ì(€½¹ÍÐ±¥™Ð€ô±¥™Ñ]½É±¹•Ñ1¥™ÑMÑ…ÉÐ ÄàÀ°€À¸ØÔ°€ÄàÀ°ìÕ¹±½­•‘Q¥•É…Àè€äô¤ì(€…ÍÍ•ÉÐ¹½¬¡±¥™Ð°±¥™Ð™¥áÑÕÉ”µÕÍÐ•á¥ÍÐ™½È¡•ÍÐÍ••€‘íÍ••‘õ€¤ì(€½¹ÍÐ±¥™ÑMÑ…•€ô±¥™Ñ]½É±¹ÍÑ…•5¥É½Ù•¹Ñ9•…ÉMÁ…Ý¸ ‰…¹¥•¹Ñ}½¹Ñ…¥¹•Èˆ°±¥™Ð¤ì(€…ÍÍ•ÉÐ¹½¬¡±¥™ÑMÑ…•°±¥™ÐÁ¥ÑäµÕÍÐÍÑ…”Ñ¡”¡•ÍÐ™½ÈÍ••€‘íÍ••‘õ€¤ì(€…ÍÍ•ÉÐ¹½¬ (€€€5…Ñ ¹¡åÁ½Ð¡±¥™ÑMÑ…•¹Ñà€´±¥™Ð¹Ñà°±¥™ÑMÑ…•¹Ñä€´±¥™Ð¹Ñä¤€ðô€à(€€€€€ñð€¡±¥™Ð¹Ñ…É•Ð€˜˜±¥™ÑMÑ…•¹Ñà€ôôô±¥™Ð¹Ñ…É•Ð¹Ñà€˜˜±¥™ÑMÑ…•¹Ñä€ôôô±¥™Ð¹Ñ…É•Ð¹Ñä¤°(€€€€‰±¥™ÐÁ¥ÑäµÕÍÐÍÑ…ä¹•…ÈÑ¡”ÕÉÉ•¹Ð±…¹‘¥¹œ½È¥ÑÌÕ…É…¹Ñ••Ñ…É•Ðˆ°(€€¤ì(€¡•­•‘MÑ…•‘Ù•¹ÑÌ€¬ô€Èì)ô((¼¼±¥™Ð±…¹‘¥¹œÉ•ÑÕ¹•Ì¥ÑÌ•á¥ÍÑ¥¹œ½¹”µ¹½‘”Í…µÁ±”Ñ¼Ñ¡”Ý½É­Í¡½ÀÌ(¼¼É•ÅÕ•ÍÑ•Í¡½ÉÑ…”¸%ÐµÕÍÐ¹½ÐÉ•…Ñ”•áÑÉ„½É”½ÈÉ•ÍÑ½É”™Õ±°‘••Àµ½É”!@¸)½¹ÍÐ±¥™ÑMÕÁÁ±å]½É±€ô¹•Ü5¥¹•]½É±¡=I}QeAL°€‰±¥™ÐµÉ•ÍÕÁÁ±äµÁÉ½‰”ˆ°ìÍ•Ñ½É%è€‰ÍÑ…‰±•}ÍÑÉ…Ñ„ˆô¤ì)½¹ÍÐ±¥™ÑMÕÁÁ±åMÑ…ÉÐ€ô±¥™ÑMÕÁÁ±å]½É±¹•Ñ1¥™ÑMÑ…ÉÐ àÀÀ°€À¸ÐÔ°€àÀÀ°ìÕ¹±½­•‘Q¥•É…Àè€äô¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡±¥™ÑMÕÁÁ±åMÑ…ÉÐ¹Í½ÕÉ”°€‰Í¡…™Ðµ±¥™Ðˆ¤ì)…ÍÍ•ÉÐ¹½¬¡±¥™ÑMÕÁÁ±åMÑ…ÉÐ¹É•ÅÕ¥É•‘Q¥•È€øô€È°€‰Ñ¡”É•ÍÕÁÁ±ä™¥áÑÕÉ”µÕÍÐ…±±½Ü¥É½¸ˆ¤ì)½¹ÍÐ±¥™ÑMÕÁÁ±å	•™½É•½Õ¹Ð€ôÝ½É±‘5•ÑÉ¥Ì¡±¥™ÑMÕÁÁ±å]½É±¤¹½É•Q¥±•Ìì)½¹ÍÐ±¥™ÑMÕÁÁ±å=É¥¥¹…±…À€ô±¥™ÑMÕÁÁ±å]½É±¹•ÑQ¥±” (€±¥™ÑMÕÁÁ±åMÑ…ÉÐ¹Ñ…É•Ð¹Ñà°(€±¥™ÑMÕÁÁ±åMÑ…ÉÐ¹Ñ…É•Ð¹Ñä°(¤¹µ…á!Àì)½¹ÍÐ±¥™ÑMÕÁÁ±ä€ô±¥™ÑMÕÁÁ±å]½É±¹É•ÑÕ¹•1¥™ÑQ…É•Ð¡±¥™ÑMÕÁÁ±åMÑ…ÉÐ°l‰ÍÑ…É}½É”ˆ°€‰¥É½¸‰t¤ì)…ÍÍ•ÉÐ¹½¬¡±¥™ÑMÕÁÁ±ä°€‰„‘••À±¥™ÐµÕÍÐ•áÁ½Í”½¹”É•ÑÕ¹…‰±”É•ÍÕÁÁ±äÍ…µÁ±”ˆ¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡±¥™ÑMÕÁÁ±ä¹½É•%°€‰¥É½¸ˆ°€‰…¸Õ¹…Ù…¥±…‰±”Ñ½ÀµÑ¥•ÈÉ•ÅÕ•ÍÐµÕÍÐ™…±°Ñ¡É½Õ Ñ¼Ñ¡”É•…¡…‰±”Í¡½ÉÑ…”ˆ¤ì)…ÍÍ•ÉÐ¹‘••ÁÅÕ…° (€ìÑàè±¥™ÑMÕÁÁ±ä¹Ñà°Ñäè±¥™ÑMÕÁÁ±ä¹Ñäô°(€ìÑàè±¥™ÑMÕÁÁ±åMÑ…ÉÐ¹Ñ…É•Ð¹Ñà°Ñäè±¥™ÑMÕÁÁ±åMÑ…ÉÐ¹Ñ…É•Ð¹Ñäô°(€€‰É•ÑÕ¹¥¹œµÕÍÐÉ•ÕÍ”Ñ¡”…ÕÑ¡½É•±…¹‘¥¹œ¹½‘”ˆ°(¤ì)½¹ÍÐ±¥™ÑMÕÁÁ±åQ¥±”€ô±¥™ÑMÕÁÁ±å]½É±¹•ÑQ¥±”¡±¥™ÑMÕÁÁ±ä¹Ñà°±¥™ÑMÕÁÁ±ä¹Ñä¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡±¥™ÑMÕÁÁ±åQ¥±”¹±¥™ÑMÕÁÁ±ä°ÑÉÕ”¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡±¥™ÑMÕÁÁ±åQ¥±”¹‘¥Í½Ù•É•°ÑÉÕ”¤ì)…ÍÍ•ÉÐ¹½¬¡±¥™ÑMÕÁÁ±åQ¥±”¹µ…á!À€ðô±¥™ÑMÕÁÁ±å=É¥¥¹…±…À°€‰Ñ¡”±…¹‘¥¹œÍ…µÁ±”µÕÍÐÉ•µ…¥¸ÅÕ¥¬Ñ¼½±±•Ðˆ¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡Ý½É±‘5•ÑÉ¥Ì¡±¥™ÑMÕÁÁ±å]½É±¤¹½É•Q¥±•Ì°±¥™ÑMÕÁÁ±å	•™½É•½Õ¹Ð°€‰É•ÍÕÁÁ±äµÕÍÐ¹½Ð¥¹É•…Í”¹½‘”‘•¹Í¥Ñäˆ¤ì((¼¼Ù•ÉäÍ•Ñ½È…¹Í••ÍÑ…ÉÑÌÝ¥Ñ Ñ¡”Í…µ”Í¡½ÉÐ°µ¥¹•…‰±”•½¹½µäÍ•…´è(¼¼½ÁÁ•È¥ÌÙ¥Í¥‰±”¥µµ•‘¥…Ñ•±ä°½…°™½±±½ÝÌ‰•¡¥¹¥Ð°…¹…¹½Ñ¡•È½ÁÁ•È(¼¼Ñ¥±”É•Ý…É‘Ì½¹Ñ¥¹Õ¥¹œ‘½Ý¸Ñ¡”¹•Ý±ä½Á•¹•Í¡…™Ð¸)±•Ð¡•­•‘MÑ…ÉÑ•ÉM•…µÌ€ô€Àì)™½È€¡±•ÐÍ••€ô€ÄìÍ••€ðô€àìÍ••€¬ô€Ä¤ì(€™½È€¡½¹ÍÐÍ•Ñ½È½˜=1=%1}MQ=IL¤ì(€€€½¹ÍÐÍÑ…ÉÑ•É]½É±€ô¹•Ü5¥¹•]½É±¡=I}QeAL°ÍÑ…ÉÑ•ÈµÍ•…´´‘íÍ••‘õ€°ìÍ•Ñ½É%èÍ•Ñ½È¹¥ô¤ì(€€€½¹ÍÐÍÑ…ÉÑ•ÉMÁ…Ý¸€ôÍÑ…ÉÑ•É]½É±¹•ÑMÁ…Ý¸ ¤ì(€€€½¹ÍÐ™¥ÉÍÑ½ÁÁ•È€ôÍÑ…ÉÑ•É]½É±¹•ÑQ¥±”¡ÍÑ…ÉÑ•ÉMÁ…Ý¸¹Ñà°ÍÑ…ÉÑ•ÉMÁ…Ý¸¹Ñä€¬€È¤ì(€€€½¹ÍÐ½…°€ôÍÑ…ÉÑ•É]½É±¹•ÑQ¥±”¡ÍÑ…ÉÑ•ÉMÁ…Ý¸¹Ñà°ÍÑ…ÉÑ•ÉMÁ…Ý¸¹Ñä€¬€Ì¤ì(€€€½¹ÍÐÍ•½¹‘½ÁÁ•È€ôÍÑ…ÉÑ•É]½É±¹•ÑQ¥±”¡ÍÑ…ÉÑ•ÉMÁ…Ý¸¹Ñà°ÍÑ…ÉÑ•ÉMÁ…Ý¸¹Ñä€¬€Ð¤ì((€€€…ÍÍ•ÉÐ¹•ÅÕ…°¡™¥ÉÍÑ½ÁÁ•Èü¹½É•%°€‰½ÁÁ•Èˆ°€‘íÍ•Ñ½È¹¥‘ôµÕÍÐ•áÁ½Í”ÍÑ…ÉÑ•È½ÁÁ•É€¤ì(€€€…ÍÍ•ÉÐ¹•ÅÕ…°¡™¥ÉÍÑ½ÁÁ•Èü¹µ…á!À°€È°€‰™¥ÉÍÐ½ÁÁ•ÈµÕÍÐ™¥Ð¥¹Í¥‘”Ñ¡”½Á•¹¥¹œÍ¡¥™Ðˆ¤ì(€€€…ÍÍ•ÉÐ¹•ÅÕ…°¡½…°ü¹½É•%°€‰½…°ˆ°€‘íÍ•Ñ½È¹¥‘ôµÕÍÐÕ…É…¹Ñ•”•…É±ä½…±€¤ì(€€€…ÍÍ•ÉÐ¹•ÅÕ…°¡½…°ü¹µ…á!À°€Ð°€‰ÍÑ…ÉÑ•È½…°µÕÍÐ™¥ÐÑ¡”½Á•¹¥¹œÍ¡¥™ÐÝ¥Ñ¡½ÕÐ‰•½µ¥¹œ™É•”ˆ¤ì(€€€…ÍÍ•ÉÐ¹•ÅÕ…°¡Í•½¹‘½ÁÁ•Èü¹½É•%°€‰½ÁÁ•Èˆ°€‘íÍ•Ñ½È¹¥‘ôµÕÍÐ™¥¹¥Í Ñ¡”ÍÑ…ÉÑ•ÈÍ•…´Ý¥Ñ ½ÁÁ•É€¤ì(€€€…ÍÍ•ÉÐ¹•ÅÕ…°¡Í•½¹‘½ÁÁ•Èü¹µ…á!À°€Ì°€‰Í•½¹½ÁÁ•ÈµÕÍÐÍÑ…äÍ½™Ðˆ¤ì(€€€…ÍÍ•ÉÐ¹½¬¡™¥ÉÍÑ½ÁÁ•È¹‘¥Í½Ù•É•€˜˜½…°¹‘¥Í½Ù•É•€˜˜Í•½¹‘½ÁÁ•È¹‘¥Í½Ù•É•¤ì((€€€½¹ÍÐÍÑ…ÉÑ•ÉI½ÕÑ”€ôÍÑ…ÉÑ•É]½É±¹™¥¹‘1•…ÍÑI•Í¥ÍÑ…¹•MÑ•À (€€€€€ÍÑ…ÉÑ•ÉMÁ…Ý¸°(€€€€€ìÑàèÍÑ…ÉÑ•ÉMÁ…Ý¸¹Ñà°ÑäèÍÑ…ÉÑ•ÉMÁ…Ý¸¹Ñä€¬€Ðô°(€€€€€ìµ½Ù•MÁ••è€ÄÀÀ°‘¥A½Ý•ÉA•ÉM•½¹è€È¸ÈÔ°µ…á•Ñ½ÕÉQ¥±•Ìè€àô°(€€€€¤ì(€€€…ÍÍ•ÉÐ¹½¬¡ÍÑ…ÉÑ•ÉI½ÕÑ”ü¹É½ÕÑ”¹±•¹Ñ €øô€Ì°€‰Ñ¡”½µÁ±•Ñ”ÍÑ…ÉÑ•ÈÍ•…´µÕÍÐ‰”É•…¡…‰±”ˆ¤ì(€€€¡•­•‘MÑ…ÉÑ•ÉM•…µÌ€¬ô€Äì(€ô)ô((¼¼Q¡”Ñ¡É•”…‘‘¥Ñ¥½¹…°Õ…É…¹Ñ••½ÁÁ•ÈÁÉ½‰•ÌµÕÍÐ±•…¥¹Ñ¼Ñ¡”Í¡…™Ð°(¼¼¹•Ù•ÈÉ•É•…Ñ”Ñ¡”™½Éµ•ÈÍ¡…±±½Ü±•™Ð½É¥¡Ð™…Éµ¥¹œÍÑÉ¥À¸I•½ÉÑ¡”(¼¼É•ÅÕ•ÍÑ•±½…Ñ¥½¹ÌÝ¥Ñ¡½ÕÐ‘•Á•¹‘¥¹œ½¸¥¹¥‘•¹Ñ…°…Ù•Ì¥¸½¹”Í••¸)½¹ÍÐÍÑ…ÉÑ•É…¹]½É±€ô¹•Ü5¥¹•]½É±¡=I}QeAL°€‰ÍÑ…ÉÑ•Èµ‘•Í•¹‘¥¹œµ™…¸ˆ°ìÍ•Ñ½É%è€‰ÍÑ…‰±•}ÍÑÉ…Ñ„ˆô¤ì)½¹ÍÐÍÑ…ÉÑ•É…¹MÁ…Ý¸€ôÍÑ…ÉÑ•É…¹]½É±¹•ÑMÁ…Ý¸ ¤ì)½¹ÍÐÍÑ…ÉÑ•É…¹I•ÅÕ•ÍÑÌ€ômtì)½¹ÍÐ½É¥¥¹…±9•…É•ÍÑM½±¥‘Q¥±”€ôÍÑ…ÉÑ•É…¹]½É±¹}¹•…É•ÍÑM½±¥‘Q¥±”ì)ÍÑ…ÉÑ•É…¹]½É±¹}¹•…É•ÍÑM½±¥‘Q¥±”€ô€¡Ñà°Ñä°É…‘¥ÕÌ¤€ôøì(€ÍÑ…ÉÑ•É…¹I•ÅÕ•ÍÑÌ¹ÁÕÍ ¡ì(€€€‘àèÑà€´ÍÑ…ÉÑ•É…¹MÁ…Ý¸¹Ñà°(€€€‘äèÑä€´ÍÑ…ÉÑ•É…¹MÁ…Ý¸¹Ñä°(€€€É…‘¥ÕÌ°(€ô¤ì(€É•ÑÕÉ¸¹Õ±°ì)ôì)ÍÑ…ÉÑ•É…¹]½É±¹}Á±…•MÑ…ÉÑ•É=É” ¤ì)ÍÑ…ÉÑ•É…¹]½É±¹}¹•…É•ÍÑM½±¥‘Q¥±”€ô½É¥¥¹…±9•…É•ÍÑM½±¥‘Q¥±”ì)…ÍÍ•ÉÐ¹‘••ÁÅÕ…°¡ÍÑ…ÉÑ•É…¹I•ÅÕ•ÍÑÌ°l(€ì‘àè€´È°‘äè€Ð°É…‘¥ÕÌè€Èô°(€ì‘àè€È°‘äè€Ô°É…‘¥ÕÌè€Èô°(€ì‘àè€À°‘äè€Ü°É…‘¥ÕÌè€Èô°)t¤ì)…ÍÍ•ÉÐ¹½¬¡ÍÑ…ÉÑ•É…¹I•ÅÕ•ÍÑÌ¹•Ù•Éä ¡É•ÅÕ•ÍÐ¤€ôøÉ•ÅÕ•ÍÐ¹‘ä€øô€Ð€˜˜5…Ñ ¹…‰Ì¡É•ÅÕ•ÍÐ¹‘à¤€ðô€È¤¤ì((¼¼‘¥É•Ð‘¥…½¹…°µÕÍÐ¹½ÐÍÅÕ••é”Ñ¡É½Õ Ñ¡”Í•…´‰•ÑÝ••¸ÑÝ¼¥¹Ñ…Ð(¼¼‰±½­Ì¸Q¡”ÁÕ‰±¥ŒÉ½ÕÑ”™¥¹‘•ÈµÕÍÐ¥¹ÍÑ•…¡½½Í”½¹”½˜Ñ¡”½ÉÑ¡½½¹…°(¼¼‰±½­Ì…¹•¹Ñ•ÈÑ¡”½…°™É½´„…É‘¥¹…°‘¥É•Ñ¥½¸¸)½¹ÍÐ½É¹•É]½É±€ô¹•Ü5¥¹•]½É±¡=I}QeAL°€‰½É¹•ÈµÕÐµÁÉ½‰”ˆ¤ì)½¹ÍÐ½É¹•ÉMÑ…ÉÐ€ôìÑàè5…Ñ ¹™±½½È¡]=I1}=9%¹]%Q €¼€È¤°Ñäè€ÐÀôì)½¹ÍÐ½É¹•É½…°€ôìÑàè½É¹•ÉMÑ…ÉÐ¹Ñà€¬€Ä°Ñäè½É¹•ÉMÑ…ÉÐ¹Ñä€¬€Äôì)™½È€¡±•Ð½™™Í•Ñd€ô€´Èì½™™Í•Ñd€ðô€Ìì½™™Í•Ñd€¬ô€Ä¤ì(€™½È€¡±•Ð½™™Í•Ñ`€ô€´Èì½™™Í•Ñ`€ðô€Ìì½™™Í•Ñ`€¬ô€Ä¤ì(€€€½¹ÍÐÑ¥±”€ô½É¹•É]½É±¹•ÑQ¥±”¡½É¹•ÉMÑ…ÉÐ¹Ñà€¬½™™Í•Ñ`°½É¹•ÉMÑ…ÉÐ¹Ñä€¬½™™Í•Ñd¤ì(€€€Ñ¥±”¹­¥¹€ô€‰‰•‘É½¬ˆì(€€€Ñ¥±”¹¡À€ô€Å|ÀÀÁ|ÀÀÁ|ÀÀÀì(€€€Ñ¥±”¹µ…á!À€ô€Å|ÀÀÁ|ÀÀÁ|ÀÀÀì(€€€Ñ¥±”¹½É•%€ô¹Õ±°ì(€€€Ñ¥±”¹Ù•¥¹%€ô¹Õ±°ì(€ô)ô)™½È€¡½¹ÍÐÁ½¥¹Ð½˜m½É¹•ÉMÑ…ÉÐ°½É¹•É½…±t¤ì(€½¹ÍÐÑ¥±”€ô½É¹•É]½É±¹•ÑQ¥±”¡Á½¥¹Ð¹Ñà°Á½¥¹Ð¹Ñä¤ì(€Ñ¥±”¹­¥¹€ô€‰…¥Èˆì(€Ñ¥±”¹¡À€ô€Àì(€Ñ¥±”¹µ…á!À€ô€Àì)ô)™½È€¡½¹ÍÐÁ½¥¹Ð½˜l(€ìÑàè½É¹•É½…°¹Ñà°Ñäè½É¹•ÉMÑ…ÉÐ¹Ñäô°(€ìÑàè½É¹•ÉMÑ…ÉÐ¹Ñà°Ñäè½É¹•É½…°¹Ñäô°)t¤ì(€½¹ÍÐÑ¥±”€ô½É¹•É]½É±¹•ÑQ¥±”¡Á½¥¹Ð¹Ñà°Á½¥¹Ð¹Ñä¤ì(€Ñ¥±”¹­¥¹€ô€‰ÍÑ½¹”ˆì(€Ñ¥±”¹¡À€ô€Èì(€Ñ¥±”¹µ…á!À€ô€Èì)ô()½¹ÍÐ½É¹•ÉI½ÕÑ”€ô½É¹•É]½É±¹™¥¹‘1•…ÍÑI•Í¥ÍÑ…¹•MÑ•À¡½É¹•ÉMÑ…ÉÐ°½É¹•É½…°°ì(€µ½Ù•MÁ••è€ÄÀÀ°(€‘¥A½Ý•ÉA•ÉM•½¹è€ÄÀ°(€µ…á•Ñ½ÕÉQ¥±•Ìè€È°(€µ¥¹¥µÕµM…Ù¥¹Ìè€À°)ô¤ì)…ÍÍ•ÉÐ¹½¬¡½É¹•ÉI½ÕÑ”°€‰…¸½ÉÑ¡½½¹…°ÑÝ¼µÍÑ•ÀÉ½ÕÑ”µÕÍÐÉ•µ…¥¸…Ù…¥±…‰±”ˆ¤ì)…ÍÍ•ÉÐ¹•ÅÕ…° (€½É¹•É]½É±¹}É½ÕÑ•MÑ•Á½ÍÐ¡½É¹•ÉMÑ…ÉÐ°½É¹•É½…°°ì(€€€µ½Ù•MÁ••è€ÄÀÀ°(€€€‘¥A½Ý•ÉA•ÉM•½¹è€ÄÀ°(€€€¡…É‘¹•ÍÍ5Õ±Ñ¥Á±¥•Èè€Ä°(€€€™½ÕÍ•‘=É•%è¹Õ±°°(€€€™½ÕÍ•‘=É•¥5Õ±Ñ¥Á±¥•Èè€Ä°(€ô¤°(€%¹™¥¹¥Ñä°(€€‰Ñ¡”‰±½­•½¹”µÍÑ•À‘¥…½¹…°µÕÍÐ‰”É•©•Ñ•ˆ°(¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡½É¹•ÉI½ÕÑ”¹É½ÕÑ”¹±•¹Ñ °€Ì¤ì)…ÍÍ•ÉÐ¹½¬ (€½É¹•ÉI½ÕÑ”¹É½ÕÑ”¹Í±¥” Ä¤¹•Ù•Éä ¡Á½¥¹Ð°¥¹‘•à¤€ôøì(€€€½¹ÍÐÁÉ•Ù¥½ÕÌ€ô½É¹•ÉI½ÕÑ”¹É½ÕÑ•m¥¹‘•átì(€€€É•ÑÕÉ¸Á½¥¹Ð¹Ñà€ôôôÁÉ•Ù¥½ÕÌ¹ÑàñðÁ½¥¹Ð¹Ñä€ôôôÁÉ•Ù¥½ÕÌ¹Ñäì(€ô¤°(€€‰Ñ¡”É•Á±…•µ•¹ÐÉ½ÕÑ”µÕÍÐ½¹Ñ…¥¸…É‘¥¹…°ÍÑ•ÁÌ½¹±äˆ°(¤ì((¼¼á¥ÍÑ¥¹œ±¥Ù”µ½É”¥¹‘•à…¹É½ÕÑ”Í•…É É•µ…¥¸ÕÍ…‰±”Ý¥Ñ „Í•±•Ñ•Í•Ñ½È¸)±•Ð™¥ÉÍÑ=É”€ô¹Õ±°ì)±•Ð¥¹‘•á•‘=É”€ô€Àì)•Ù•¹Ñ]½É±¹™½É…¡=É•Q¥±•%¹	½Õ¹‘Ì (€€À°(€€À°(€]=I1}=9%¹]%Q €´€Ä°(€]=I1}=9%¹!%!P€´€Ä°(€€¡Ñ¥±”°Ñà°Ñä¤€ôøì(€€€¥¹‘•á•‘=É”€¬ô€Äì(€€€¥˜€ …™¥ÉÍÑ=É”¤™¥ÉÍÑ=É”€ôìÑ¥±”°Ñà°Ñäôì(€ô°(¤ì)…ÍÍ•ÉÐ¹½¬¡¥¹‘•á•‘=É”€ø€À€˜˜™¥ÉÍÑ=É”¤ì)½¹ÍÐÍÁ…Ý¸€ô•Ù•¹Ñ]½É±¹•ÑMÁ…Ý¸ ¤ì)½¹ÍÐ¡Á	•™½É•I½ÕÑ”€ô•Ù•¹Ñ]½É±¹•ÑQ¥±”¡™¥ÉÍÑ=É”¹Ñà°™¥ÉÍÑ=É”¹Ñä¤¹¡Àì)½¹ÍÐÉ½ÕÑ”€ô•Ù•¹Ñ]½É±¹™¥¹‘1•…ÍÑI•Í¥ÍÑ…¹•MÑ•À¡ÍÁ…Ý¸°™¥ÉÍÑ=É”°ì(€µ½Ù•MÁ••è€ÄÀÀ°(€‘¥A½Ý•ÉA•ÉM•½¹è€ÄÀ°(€µ…á•Ñ½ÕÉQ¥±•Ìè€à°)ô¤ì)…ÍÍ•ÉÐ¹½¬¡É½ÕÑ”ü¹É½ÕÑ”¹±•¹Ñ €øô€Ä¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡•Ù•¹Ñ]½É±¹•ÑQ¥±”¡™¥ÉÍÑ=É”¹Ñà°™¥ÉÍÑ=É”¹Ñä¤¹¡À°¡Á	•™½É•I½ÕÑ”°€‰É½ÕÑ¥¹œÍÑ…åÌÉ•…µ½¹±äˆ¤ì((¼¼‘…µ…•I…ä‘•±¥‰•É…Ñ•±ä…ÁÁ±¥•Ì¥ÑÌ™Õ±°‘…µ…”Ñ¼•Ù•ÉäÑ¥±”½Ù•É•‰äÑ¡”(¼¼ÍÕÁÁ±¥•Ý¥‘Ñ ¸…±±½™˜‰…¹‘ÌÑ¡•É•™½É”‰•±½¹œÑ¼Ñ¡”…±±•ÈèÑ¡”±…Í•ÈµÕÍÐ(¼¼Á…ÍÌ½¹±ä¥ÑÌÁ•Éµ…¹•¹Ð½É”Ý¥‘Ñ …¹É•Í½±Ù”Ñ¡•Éµ…°•‘•ÌÍ•Á…É…Ñ•±ä¸)½¹ÍÐÉ…å½¹ÑÉ…Ñ]½É±€ô¹•Ü5¥¹•]½É±¡=I}QeAL°€‰É…äµÝ¥‘Ñ µ½¹ÑÉ…Ðˆ¤ì)½¹ÍÐÉ…å=É¥¥¹Qà€ô5…Ñ ¹™±½½È¡]=I1}=9%¹]%Q €¼€È¤ì)½¹ÍÐÉ…å=É¥¥¹Qä€ô€ÐÀì)½¹ÍÐÉ…å½É”€ôÉ…å½¹ÑÉ…Ñ]½É±¹•ÑQ¥±”¡É…å=É¥¥¹Qà€¬€È°É…å=É¥¥¹Qä¤ì)½¹ÍÐÉ…å‘”€ôÉ…å½¹ÑÉ…Ñ]½É±¹•ÑQ¥±”¡É…å=É¥¥¹Qà€¬€È°É…å=É¥¥¹Qä€¬€Ä¤ì)™½È€¡½¹ÍÐÑ¥±”½˜mÉ…å½É”°É…å‘•t¤ì(€=‰©•Ð¹…ÍÍ¥¸¡Ñ¥±”°ì(€€€­¥¹è€‰ÍÑ½¹”ˆ°(€€€½É•%è¹Õ±°°(€€€Ù•¥¹%è¹Õ±°°(€€€¡Àè€ÄÀÀ°(€€€µ…á!Àè€ÄÀÀ°(€€€‘¥Í½Ù•É•èÑÉÕ”°(€€€É…­•è€À°(€ô¤ì)ô)½¹ÍÐÉ…å=É¥¥¹`€ô€¡É…å=É¥¥¹Qà€¬€À¸Ô¤€¨]=I1}=9%¹Q%1}M%iì)½¹ÍÐÉ…å=É¥¥¹d€ô€¡É…å=É¥¥¹Qä€¬€À¸Ô¤€¨]=I1}=9%¹Q%1}M%iì)É…å½¹ÑÉ…Ñ]½É±¹‘…µ…•I…ä¡É…å=É¥¥¹`°É…å=É¥¥¹d°€Ä°€À°]=I1}=9%¹Q%1}M%i€¨€Ð°€ÄÀ°€à¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡É…å½É”¹¡À°€äÀ°€‰Ñ¡”•¥¡ÐµÁ¥á•°½É”µÕÍÐ‘…µ…”¥ÑÌ•¹Ñ•ÈÉ½Üˆ¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡É…å‘”¹¡À°€ÄÀÀ°€‰Ñ¡”•¥¡ÐµÁ¥á•°½É”µÕÍÐ¹½ÐÉ•… Ñ¡”¹•¥¡‰½É¥¹œÉ½Üˆ¤ì)É…å½¹ÑÉ…Ñ]½É±¹‘…µ…•I…ä¡É…å=É¥¥¹`°É…å=É¥¥¹d°€Ä°€À°]=I1}=9%¹Q%1}M%i€¨€Ð°€ÄÀ°€ÈÌ¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡É…å½É”¹¡À°€àÀ¤ì)…ÍÍ•ÉÐ¹•ÅÕ…°¡É…å‘”¹¡À°€äÀ°€‰‘…µ…•I…ä¡…Ì¹¼¥µÁ±¥¥Ð•‘”™…±±½™˜…ÐÝ¥‘•ÈÝ¥‘Ñ¡Ìˆ¤ì()½¹Í½±”¹±½œ¡)M=8¹ÍÑÉ¥¹¥™ä¡ì(€½¬èÑÉÕ”°(€‘¥…¹½ÍÑ¥AÉ½™¥±•Ìè±•…åAÉ½™¥±•Ì¹±•¹Ñ °(€Á¡åÍ¥…±Ù•¹ÑQåÁ•Ìè•Ù•¹ÑÌ¹±•¹Ñ °(€±½‰…±Ù•¹ÑQåÁ•ÌèÍ¡•‘Õ±•‘QåÁ•Ì¹Í¥é”°(€¡•­•‘MÑ…ÉÑ•ÉM•…µÌ°(€¡•­•‘MÑ…•‘Ù•¹ÑÌ°(€¡•­•‘•ÁÑ¡…Ñ•‘=É”°(€Í…µÁ±•‘=É••¹Í¥Ñäè9Õµ‰•È¡Í…µÁ±•‘=É••¹Í¥Ñä¹Ñ½¥á• Ð¤¤°(€Í…µÁ±•‘…Ù••¹Í¥Ñäè9Õµ‰•È¡Í…µÁ±•‘…Ù••¹Í¥Ñä¹Ñ½¥á• Ð¤¤°(€µ…ááÁ•Ñ•‘9½‘•	Õ‘•ÑÉ¥™Ðè9Õµ‰•È¡µ…ááÁ•Ñ•‘9½‘•	Õ‘•ÑÉ¥™Ð¹Ñ½¥á• Ð¤¤°(€µ…á•¹•É…Ñ•‘9½‘•	Õ‘•ÑÉ¥™Ðè9Õµ‰•È¡µ…á•¹•É…Ñ•‘9½‘•	Õ‘•ÑÉ¥™Ð¹Ñ½¥á• Ð¤¤°(€…Ù•É¹¥Èè…Ù•É¸¹Õ¹‘•ÉÉ½Õ¹‘¥È°(€É¥‘•¥ÈèÉ¥‘”¹Õ¹‘•ÉÉ½Õ¹‘¥È°(€…Ù•É¹=É”è…Ù•É¸¹½É•Q¥±•Ì°(€É¥‘•=É”èÉ¥‘”¹½É•Q¥±•Ì°)ô¤¤ì(
+assert.equal(legacyProfiles.length, 3, "legacy profiles remain available only for diagnostics");
+assert.equal(GEOLOGICAL_SECTORS.length, 3);
+
+// A normal run no longer selects a sector. Its hidden geology is deterministic
+// for a seed and rerolled when the seed changes.
+const randomA = new MineWorld(ORE_TYPES, "random-geology-probe");
+const randomB = new MineWorld(ORE_TYPES, "random-geology-probe");
+const randomProfile = randomA.getGeologyProfile();
+assert.match(randomProfile.id, /^random_strata-/);
+assert.equal(randomProfile.hidden, true);
+assert.equal(randomProfile.modifiers.hardness, 1, "run variance must not change block HP");
+assert.equal(randomProfile.modifiers.veins, 1, "run variance must not change individual vein density");
+assert.ok(randomProfile.oreBias?.id, "every run may redistribute its ore composition");
+assert.equal(tileFingerprint(randomA), tileFingerprint(randomB));
+assert.deepEqual(randomA.getMicroEvents(), randomB.getMicroEvents());
+assert.deepEqual(randomProfile, randomB.getGeologyProfile());
+assert.notEqual(
+  randomProfile.id,
+  new MineWorld(ORE_TYPES, "another-random-geology-probe").getGeologyProfile().id,
+);
+
+function findProfileSeed(predicate) {
+  for (let index = 0; index < 10_000; index += 1) {
+    const seed = `profile-search-${index}`;
+    const profile = createRandomGeologyProfile(seed, ORE_TYPES);
+    if (predicate(profile)) return seed;
+  }
+  throw new Error("could not find deterministic geology fixture");
+}
+
+const cavernSeed = findProfileSeed((profile) => profile.trait === "cavernous");
+const compactSeed = findProfileSeed((profile) => profile.trait === "compact");
+const richSeed = findProfileSeed((profile) => profile.trait === "ore_rich");
+const ironSeed = findProfileSeed((profile) => profile.trait === "ore_bias" && profile.oreBias?.id === "iron");
+for (const seed of [cavernSeed, compactSeed, ironSeed]) {
+  const profile = createRandomGeologyProfile(seed, ORE_TYPES);
+  assert.equal(
+    profile.modifiers.abundance,
+    1,
+    `${profile.trait} must redistribute ore without changing the node budget`,
+  );
+}
+const cavernWorld = new MineWorld(ORE_TYPES, cavernSeed);
+const compactWorld = new MineWorld(ORE_TYPES, compactSeed);
+const richWorld = new MineWorld(ORE_TYPES, richSeed);
+const richControl = new MineWorld(ORE_TYPES, richSeed, { sectorId: "stable_strata" });
+const ironWorld = new MineWorld(ORE_TYPES, ironSeed);
+const ironControl = new MineWorld(ORE_TYPES, ironSeed, { sectorId: "stable_strata" });
+for (const [label, world] of [
+  ["random profile", randomA],
+  ["cavern profile", cavernWorld],
+  ["compact profile", compactWorld],
+  ["ore-rich profile", richWorld],
+  ["iron-biased profile", ironWorld],
+]) {
+  checkedDepthGatedOre += assertAuthoredVerticalOreDepth(world, label);
+}
+const cavern = worldMetrics(cavernWorld);
+const ridge = worldMetrics(compactWorld);
+assert.ok(cavern.undergroundAir > ridge.undergroundAir, "hidden cave-heavy runs must visibly contain more caves");
+assert.ok(worldMetrics(richWorld).oreTiles > worldMetrics(richControl).oreTiles, "ore-rich runs must add ore overall");
+
+function oreCounts(world) {
+  const counts = {};
+  world.forEachOreTileInBounds(0, 0, WORLD_CONFIG.WIDTH - 1, WORLD_CONFIG.HEIGHT - 1, (tile) => {
+    counts[tile.oreId] = (counts[tile.oreId] || 0) + 1;
+  });
+  return counts;
+}
+const biasedIron = oreCounts(ironWorld).iron || 0;
+const neutralIron = oreCounts(ironControl).iron || 0;
+assert.ok(biasedIron > neutralIron * 1.35, "an iron-biased run must substantially redistribute veins toward iron");
+
+// Composition bias must preserve expected ore tiles, not merely the number of
+// veins: early ores have larger veins than late ores. Check every possible
+// preferred ore so a future normalizer cannot silently grow copper-heavy maps
+// or shrink deep-ore maps. Actual generated totals get a slightly wider bound
+// because each profile may also change cave topology.
+let maxExpectedNodeBudgetDrift = 0;
+let maxGeneratedNodeBudgetDrift = 0;
+for (const preferredOre of ORE_TYPES) {
+  const seed = findProfileSeed((profile) => (
+    profile.trait === "ore_bias" && profile.oreBias?.id === preferredOre.id
+  ));
+  const profile = createRandomGeologyProfile(seed, ORE_TYPES);
+  assert.equal(profile.modifiers.abundance, 1);
+
+  const biasedWorld = new MineWorld(ORE_TYPES, seed);
+  const neutralWorld = new MineWorld(ORE_TYPES, seed, { sectorId: "stable_strata" });
+  const neutralNodeBudget = biasedWorld._oreDefinitions.reduce((total, definition) => (
+    total + biasedWorld._oreBasePropensity(definition) * biasedWorld._oreExpectedVeinSize(definition)
+  ), 0);
+  const biasedNodeBudget = biasedWorld._oreDefinitions.reduce((total, definition) => (
+    total + biasedWorld._oreVeinCount(definition) * biasedWorld._oreExpectedVeinSize(definition)
+  ), 0);
+  const expectedDrift = Math.abs(biasedNodeBudget / Math.max(1, neutralNodeBudget) - 1);
+  const generatedDrift = Math.abs(
+    worldMetrics(biasedWorld).oreTiles / Math.max(1, worldMetrics(neutralWorld).oreTiles) - 1,
+  );
+  maxExpectedNodeBudgetDrift = Math.max(maxExpectedNodeBudgetDrift, expectedDrift);
+  maxGeneratedNodeBudgetDrift = Math.max(maxGeneratedNodeBudgetDrift, generatedDrift);
+
+  assert.ok(
+    expectedDrift <= 0.015,
+    `${preferredOre.id} bias changed the expected ore-node budget by ${(expectedDrift * 100).toFixed(2)}%`,
+  );
+  assert.ok(
+    generatedDrift <= 0.06,
+    `${preferredOre.id} bias changed generated ore nodes by ${(generatedDrift * 100).toFixed(2)}%`,
+  );
+}
+
+// Explicit diagnostic profiles also keep hardness and individual vein size
+// neutral; only cave count and total abundance may vary.
+for (const profile of legacyProfiles) {
+  assert.equal(profile.modifiers.hardness, 1);
+  assert.equal(profile.modifiers.veins, 1);
+}
+
+assert.equal(UNDERGROUND_EVENT_TYPES.length, 5);
+assert.equal(GLOBAL_EVENT_TYPES.length, 4, "four short buffs must remain scheduled non-spatial events");
+assert.deepEqual(
+  new Set(GLOBAL_EVENT_TYPES.map((definition) => definition.id)),
+  new Set(UNDERGROUND_EVENT_TYPES.filter((definition) => definition.effect !== "chest").map((definition) => definition.id)),
+);
+const eventWorld = new MineWorld(ORE_TYPES, "micro-event-probe", { sectorId: "ore_ridge" });
+const eventTwin = new MineWorld(ORE_TYPES, "micro-event-probe", { sectorId: "ore_ridge" });
+const events = eventWorld.getMicroEvents();
+assert.equal(events.length, 1, "the ancient container must be the only physical field event");
+assert.equal(events[0]?.type, "ancient_container");
+assert.deepEqual(events, eventTwin.getMicroEvents(), "physical events must be deterministic");
+
+function assertContainerLoot(world, event) {
+  const available = new Set(world.getAvailableOreIdsAt(event.tx, event.ty));
+  assert.ok(Object.keys(event.loot || {}).length >= 2, "the chest must carry several depth-scaled ore types");
+  for (const [oreId, amount] of Object.entries(event.loot)) {
+    const ore = ORE_TYPES.find((candidate) => candidate.id === oreId);
+    assert.ok(ore, `${oreId} must be a known resource`);
+    assert.ok(
+      ore.tier <= 4 || available.has(oreId),
+      `${oreId} above T5 must naturally exist at the chest depth`,
+    );
+    assert.ok(Number.isInteger(amount) && amount >= 1 && amount <= 6);
+  }
+}
+
+for (let seed = 1; seed <= 12; seed += 1) {
+  for (const sector of legacyProfiles) {
+    const stressWorld = new MineWorld(ORE_TYPES, `micro-stress-${seed}`, { sectorId: sector.id });
+    const stressEvents = stressWorld.getMicroEvents();
+    assert.equal(stressEvents.length, 1);
+    assert.equal(stressEvents[0].type, "ancient_container");
+    assert.ok(stressEvents[0].depthTiles >= 12);
+    assertContainerLoot(stressWorld, stressEvents[0]);
+  }
+  const randomStressWorld = new MineWorld(ORE_TYPES, `random-micro-stress-${seed}`);
+  const randomStressEvents = randomStressWorld.getMicroEvents();
+  assert.equal(randomStressEvents.length, 1);
+  assert.equal(randomStressEvents[0].type, "ancient_container");
+  assert.ok(randomStressEvents[0].depthTiles >= 12);
+  assertContainerLoot(randomStressWorld, randomStressEvents[0]);
+}
+
+const chest = events[0];
+assert.ok(chest.depthTiles >= 12, "the physical chest must start after the opening zone");
+assert.ok(chest.label.length >= 8);
+assert.ok(chest.icon);
+assert.match(chest.color, /^#[0-9a-f]{6}$/i);
+assert.ok(chest.radius >= WORLD_CONFIG.TILE_SIZE);
+assert.ok(chest.radiusTiles >= 1 && chest.radiusTiles <= 2);
+assert.ok(chest.description.length >= 40);
+assert.equal(chest.noticeLevel, "high");
+assert.equal(chest.visual.pulse, "local");
+assert.equal(chest.visual.color, chest.color);
+assert.ok(chest.announcement.includes(chest.label));
+assert.equal(chest.triggered, false);
+assert.equal(chest.consumed, false);
+assert.equal(chest.state, "ready");
+assertContainerLoot(eventWorld, chest);
+
+const forbiddenGlobalFields = [
+  "tx", "ty", "x", "y", "depthTiles", "radius", "radiusTiles", "visual", "loot",
+  "triggered", "consumed", "state",
+];
+const scheduledTypes = new Set();
+for (let index = 0; index < 64; index += 1) {
+  const scheduled = eventWorld.getGlobalMicroEvent(index);
+  assert.deepEqual(scheduled, eventTwin.getGlobalMicroEvent(index), "scheduled buffs must be deterministic");
+  assert.ok(scheduled);
+  assert.ok(GLOBAL_EVENT_TYPES.some((definition) => definition.id === scheduled.type));
+  assert.equal(scheduled.durationSeconds, 5);
+  assert.equal(scheduled.global, true);
+  assert.equal(scheduled.scheduled, true);
+  assert.equal(scheduled.index, index);
+  assert.equal(scheduled.noticeLevel, "high");
+  assert.ok(scheduled.announcement.includes(scheduled.label));
+  for (const field of forbiddenGlobalFields) {
+    assert.equal(
+      Object.hasOwn(scheduled, field),
+      false,
+      `scheduled ${scheduled.type} must not expose field-only property ${field}`,
+    );
+  }
+  scheduledTypes.add(scheduled.type);
+}
+assert.deepEqual(scheduledTypes, new Set(GLOBAL_EVENT_TYPES.map((definition) => definition.id)));
+
+const fixedLootRng = { int: (minimum) => minimum };
+const eventSpawn = eventWorld.getSpawn();
+const earlyLoot = eventWorld._createContainerLoot(eventSpawn.tx, eventSpawn.ty + 12, fixedLootRng);
+assert.equal(Object.keys(earlyLoot).length, 5, "opening containers must carry a small T1-T5 starter mix");
+assert.ok(Object.keys(earlyLoot).every((oreId) => ORE_TYPES.find((ore) => ore.id === oreId)?.tier <= 4));
+const deepLootTy = WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 8;
+const deepAvailable = eventWorld.getAvailableOreIdsAt(eventSpawn.tx, deepLootTy);
+const deepLoot = eventWorld._createContainerLoot(eventSpawn.tx, deepLootTy, fixedLootRng);
+assert.ok(deepAvailable.length > 0);
+assert.ok(
+  Object.hasOwn(deepLoot, deepAvailable[deepAvailable.length - 1]),
+  "a deep chest must include the highest ore that naturally exists there",
+);
+
+const tileSearch = eventWorld.getMicroEventsNear(chest.tx, chest.ty, 0);
+assert.equal(tileSearch[0]?.id, chest.id, "tile-space proximity search must find the chest at its center");
+const pixelSearch = eventWorld.findUndergroundEvent(chest.x, chest.y, 0);
+assert.equal(pixelSearch?.id, chest.id, "world-space proximity search must find the chest at its center");
+assert.equal(pixelSearch?.distance, 0);
+
+// Returned records are defensive copies.
+const copiedEvents = eventWorld.getMicroEvents();
+copiedEvents[0].label = "mutated";
+copiedEvents[0].visual.color = "#000000";
+assert.notEqual(eventWorld.getMicroEvents()[0].label, "mutated");
+assert.notEqual(eventWorld.getMicroEvents()[0].visual.color, "#000000");
+const copiedChest = copiedEvents[0];
+const copiedLootId = Object.keys(copiedChest.loot || {})[0];
+if (copiedLootId) copiedChest.loot[copiedLootId] = 999;
+assert.notEqual(
+  eventWorld.getMicroEvents({ type: "ancient_container" })[0]?.loot?.[copiedLootId],
+  999,
+  "chest loot must also be returned as a defensive copy",
+);
+
+const triggered = eventWorld.triggerMicroEvent(chest.id);
+assert.equal(triggered.id, chest.id);
+assert.equal(triggered.firstTrigger, true);
+assert.equal(triggered.state, "triggered");
+assert.equal(eventWorld.triggerMicroEvent(chest.id), null, "trigger must be one-shot");
+const consumed = eventWorld.consumeMicroEvent(chest.id);
+assert.equal(consumed.id, chest.id);
+assert.equal(consumed.wasTriggered, true);
+assert.equal(consumed.firstConsume, true);
+assert.equal(consumed.state, "consumed");
+assert.equal(eventWorld.consumeMicroEvent(chest.id), null, "consume must be one-shot");
+assert.ok(!eventWorld.getMicroEvents().some((event) => event.id === chest.id));
+assert.ok(eventWorld.getMicroEvents({ includeConsumed: true }).some((event) => event.id === chest.id));
+
+eventWorld.reset("micro-event-probe", { sectorId: "ore_ridge" });
+const untouchedChest = eventWorld.getMicroEvents()[0];
+const directlyConsumed = eventWorld.consumeMicroEvent(untouchedChest.id);
+assert.equal(directlyConsumed.wasTriggered, false, "consume may atomically trigger an untouched event");
+assert.equal(eventWorld.triggerMicroEvent(untouchedChest.id), null);
+
+eventWorld.reset("micro-event-probe", { sectorId: "ore_ridge" });
+assert.deepEqual(eventWorld.getMicroEvents(), eventTwin.getMicroEvents(), "reset must restore deterministic ready events");
+
+const stagedFingerprint = tileFingerprint(eventWorld);
+const stagedEvent = eventWorld.stageMicroEventNearSpawn("ancient_container");
+const stagedTwin = eventTwin.stageMicroEventNearSpawn("ancient_container");
+const stagedSpawn = eventWorld.getSpawn();
+assert.ok(stagedEvent, "a dry-shift pity event must be stageable near the landing chamber");
+assert.deepEqual(stagedEvent, stagedTwin, "staged pity events must stay deterministic");
+assert.ok(
+  Math.hypot(stagedEvent.tx - stagedSpawn.tx, stagedEvent.ty - stagedSpawn.ty) <= 6,
+  "a staged event must fit inside early sense range",
+);
+assert.ok(
+  !["air", "bedrock"].includes(eventWorld.getTile(stagedEvent.tx, stagedEvent.ty)?.kind),
+  "a staged event must remain a physical underground target",
+);
+assert.equal(stagedEvent.type, "ancient_container");
+assertContainerLoot(eventWorld, stagedEvent);
+assert.equal(eventWorld.getMicroEvents().length, 1);
+assert.equal(tileFingerprint(eventWorld), stagedFingerprint, "staging an event must not change rock or ore density");
+
+let checkedStagedEvents = 0;
+for (let seed = 0; seed < 12; seed += 1) {
+  const surfaceWorld = new MineWorld(ORE_TYPES, `surface-pity-${seed}-ancient-container`);
+  const surfaceStaged = surfaceWorld.stageMicroEventNearSpawn("ancient_container", surfaceWorld.getSpawn());
+  assert.ok(surfaceStaged, `surface pity must stage the chest for seed ${seed}`);
+
+  const liftWorld = new MineWorld(ORE_TYPES, `lift-pity-${seed}-ancient-container`);
+  const lift = liftWorld.getLiftStart(180, 0.65, 180, { unlockedTierCap: 9 });
+  assert.ok(lift, `lift fixture must exist for chest seed ${seed}`);
+  const liftStaged = liftWorld.stageMicroEventNearSpawn("ancient_container", lift);
+  assert.ok(liftStaged, `lift pity must stage the chest for seed ${seed}`);
+  assert.ok(
+    Math.hypot(liftStaged.tx - lift.tx, liftStaged.ty - lift.ty) <= 8
+      || (lift.target && liftStaged.tx === lift.target.tx && liftStaged.ty === lift.target.ty),
+    "lift pity must stay near the current landing or its guaranteed target",
+  );
+  checkedStagedEvents += 2;
+}
+
+// A lift landing retunes its existing one-node sample to the workshop's
+// requested shortage. It must not create extra ore or restore full deep-ore HP.
+const liftSupplyWorld = new MineWorld(ORE_TYPES, "lift-resupply-probe", { sectorId: "stable_strata" });
+const liftSupplyStart = liftSupplyWorld.getLiftStart(800, 0.45, 800, { unlockedTierCap: 9 });
+assert.equal(liftSupplyStart.source, "shaft-lift");
+assert.ok(liftSupplyStart.requiredTier >= 2, "the resupply fixture must allow iron");
+const liftSupplyBeforeCount = worldMetrics(liftSupplyWorld).oreTiles;
+const liftSupplyOriginalCap = liftSupplyWorld.getTile(
+  liftSupplyStart.target.tx,
+  liftSupplyStart.target.ty,
+).maxHp;
+const liftSupply = liftSupplyWorld.retuneLiftTarget(liftSupplyStart, ["star_core", "iron"]);
+assert.ok(liftSupply, "a deep lift must expose one retunable resupply sample");
+assert.equal(liftSupply.oreId, "iron", "an unavailable top-tier request must fall through to the reachable shortage");
+assert.deepEqual(
+  { tx: liftSupply.tx, ty: liftSupply.ty },
+  { tx: liftSupplyStart.target.tx, ty: liftSupplyStart.target.ty },
+  "retuning must reuse the authored landing node",
+);
+const liftSupplyTile = liftSupplyWorld.getTile(liftSupply.tx, liftSupply.ty);
+assert.equal(liftSupplyTile.liftSupply, true);
+assert.equal(liftSupplyTile.discovered, true);
+assert.ok(liftSupplyTile.maxHp <= liftSupplyOriginalCap, "the landing sample must remain quick to collect");
+assert.equal(worldMetrics(liftSupplyWorld).oreTiles, liftSupplyBeforeCount, "resupply must not increase node density");
+
+// Every sector and seed starts with the same short, mineable economy seam:
+// copper is visible immediately, coal follows behind it, and another copper
+// tile rewards continuing down the newly opened shaft.
+let checkedStarterSeams = 0;
+for (let seed = 1; seed <= 8; seed += 1) {
+  for (const sector of GEOLOGICAL_SECTORS) {
+    const starterWorld = new MineWorld(ORE_TYPES, `starter-seam-${seed}`, { sectorId: sector.id });
+    const starterSpawn = starterWorld.getSpawn();
+    const firstCopper = starterWorld.getTile(starterSpawn.tx, starterSpawn.ty + 2);
+    const coal = starterWorld.getTile(starterSpawn.tx, starterSpawn.ty + 3);
+    const secondCopper = starterWorld.getTile(starterSpawn.tx, starterSpawn.ty + 4);
+
+    assert.equal(firstCopper?.oreId, "copper", `${sector.id} must expose starter copper`);
+    assert.equal(firstCopper?.maxHp, 2, "first copper must fit inside the opening shift");
+    assert.equal(coal?.oreId, "coal", `${sector.id} must guarantee early coal`);
+    assert.equal(coal?.maxHp, 4, "starter coal must fit the opening shift without becoming free");
+    assert.equal(secondCopper?.oreId, "copper", `${sector.id} must finish the starter seam with copper`);
+    assert.equal(secondCopper?.maxHp, 3, "second copper must stay soft");
+    assert.ok(firstCopper.discovered && coal.discovered && secondCopper.discovered);
+
+    const starterRoute = starterWorld.findLeastResistanceStep(
+      starterSpawn,
+      { tx: starterSpawn.tx, ty: starterSpawn.ty + 4 },
+      { moveSpeed: 100, digPowerPerSecond: 2.25, maxDetourTiles: 8 },
+    );
+    assert.ok(starterRoute?.route.length >= 3, "the complete starter seam must be reachable");
+    checkedStarterSeams += 1;
+  }
+}
+
+// The three additional guaranteed copper probes must lead into the shaft,
+// never recreate the former shallow left/right farming strip. Record the
+// requested locations without depending on incidental caves in one seed.
+const starterFanWorld = new MineWorld(ORE_TYPES, "starter-descending-fan", { sectorId: "stable_strata" });
+const starterFanSpawn = starterFanWorld.getSpawn();
+const starterFanRequests = [];
+const originalNearestSolidTile = starterFanWorld._nearestSolidTile;
+starterFanWorld._nearestSolidTile = (tx, ty, radius) => {
+  starterFanRequests.push({
+    dx: tx - starterFanSpawn.tx,
+    dy: ty - starterFanSpawn.ty,
+    radius,
+  });
+  return null;
+};
+starterFanWorld._placeStarterOre();
+starterFanWorld._nearestSolidTile = originalNearestSolidTile;
+assert.deepEqual(starterFanRequests, [
+  { dx: -2, dy: 4, radius: 2 },
+  { dx: 2, dy: 5, radius: 2 },
+  { dx: 0, dy: 7, radius: 2 },
+]);
+assert.ok(starterFanRequests.every((request) => request.dy >= 4 && Math.abs(request.dx) <= 2));
+
+// A direct diagonal must not squeeze through the seam between two intact
+// blocks. The public route finder must instead choose one of the orthogonal
+// blocks and enter the goal from a cardinal direction.
+const cornerWorld = new MineWorld(ORE_TYPES, "corner-cut-probe");
+const cornerStart = { tx: Math.floor(WORLD_CONFIG.WIDTH / 2), ty: 40 };
+const cornerGoal = { tx: cornerStart.tx + 1, ty: cornerStart.ty + 1 };
+for (let offsetY = -2; offsetY <= 3; offsetY += 1) {
+  for (let offsetX = -2; offsetX <= 3; offsetX += 1) {
+    const tile = cornerWorld.getTile(cornerStart.tx + offsetX, cornerStart.ty + offsetY);
+    tile.kind = "bedrock";
+    tile.hp = 1_000_000_000;
+    tile.maxHp = 1_000_000_000;
+    tile.oreId = null;
+    tile.veinId = null;
+  }
+}
+for (const point of [cornerStart, cornerGoal]) {
+  const tile = cornerWorld.getTile(point.tx, point.ty);
+  tile.kind = "air";
+  tile.hp = 0;
+  tile.maxHp = 0;
+}
+for (const point of [
+  { tx: cornerGoal.tx, ty: cornerStart.ty },
+  { tx: cornerStart.tx, ty: cornerGoal.ty },
+]) {
+  const tile = cornerWorld.getTile(point.tx, point.ty);
+  tile.kind = "stone";
+  tile.hp = 2;
+  tile.maxHp = 2;
+}
+
+const cornerRoute = cornerWorld.findLeastResistanceStep(cornerStart, cornerGoal, {
+  moveSpeed: 100,
+  digPowerPerSecond: 10,
+  maxDetourTiles: 2,
+  minimumSavings: 0,
+});
+assert.ok(cornerRoute, "an orthogonal two-step route must remain available");
+assert.equal(
+  cornerWorld._routeStepCost(cornerStart, cornerGoal, {
+    moveSpeed: 100,
+    digPowerPerSecond: 10,
+    hardnessMultiplier: 1,
+    focusedOreId: null,
+    focusedOreDigMultiplier: 1,
+  }),
+  Infinity,
+  "the blocked one-step diagonal must be rejected",
+);
+assert.equal(cornerRoute.route.length, 3);
+assert.ok(
+  cornerRoute.route.slice(1).every((point, index) => {
+    const previous = cornerRoute.route[index];
+    return point.tx === previous.tx || point.ty === previous.ty;
+  }),
+  "the replacement route must contain cardinal steps only",
+);
+
+// Existing live-ore index and route search remain usable with a selected sector.
+let firstOre = null;
+let indexedOre = 0;
+eventWorld.forEachOreTileInBounds(
+  0,
+  0,
+  WORLD_CONFIG.WIDTH - 1,
+  WORLD_CONFIG.HEIGHT - 1,
+  (tile, tx, ty) => {
+    indexedOre += 1;
+    if (!firstOre) firstOre = { tile, tx, ty };
+  },
+);
+assert.ok(indexedOre > 0 && firstOre);
+const spawn = eventWorld.getSpawn();
+const hpBeforeRoute = eventWorld.getTile(firstOre.tx, firstOre.ty).hp;
+const route = eventWorld.findLeastResistanceStep(spawn, firstOre, {
+  moveSpeed: 100,
+  digPowerPerSecond: 10,
+  maxDetourTiles: 8,
+});
+assert.ok(route?.route.length >= 1);
+assert.equal(eventWorld.getTile(firstOre.tx, firstOre.ty).hp, hpBeforeRoute, "routing stays read-only");
+
+// damageRay deliberately applies its full damage to every tile covered by the
+// supplied width. Falloff bands therefore belong to the caller: the laser must
+// pass only its permanent core width and resolve thermal edges separately.
+const rayContractWorld = new MineWorld(ORE_TYPES, "ray-width-contract");
+const rayOriginTx = Math.floor(WORLD_CONFIG.WIDTH / 2);
+const rayOriginTy = 40;
+const rayCore = rayContractWorld.getTile(rayOriginTx + 2, rayOriginTy);
+const rayEdge = rayContractWorld.getTile(rayOriginTx + 2, rayOriginTy + 1);
+for (const tile of [rayCore, rayEdge]) {
+  Object.assign(tile, {
+    kind: "stone",
+    oreId: null,
+    veinId: null,
+    hp: 100,
+    maxHp: 100,
+    discovered: true,
+    cracked: 0,
+  });
+}
+const rayOriginX = (rayOriginTx + 0.5) * WORLD_CONFIG.TILE_SIZE;
+const rayOriginY = (rayOriginTy + 0.5) * WORLD_CONFIG.TILE_SIZE;
+rayContractWorld.damageRay(rayOriginX, rayOriginY, 1, 0, WORLD_CONFIG.TILE_SIZE * 4, 10, 8);
+assert.equal(rayCore.hp, 90, "the eight-pixel core must damage its center row");
+assert.equal(rayEdge.hp, 100, "the eight-pixel core must not reach the neighboring row");
+rayContractWorld.damageRay(rayOriginX, rayOriginY, 1, 0, WORLD_CONFIG.TILE_SIZE * 4, 10, 23);
+assert.equal(rayCore.hp, 80);
+assert.equal(rayEdge.hp, 90, "damageRay has no implicit edge falloff at wider widths");
+
+console.log(JSON.stringify({
+  ok: true,
+  diagnosticProfiles: legacyProfiles.length,
+  physicalEventTypes: events.length,
+  globalEventTypes: scheduledTypes.size,
+  checkedStarterSeams,
+  checkedStagedEvents,
+  checkedDepthGatedOre,
+  sampledOreDensity: Number(sampledOreDensity.toFixed(4)),
+  sampledCaveDensity: Number(sampledCaveDensity.toFixed(4)),
+  maxExpectedNodeBudgetDrift: Number(maxExpectedNodeBudgetDrift.toFixed(4)),
+  maxGeneratedNodeBudgetDrift: Number(maxGeneratedNodeBudgetDrift.toFixed(4)),
+  cavernAir: cavern.undergroundAir,
+  ridgeAir: ridge.undergroundAir,
+  cavernOre: cavern.oreTiles,
+  ridgeOre: ridge.oreTiles,
+}));

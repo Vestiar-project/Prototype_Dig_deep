@@ -387,4 +387,2572 @@ function spendRecipe(inventory, recipe) {
 const coreRootUpgrade = defineUpgrade({
   id: "core_first_descent",
   name: "ÐŸÐµÑ€Ð²Ñ‹Ð¹ ÑÐ¿ÑƒÑÐº",
-  description: "ÐÐ°Ñ‡Ð°Ð»Ð¾ Ð¿ÑƒÑ‚Ð¸ ÑˆÐ°Ñ…Ñ‚Ñ‘Ñ€Ð°. ÐžÛ¯7ÖÚ$z{-®éÜj×F–ÖU&VgVæD6†æ6S¢À¢F–ÖU&VgVæDÖ÷VçC¢À¢F–ÖU&VgVæD×VÇF—Æ–W#¢À¢F–ÖU6†&D6†æ6S¢À¢F–ÖU6†&E6V6öæG3¢À¢Æ7D6†æ6T6†&vW3¢À¢Æ7D6†æ6U6V6öæG3¢À¢F–ÖW$G&–å&VGV7F–öã¢À¢F–ÖW$G&–ä×VÇF—Æ–W#¢À¢6‡&öæô÷fW&6Æö6³¢fÇ6RÀ¢6‡&öæô÷fW&G&—fS¢fÇ6RÀ¢6‡&öæô÷fW&fÆ÷uF‡&W6†öÆC¢CRÀ¢6‡&öæô÷fW&fÆ÷u7VVD&öçW3¢À¢6‡&öæô÷fW&fÆ÷u&WVDWfW'“¢À ¢òòvFvWG2à¢&öÖ$6†æ6S¢À¢&öÖ%÷vW#¢À¢&öÖ%&F—W3¢3BÀ¢&öÖ$g&vÖVçG3¢À¢&öÖ$g&vÖVçE÷vW#¢ã2À¢7F–6·”&öÖ$6†æ6S¢À¢föÆF–ÆT&öÖ$6†æ6S¢À¢&öÖ%fÇVT×VÇF—Æ–W#¢À¢F—&V7F–öæÄ&öÖ'3¢fÇ6RÀ¢F—&V7F–öæÄ&öÖ$6öæUF–ÆW3¢À¢6†–ä6†æ6S¢À¢6†–ä6÷VçC¢À¢6†–å÷vW#¢ãSRÀ¢6†ö6´GW&F–öã¢À¢–6·W&F—W3¢CbÀ¢G&öæUVæÆö6¶VC¢fÇ6RÀ¢G&öæT6÷VçC¢À¢G&öæU÷vW#¢ã3RÀ¢G&öæU7VVC¢À¢G&öæTÆ–fWF–ÖS¢ãCRÀ¢G&öæT&öÖ$6†æ6S¢À¢7&Wt&V6öåVæÆö6¶VC¢fÇ6RÀ¢7&Wt&V6öä÷fW&¶–ÆÄ6''“¢À¢ÖvæWF–4f–VÆDVæ&ÆVC¢fÇ6RÀ¢ÖvæWF–4f–VÆDGW&F–öã¢À¢ÖvæWF–4f–VÆE&F—W5F–ÆW3¢À¢ÖvæWF–4f–VÆEF&vWF–æt&öçW3¢À¢FVÖöÆ—F–öä6öÖ&ôVæ&ÆVC¢fÇ6RÀ¢FVÖöÆ—F–öä6öÖ&ôÖ&´GW&F–öã¢À¢FVÖöÆ—F–öä6öÖ&ôf–æ—6…÷vW#¢À¢FVÖöÆ—F–öä6öÖ&õfV–å&F—W5F–ÆW3¢À ¢òòFööÂ&öw&W76–öâà¢FööÃ¢'–6¶†R"À¢FööÅF–W#¢À¢7WW%–6µVæÆö6¶VC¢fÇ6RÀ¢Æ6W%VæÆö6¶VC¢fÇ6RÀ¢Æ6W%&ævS¢#À¢Æ6W%÷vW#¢À¢Æ6W%v–GFƒ¢‚À¢Æ6W%–W&6S¢À¢Æ6W$&V×3¢À¢Æ6W$6†&vU&FS¢À¢Æ6W%&–6ö6†WD6÷VçC¢À¢Æ6W$f—'7E&–6ö6†WD×VÇF—Æ–W#¢ãcRÀ¢Æ6W%6V6öæE&–6ö6†WD×VÇF—Æ–W#¢ãCRÀ¢Æ6W%7WW%–6´V6†ôWfW'“¢À¢Æ6W%7WW%–6´V6†õ&F—W5F–ÆW3¢À¢Æ6W%7WW%–6´V6†õ÷vW#¢À¢Æ6W%7WW%–6´V6†ôæõ&ö73¢fÇ6RÀ¢7WW$f–VÆDVæ&ÆVC¢fÇ6RÀ¢7WW$f–VÆE&F—W5F–ÆW3¢À¢7WW$f–VÆE÷vW#¢À¢7WW$f–VÆDGW&F–öã¢À¢7WW$f–VÆDÆ6W%W'6—7FVçC¢fÇ6RÀ¢Æ6W$†VDVFvU÷vW#¢À¢Æ6W$†VDGW&F–öã¢À¢Æ6W$†VDæW‡D†—D&öçW3¢À¢6öÆ$G&–ÆÄVæ&ÆVC¢fÇ6RÀ¢6öÆ$G&–ÆÅ&ö4WfW'“¢À¢6öÆ$G&–ÆÄ&VÔGW&F–öã¢À¢6öÆ$G&–ÆÄf–æÄ'W'7E÷vW#¢À ¢òò&Wv&G2æB&ö6VGW&Âf÷'GVæRâ6öç7VÖW'26öÖ&–æRÇV6¶æBW‡Æ–6—@¢òò&ö26†æ6W3²F†—2ÖöGVÆRFöW2æ÷B&öÆÂ&æFöÒfÇVW2—G6VÆbà¢÷&UfÇVT×VÇF—Æ–W#¢À¢ÇV6³¢À¢&&T÷&T6†æ6S¢À¢&&T÷&TFF—F—fT6†æ6S¢À¢vVÕfÇVT×VÇF—Æ–W#¢À¢&–6…fV–ä6†æ6S¢À¢&–6…fV–åv†öÆT6†æ6S¢À¢&–6…fV–å––VÆD&öçW3¢À¢&–6…fV–ä6ö×ÆWF–öä&öçW3¢À¢F÷V&ÆTG&÷6†æ6S¢À¢W‡G&––VÆD6†æ6S¢À¢G&—ÆTG&÷6†æ6S¢À¢G&—ÆU6×ÆTWfW'“¢À¢G&—ÆU6×ÆT&öçW5––VÆC¢À¢G&—ÆU6×ÆTæW‡DæöFTFÖvS¢À¢÷&T6öçfW'6–öä&öçW3¢À¢G'VT÷fW&¶–ÆÄVæ&ÆVC¢fÇ6RÀ¢÷fW&¶–ÆÅ&W6W'fö—%&F–ó¢À¢÷fW&¶–ÆÅ&W6W'fö—%––VÆEF‡&W6†öÆC¢À¢FWF…fÇVT&öçW3¢À¢FWF„6öçG&7E7FW¢À¢FWF„6öçG&7D&öçW5W%7F6³¢À¢FWF„6öçG&7DÖ…7F6·3¢À¢vöÆFVä÷&T6†æ6S¢À¢vöÆFVä÷&TFF—F—fT6†æ6S¢À¢&VÆ–46†æ6S¢À¢&VÆ–4VffV7D6†æ6S¢À¢&VÆ–4VffV7DGW&F–öã¢À¢&VÆ–4VffV7E÷vW#¢À¢f÷'GVæU&ö46†æ6S¢À¢f÷'GVæUv†VVÄVæ&ÆVC¢fÇ6RÀ¢f÷'GVæU—G•F‡&W6†öÆC¢À¢f÷'GVæUv†VVÄ7–6ÆTÆVæwFƒ¢À¢Ö÷F†W&ÆöFT6†æ6S¢À¢Ö÷F†W&ÆöFTwV&çFVVC¢fÇ6RÀ¢Ö÷F†W&ÆöFUG&–vvW$'&V·3¢À¢Ö÷F†W&ÆöFU––VÆD×VÇF—Æ–W#¢À¢Ö÷F†W&ÆöFT6ö×ÆWF–öä66†S¢À¢Ö÷F†W&ÆöFT6ö×ÆWF–öåF–ÖT&öçW3¢À¢÷&TF—fW'6—G”&öçW5W%G—S¢À¢Ó°§Ð ¦6öç7B&ö&&–Æ—G”¶W—2Ò°¢'fV–å&WfVÄ6†æ6R"À¢&×VÇF”†—D6†æ6R"À¢&7&—D6†æ6R"À¢&'&Vµ7Æ6„6†æ6R"À¢&÷fW&¶–ÆÄ6''’"À¢'F–ÖU&VgVæD6†æ6R"À¢'F–ÖU6†&D6†æ6R"À¢&&öÖ$6†æ6R"À¢'7F–6·”&öÖ$6†æ6R"À¢'föÆF–ÆT&öÖ$6†æ6R"À¢&6†–ä6†æ6R"À¢&G&öæT&öÖ$6†æ6R"À¢&ÇV6²"À¢'&&T÷&T6†æ6R"À¢'&&T÷&TFF—F—fT6†æ6R"À¢'&–6…fV–ä6†æ6R"À¢'&–6…fV–åv†öÆT6†æ6R"À¢&F÷V&ÆTG&÷6†æ6R"À¢&W‡G&––VÆD6†æ6R"À¢'G&—ÆTG&÷6†æ6R"À¢&vöÆFVä÷&T6†æ6R"À¢&vöÆFVä÷&TFF—F—fT6†æ6R"À¢'&VÆ–46†æ6R"À¢'&VÆ–4VffV7D6†æ6R"À¢&f÷'GVæU&ö46†æ6R"À¢&Ö÷F†W&ÆöFT6†æ6R"À¢&fö7W6VD÷&T†&FæW75&VGV7F–öâ"À¥Ó° ¦gVæ7F–öâæ÷&ÖÆ—¦TÖWF7FG2‡7FG2’°¢7FG2ç6Vç6U&F—W2ÒÖF‚æÖ‚ƒÂ7FG2ç6Vç6U&F—W2¢7FG2ç6Vç6U&F—W4×VÇF—Æ–W"“°¢7FG2æV6†õ–æt6ööÆF÷vâÒÖF‚æÖ‚ƒÂ7FG2æV6†õ–æt6ööÆF÷vâ“°¢7FG2æV6†õ–æu&F—W4×VÇF—Æ–W"ÒÖF‚æÖ‚ƒÂ7FG2æV6†õ–æu&F—W4×VÇF—Æ–W"“°¢7FG2æV6†õ–æuF&vWD†öÆBÒÖF‚æÖ‚ƒÂ7FG2æV6†õ–æuF&vWD†öÆB“°¢7FG2çfV–åG&–Å&ævT×VÇF—Æ–W"ÒÖF‚æÖ‚ƒÂ7FG2çfV–åG&–Å&ævT×VÇF—Æ–W"“°¢7FG2çfV–åG&–ÄÖ÷fU7VVD&öçW2ÒÖF‚æÖ‚ƒÂ7FG2çfV–åG&–ÄÖ÷fU7VVD&öçW2“°¢7FG2çfV–äÆö6µ&ævT×VÇF—Æ–W"ÒÖF‚æÖ‚ƒÂ7FG2çfV–äÆö6µ&ævT×VÇF—Æ–W"“°¢7FG2çfV–äÆö6´Ö÷fU7VVD&öçW2ÒÖF‚æÖ‚ƒÂ7FG2çfV–äÆö6´Ö÷fU7VVD&öçW2“°¢7FG2ç6V—6Ö–5&÷WFU6Æ÷G2ÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2ç6V—6Ö–5&÷WFU6Æ÷G2’“°¢7FG2æv†÷7EG&–ÄGW&F–öâÒÖF‚æÖ‚ƒÂ7FG2æv†÷7EG&–ÄGW&F–öâ“°¢7FG2æv†÷7EG&–ÄÖ„Æ–W'2ÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2æv†÷7EG&–ÄÖ„Æ–W'2’“°¢7FG2æfö7W5fV–å6—¦T&–2ÒÖF‚æÖ‚ƒÂ7FG2æfö7W5fV–å6—¦T&–2“°¢7FG2æfö7W5fV–äÖ÷fU7VVEW$æöFRÒÖF‚æÖ‚ƒÂ7FG2æfö7W5fV–äÖ÷fU7VVEW$æöFR“°¢7FG2æÖ÷fU7VVBÒÖF‚æÖ‚ƒÂ7FG2æÖ÷fU7VVB¢7FG2æÖ÷fU7VVD×VÇF—Æ–W"“°¢7FG2æÖ–æTÖ÷fT×VÇF—Æ–W"ÒÖF‚æÖ‚ƒãÂ7FG2æÖ–æTÖ÷fT×VÇF—Æ–W"“°¢6öç7B&tF–u&V6‚ÒÖF‚æÖ‚ƒÂ7FG2æF–u&V6‚¢7FG2æF–u&V6„×VÇF—Æ–W"“°¢6öç7BFööÅF–W"Ò6Æ×„ÖF‚æfÆö÷"„çVÖ&W"‡7FG2çFööÅF–W"’ÇÂ’ÂÂr“°¢6öç7B&V6„&æG2Ò°¢çVÆÂÀ¢²Ö–ã¢3‚ÂÖƒ¢cBÒÀ¢²Ö–ã¢3‚ÂÖƒ¢c‚ÒÀ¢²Ö–ã¢3‚ÂÖƒ¢sbÒÀ¢²Ö–ã¢SbÂÖƒ¢ƒ‚ÒÀ¢²Ö–ã¢s"ÂÖƒ¢"ÒÀ¢²Ö–ã¢s"ÂÖƒ¢"ÒÀ¢²Ö–ã¢s"ÂÖƒ¢"ÒÀ¢Ó°¢6öç7B&V6„&æBÒ&V6„&æG5·FööÅF–W%Ó°¢7FG2çFööÅF–W"ÒFööÅF–W#°¢7FG2ç–6µ&V6„6Ò&V6„&æBæÖƒ°¢7FG2æF–u&V6‚Ò6Æ×‡&tF–u&V6‚Â&V6„&æBæÖ–âÂ&V6„&æBæÖ‚“°¢7FG2æF–u&F—W2ÒÖF‚æÖ‚ƒÂ7FG2æF–u&F—W2“°¢7FG2æF–t&2Ò6Æ×‡7FG2æF–t&2ÂÖF‚å’ò‚ÂÖF‚å’¢"“°¢7FG2æF–u7VVBÒÖF‚æÖ‚ƒãÂ7FG2æF–u7VVB¢7FG2æF–u7VVD×VÇF—Æ–W"“°¢7FG2ç6–FT6†—WfW'’ÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2ç6–FT6†—WfW'’’“°¢7FG2ç6–FT6†—F&vWG2ÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2ç6–FT6†—F&vWG2’“°¢7FG2ç6–FT6†—÷vW"Ò6Æ×‡7FG2ç6–FT6†—÷vW"ÂÂ“°¢7FG2æ&ö6…7G&–¶UG&fVÅF–ÖRÒÖF‚æÖ‚ƒÂ7FG2æ&ö6…7G&–¶UG&fVÅF–ÖR“°¢7FG2æ&ö6…7G&–¶U÷vW"ÒÖF‚æÖ‚ƒÂ7FG2æ&ö6…7G&–¶U÷vW"“°¢7FG2æ&ö6…7G&–¶U6–FT6†—÷vW"Ò6Æ×‡7FG2æ&ö6…7G&–¶U6–FT6†—÷vW"ÂÂ“°¢7FG2æ–×7EvfTWfW'’ÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2æ–×7EvfTWfW'’’“°¢7FG2æ–×7EvfU&F—W5F–ÆW2ÒÖF‚æÖ‚ƒÂ7FG2æ–×7EvfU&F—W5F–ÆW2“°¢7FG2æ–×7EvfU÷vW"Ò6Æ×‡7FG2æ–×7EvfU÷vW"ÂÂ“°¢7FG2çV''”ÖöFU&WV—&VD'&V·2ÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2çV''”ÖöFU&WV—&VD'&V·2’“°¢7FG2çV''”ÖöFUv–æF÷rÒÖF‚æÖ‚ƒÂ7FG2çV''”ÖöFUv–æF÷r“°¢7FG2çV''”ÖöFTGW&F–öâÒÖF‚æÖ‚ƒÂ7FG2çV''”ÖöFTGW&F–öâ“°¢7FG2çV''”ÖöFTÖ÷fU7VVD&öçW2ÒÖF‚æÖ‚ƒÂ7FG2çV''”ÖöFTÖ÷fU7VVD&öçW2“°¢7FG2çV''”ÖöFTF–u7VVD&öçW2ÒÖF‚æÖ‚ƒÂ7FG2çV''”ÖöFTF–u7VVD&öçW2“°¢7FG2çV''”ÖöFU6–FTg&7GW&U÷vW"Ò6Æ×‡7FG2çV''”ÖöFU6–FTg&7GW&U÷vW"ÂÂ“°¢7FG2ç–6µ÷vW"ÒÖF‚æÖ‚ƒãÂ7FG2ç–6µ÷vW"¢7FG2ç–6µ÷vW$×VÇF—Æ–W"“°¢7FG2æfVÇDÆ–æTÖ„&Æö6·2ÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2æfVÇDÆ–æTÖ„&Æö6·2’“°¢7FG2æfVÇDÆ–æU÷vW"Ò6Æ×‡7FG2æfVÇDÆ–æU÷vW"ÂÂ“°¢7FG2æÖ…'VäGW&F–öâÒ6Æ×‡7FG2æÖ…'VäGW&F–öâÂbÂCR“°¢7FG2ç'VäGW&F–öâÒ6Æ×‡7FG2ç'VäGW&F–öâÂbÂ7FG2æÖ…'VäGW&F–öâ“°¢7FG2æ&öçW5'VäGW&F–öä6Ò6Æ×‡7FG2æ&öçW5'VäGW&F–öä6Â7FG2æÖ…'VäGW&F–öâÂc“°¢7FG2æF—66÷fW'•F–ÖT&öçW2ÒÖF‚æÖ‚ƒÂ7FG2æF—66÷fW'•F–ÖT&öçW2“°¢7FG2æ6‡&öæô÷fW&fÆ÷uF‡&W6†öÆBÒ6Æ×‡7FG2æ6‡&öæô÷fW&fÆ÷uF‡&W6†öÆBÂCRÂc“°¢7FG2æ6‡&öæô÷fW&fÆ÷u7VVD&öçW2ÒÖF‚æÖ‚ƒÂ7FG2æ6‡&öæô÷fW&fÆ÷u7VVD&öçW2“°¢7FG2æ6‡&öæô÷fW&fÆ÷u&WVDWfW'’ÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2æ6‡&öæô÷fW&fÆ÷u&WVDWfW'’’“°¢7FG2çF–ÖW$G&–å&VGV7F–öâÒ6Æ×‡7FG2çF–ÖW$G&–å&VGV7F–öâÂÂãR“°¢7FG2çF–ÖW$G&–ä×VÇF—Æ–W"ÒÒ7FG2çF–ÖW$G&–å&VGV7F–öã°¢7FG2çF–ÖU&VgVæDÖ÷VçB£Ò7FG2çF–ÖU&VgVæD×VÇF—Æ–W#°¢7FG2æ&öÖ%÷vW"ÒÖF‚æÖ‚ƒÂ7FG2æ&öÖ%÷vW"“°¢7FG2æF—&V7F–öæÄ&öÖ$6öæUF–ÆW2ÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2æF—&V7F–öæÄ&öÖ$6öæUF–ÆW2’“°¢7FG2æ7&Wt&V6öä÷fW&¶–ÆÄ6''’Ò6Æ×‡7FG2æ7&Wt&V6öä÷fW&¶–ÆÄ6''’ÂÂ“°¢7FG2æÖvæWF–4f–VÆDGW&F–öâÒÖF‚æÖ‚ƒÂ7FG2æÖvæWF–4f–VÆDGW&F–öâ“°¢7FG2æÖvæWF–4f–VÆE&F—W5F–ÆW2ÒÖF‚æÖ‚ƒÂ7FG2æÖvæWF–4f–VÆE&F—W5F–ÆW2“°¢7FG2æÖvæWF–4f–VÆEF&vWF–æt&öçW2ÒÖF‚æÖ‚ƒÂ7FG2æÖvæWF–4f–VÆEF&vWF–æt&öçW2“°¢7FG2æFVÖöÆ—F–öä6öÖ&ôÖ&´GW&F–öâÒÖF‚æÖ‚ƒÂ7FG2æFVÖöÆ—F–öä6öÖ&ôÖ&´GW&F–öâ“°¢7FG2æFVÖöÆ—F–öä6öÖ&ôf–æ—6…÷vW"ÒÖF‚æÖ‚ƒÂ7FG2æFVÖöÆ—F–öä6öÖ&ôf–æ—6…÷vW"“°¢7FG2æFVÖöÆ—F–öä6öÖ&õfV–å&F—W5F–ÆW2ÒÖF‚æÖ‚ƒÂ7FG2æFVÖöÆ—F–öä6öÖ&õfV–å&F—W5F–ÆW2“°¢7FG2æ6†–å÷vW"ÒÖF‚æÖ‚ƒÂ7FG2æ6†–å÷vW"“°¢7FG2æG&öæU÷vW"ÒÖF‚æÖ‚ƒÂ7FG2æG&öæU÷vW"“°¢7FG2æÆ6W%&ævRÒ6Æ×‡7FG2æÆ6W%&ævRÂ#ÂC#“°¢7FG2æÆ6W%÷vW"ÒÖF‚æÖ‚ƒÂ7FG2æÆ6W%÷vW"“°¢7FG2æÆ6W%&–6ö6†WD6÷VçBÒ6Æ×„ÖF‚æfÆö÷"‡7FG2æÆ6W%&–6ö6†WD6÷VçB’ÂÂ"“°¢7FG2æÆ6W$f—'7E&–6ö6†WD×VÇF—Æ–W"Ò6Æ×‡7FG2æÆ6W$f—'7E&–6ö6†WD×VÇF—Æ–W"ÂÂ“°¢7FG2æÆ6W%6V6öæE&–6ö6†WD×VÇF—Æ–W"Ò6Æ×‡7FG2æÆ6W%6V6öæE&–6ö6†WD×VÇF—Æ–W"ÂÂ“°¢7FG2æ÷&UfÇVT×VÇF—Æ–W"ÒÖF‚æÖ‚ƒÂ7FG2æ÷&UfÇVT×VÇF—Æ–W"“°¢7FG2ævVÕfÇVT×VÇF—Æ–W"ÒÖF‚æÖ‚ƒÂ7FG2ævVÕfÇVT×VÇF—Æ–W"“°¢7FG2æ&6·WF&vWE6Æ÷G2ÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2æ&6·WF&vWE6Æ÷G2’“°¢7FG2æ÷&Tfö7W4W66ÆF–öäFVÆ’ÒÖF‚æÖ‚ƒÂ7FG2æ÷&Tfö7W4W66ÆF–öäFVÆ’“°¢7FG2æ÷&Tfö7W4W66ÆF–öä&öçW2ÒÖF‚æÖ‚ƒÂ7FG2æ÷&Tfö7W4W66ÆF–öä&öçW2“°¢7FG2æFVd¶æö6µ7FöæUF‡&W6†öÆBÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2æFVd¶æö6µ7FöæUF‡&W6†öÆB’“°¢7FG2æFVd¶æö6µ6Vç6U&F—W4×VÇF—Æ–W"ÒÖF‚æÖ‚ƒÂ7FG2æFVd¶æö6µ6Vç6U&F—W4×VÇF—Æ–W"“°¢7FG2æFVd¶æö6´Ö÷fU7VVD&öçW2ÒÖF‚æÖ‚ƒÂ7FG2æFVd¶æö6´Ö÷fU7VVD&öçW2“°¢7FG2æFVd¶æö6´Ö÷fTGW&F–öâÒÖF‚æÖ‚ƒÂ7FG2æFVd¶æö6´Ö÷fTGW&F–öâ“°¢7FG2æFVd¶æö6´6ööÆF÷vâÒÖF‚æÖ‚ƒÂ7FG2æFVd¶æö6´6ööÆF÷vâ“°¢7FG2çG&–æwVÆ$f—„÷&TÖVÖ÷'’ÒÖF‚æÖ‚ƒÂ7FG2çG&–æwVÆ$f—„÷&TÖVÖ÷'’“°¢7FG2çG&–æwVÆ$f—„vFvWDFÖvT&öçW2ÒÖF‚æÖ‚ƒÂ7FG2çG&–æwVÆ$f—„vFvWDFÖvT&öçW2“°¢7FG2çG&–æwVÆ$f—…&ævT&öçW2ÒÖF‚æÖ‚ƒÂ7FG2çG&–æwVÆ$f—…&ævT&öçW2“°¢7FG2æÖ–æTÆ–gE&V6÷&DFWF…&F–òÒ6Æ×‡7FG2æÖ–æTÆ–gE&V6÷&DFWF…&F–òÂÂã’“°¢7FG2æ÷&TF—fW'6—G”&öçW5W%G—RÒÖF‚æÖ‚ƒÂ7FG2æ÷&TF—fW'6—G”&öçW5W%G—R“°¢7FG2æÆ6W%7WW%–6´V6†ôWfW'’ÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2æÆ6W%7WW%–6´V6†ôWfW'’’“°¢7FG2æÆ6W%7WW%–6´V6†õ&F—W5F–ÆW2ÒÖF‚æÖ‚ƒÂ7FG2æÆ6W%7WW%–6´V6†õ&F—W5F–ÆW2“°¢7FG2æÆ6W%7WW%–6´V6†õ÷vW"Ò6Æ×‡7FG2æÆ6W%7WW%–6´V6†õ÷vW"ÂÂ“°¢7FG2ç7WW$f–VÆE&F—W5F–ÆW2ÒÖF‚æÖ‚ƒÂ7FG2ç7WW$f–VÆE&F—W5F–ÆW2“°¢7FG2ç7WW$f–VÆE÷vW"Ò6Æ×‡7FG2ç7WW$f–VÆE÷vW"ÂÂ“°¢7FG2ç7WW$f–VÆDGW&F–öâÒÖF‚æÖ‚ƒÂ7FG2ç7WW$f–VÆDGW&F–öâ“°¢7FG2æÆ6W$†VDVFvU÷vW"Ò6Æ×‡7FG2æÆ6W$†VDVFvU÷vW"ÂÂ“°¢7FG2æÆ6W$†VDGW&F–öâÒÖF‚æÖ‚ƒÂ7FG2æÆ6W$†VDGW&F–öâ“°¢7FG2æÆ6W$†VDæW‡D†—D&öçW2ÒÖF‚æÖ‚ƒÂ7FG2æÆ6W$†VDæW‡D†—D&öçW2“°¢7FG2ç6öÆ$G&–ÆÅ&ö4WfW'’ÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2ç6öÆ$G&–ÆÅ&ö4WfW'’’“°¢7FG2ç6öÆ$G&–ÆÄ&VÔGW&F–öâÒÖF‚æÖ‚ƒÂ7FG2ç6öÆ$G&–ÆÄ&VÔGW&F–öâ“°¢7FG2ç6öÆ$G&–ÆÄf–æÄ'W'7E÷vW"ÒÖF‚æÖ‚ƒÂ7FG2ç6öÆ$G&–ÆÄf–æÄ'W'7E÷vW"“°¢7FG2ç&–6…fV–å––VÆD&öçW2ÒÖF‚æÖ‚ƒÂ7FG2ç&–6…fV–å––VÆD&öçW2“°¢7FG2ç&–6…fV–ä6ö×ÆWF–öä&öçW2ÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2ç&–6…fV–ä6ö×ÆWF–öä&öçW2’“°¢7FG2çG&—ÆU6×ÆTWfW'’ÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2çG&—ÆU6×ÆTWfW'’’“°¢7FG2çG&—ÆU6×ÆT&öçW5––VÆBÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2çG&—ÆU6×ÆT&öçW5––VÆB’“°¢7FG2çG&—ÆU6×ÆTæW‡DæöFTFÖvRÒ6Æ×‡7FG2çG&—ÆU6×ÆTæW‡DæöFTFÖvRÂÂ“°¢7FG2æ÷fW&¶–ÆÅ&W6W'fö—%&F–òÒ6Æ×‡7FG2æ÷fW&¶–ÆÅ&W6W'fö—%&F–òÂÂ“°¢7FG2æ÷fW&¶–ÆÅ&W6W'fö—%––VÆEF‡&W6†öÆBÒÖF‚æÖ‚ƒÂ7FG2æ÷fW&¶–ÆÅ&W6W'fö—%––VÆEF‡&W6†öÆB“°¢7FG2æFWF„6öçG&7E7FWÒÖF‚æÖ‚ƒÂ7FG2æFWF„6öçG&7E7FW“°¢7FG2æFWF„6öçG&7D&öçW5W%7F6²ÒÖF‚æÖ‚ƒÂ7FG2æFWF„6öçG&7D&öçW5W%7F6²“°¢7FG2æFWF„6öçG&7DÖ…7F6·2ÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2æFWF„6öçG&7DÖ…7F6·2’“°¢7FG2ç&VÆ–4VffV7DGW&F–öâÒÖF‚æÖ‚ƒÂ7FG2ç&VÆ–4VffV7DGW&F–öâ“°¢7FG2ç&VÆ–4VffV7E÷vW"ÒÖF‚æÖ‚ƒÂ7FG2ç&VÆ–4VffV7E÷vW"“°¢7FG2æf÷'GVæU—G•F‡&W6†öÆBÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2æf÷'GVæU—G•F‡&W6†öÆB’“°¢7FG2æf÷'GVæUv†VVÄ7–6ÆTÆVæwF‚ÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2æf÷'GVæUv†VVÄ7–6ÆTÆVæwF‚’“°¢7FG2æÖ÷F†W&ÆöFUG&–vvW$'&V·2ÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2æÖ÷F†W&ÆöFUG&–vvW$'&V·2’“°¢7FG2æÖ÷F†W&ÆöFU––VÆD×VÇF—Æ–W"ÒÖF‚æÖ‚ƒÂ7FG2æÖ÷F†W&ÆöFU––VÆD×VÇF—Æ–W"“°¢7FG2æÖ÷F†W&ÆöFT6ö×ÆWF–öä66†RÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"‡7FG2æÖ÷F†W&ÆöFT6ö×ÆWF–öä66†R’“°¢7FG2æÖ÷F†W&ÆöFT6ö×ÆWF–öåF–ÖT&öçW2ÒÖF‚æÖ‚ƒÂ7FG2æÖ÷F†W&ÆöFT6ö×ÆWF–öåF–ÖT&öçW2“° ¢f÷"†6öç7B¶W’öb&ö&&–Æ—G”¶W—2’°¢7FG5¶¶W•ÒÒ6Æ×‡7FG5¶¶W•ÒÂÂã“R“°¢Ð ¢òò&÷VæF–ærÖ¶W26fR6ö×&—6öç2æBFWFW&Ö–æ—7F–2FW7G27F&ÆRv†–ÆP¢òò&WF–æ–ærf"Ö÷&R&V6—6–öâF†âF†RT’æVVG2à¢f÷"†6öç7B¶¶W’ÂfÇVUÒöbö&¦V7BæVçG&–W2‡7FG2’’°¢–b‡G—VöbfÇVRÓÓÒ&çVÖ&W""bbçVÖ&W"æ—4f–æ—FR‡fÇVR’’7FG5¶¶W•ÒÒ&÷VæB‡fÇVR“°¢Ð¢&WGW&â7FG3°§Ð ¦6öç7B&VDÆWfVÂÒ†ÆWfVÇ2Â–B’Óâ°¢–b†ÆWfVÇ2–ç7Fæ6VöbÖ’&WGW&âÆWfVÇ2ævWB†–B“°¢&WGW&âÆWfVÇ3òå¶–EÓ°§Ó° ¢ò¢ ¢¢6Æ7VÆFRF†R6ö×ÆWFR7FB&Æö6²g&öÒ6fRw2W&6†6VBWw&FRÆWfVÇ2à¢¢–çfÆ–BÂg&7F–öæÂÂæVvF—fRæB&÷fRÖ6ÆWfVÇ2&R6fVÇ’æ÷&ÖÆ—¦VBà¢¢ð¦gVæ7F–öâ6Æ7VÆFTÖWF7FG2†ÆWfVÇ2Ò·Ò’°¢6öç7B7FG2Ò7&VFT&6TÖWF7FG2‚“°¢f÷"†6öç7BFVf–æ—F–öâöbUu$DUôDTe2’°¢6öç7B&tÆWfVÂÒçVÖ&W"‡&VDÆWfVÂ†ÆWfVÇ2ÂFVf–æ—F–öâæ–B’“°¢6öç7BÆWfVÂÒ6Æ×„çVÖ&W"æ—4f–æ—FR‡&tÆWfVÂ’òÖF‚æfÆö÷"‡&tÆWfVÂ’¢ÂÂFVf–æ—F–öâæÖ„ÆWfVÂ“°¢–b†ÆWfVÂâ’FVf–æ—F–öâæÇ’‡7FG2ÂÆWfVÂ¢FVf–æ—F–öâæVffV7DÆWfVÄ×VÇF—Æ–W"“°¢Ð¢&WGW&âæ÷&ÖÆ—¦TÖWF7FG2‡7FG2“°§Ð ¢ò¢ ¢¢&WGW&âF†RæW‡BW&6†6R6÷7BÂ÷"–æf–æ—G’v†VâF†RFVf–æ—F–öâ—2–çfÆ–B÷ ¢¢Ç&VG’B—G2Ö†–×VÒÆWfVÂà¢¢ð¦gVæ7F–öâvWEWw&FT6÷7B†FVf–æ—F–öâÂÆWfVÂÒ’°¢–b‚FVf–æ—F–öâÇÂG—VöbFVf–æ—F–öâæ6÷7BÓÒ&gVæ7F–öâ"’&WGW&â–æf–æ—G“°¢6öç7B7W'&VçDÆWfVÂÒÖF‚æÖ‚ƒÂÖF‚æfÆö÷"„çVÖ&W"†ÆWfVÂ’ÇÂ’“°¢–b†7W'&VçDÆWfVÂãÒFVf–æ—F–öâæÖ„ÆWfVÂ’&WGW&â–æf–æ—G“°¢6öç7B&W7VÇBÒFVf–æ—F–öâæ6÷7B†7W'&VçDÆWfVÂ“°¢&WGW&âçVÖ&W"æ—4f–æ—FR‡&W7VÇB’bb&W7VÇBâòÖF‚ç&÷VæB‡&W7VÇB’¢–æf–æ—G“°§Ð ¢ò¢¢6÷VçBfÆ–BW&6†6VBÆWfVÇ2Â&W7V7F–ærWfW'’æöFRw2Ö†–×VÒâ¢ð¦gVæ7F–öâ6÷VçEW&6†6VDÆWfVÇ2†ÆWfVÇ2Ò·Ò’°¢&WGW&âUu$DUôDTe2ç&VGV6R‚‡F÷FÂÂFVf–æ—F–öâ’Óâ°¢6öç7B&tÆWfVÂÒçVÖ&W"‡&VDÆWfVÂ†ÆWfVÇ2ÂFVf–æ—F–öâæ–B’“°¢6öç7BÆWfVÂÒ6Æ×„çVÖ&W"æ—4f–æ—FR‡&tÆWfVÂ’òÖF‚æfÆö÷"‡&tÆWfVÂ’¢ÂÂFVf–æ—F–öâæÖ„ÆWfVÂ“°¢&WGW&âF÷FÂ²ÆWfVÃ°¢ÒÂ“°§Ð §v–æF÷räFWF…¦W&õWw&FW2Òö&¦V7Bæg&VW¦R‡°¢Uu$DUô4DTtõ$”U2À¢õ$UõE•U2À¢Uu$DUôDTe2À¢7&VFT÷&T&rÀ¢6æ—F—¦T÷&T&rÀ¢FD÷&T&rÀ¢6÷VçD÷&T&rÀ¢vWEWw&FU&V6—RÀ¢6äff÷&E&V6—RÀ¢7VæE&V6—RÀ¢7&VFT&6TÖWF7FG2À¢6Æ7VÆFTÖWF7FG2À¢vWEWw&FT6÷7BÀ¢6÷VçEW&6†6VDÆWfVÇ2À§Ò“°§Ò’‚“°
+  description: "ÐÐ°Ñ‡Ð°Ð»Ð¾ Ð¿ÑƒÑ‚Ð¸ ÑˆÐ°Ñ…Ñ‚Ñ‘Ñ€Ð°. ÐžÑ‚ÐºÑ€Ñ‹Ð²Ð°ÐµÑ‚ ÑÐµÐ¼ÑŒ Ð²ÐµÑ‚Ð²ÐµÐ¹ Ð¼Ð°ÑÑ‚ÐµÑ€ÑÑ‚Ð²Ð°.",
+  category: "core",
+  icon: "â›",
+  maxLevel: 1,
+  baseCost: 1,
+  growth: 1,
+  requires: [],
+  recipeOverride: { copper: 1 },
+  apply: () => {},
+});
+
+const senseUpgrades = [
+  defineUpgrade({
+    id: "sense_instinct_spark",
+    name: "Ð˜ÑÐºÑ€Ð° Ð¸Ð½ÑÑ‚Ð¸Ð½ÐºÑ‚Ð°",
+    description: "Ð Ð°Ð´Ð¸ÑƒÑ Ñ‡ÑƒÑ‚ÑŒÑ +49,5 Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "sense",
+    icon: "â—‰",
+    maxLevel: 8,
+    effectLevelMultiplier: 1.5,
+    baseCost: 4,
+    growth: 1.29,
+    requires: ["core_first_descent"],
+    levelRecipeOverrides: [
+      null, null, null, null, null, null,
+      { gold: 4, amethyst: 2 },
+      { gold: 7, amethyst: 2 },
+    ],
+    apply: (stats, level) => add(stats, "senseRadius", 33 * level),
+  }),
+  defineUpgrade({
+    id: "sense_echo_pulse",
+    name: "Ð ÐµÐ·Ð¾Ð½Ð°Ð½ÑÐ½Ñ‹Ð¹ Ð¿Ð¸Ð½Ð³",
+    description: "Ð•ÑÐ»Ð¸ Ñ†ÐµÐ»Ð¸ Ð½ÐµÑ‚, Ñ€Ð°Ð· Ð² 5/4/3 ÑÐµÐºÑƒÐ½Ð´Ñ‹ Ð·Ð°Ð¿ÑƒÑÐºÐ°ÐµÑ‚ ÑƒÑÐ¸Ð»ÐµÐ½Ð½Ñ‹Ð¹ Ð¿Ð¾Ð¸ÑÐº Ð½Ð° 125/140/155% Ñ€Ð°Ð´Ð¸ÑƒÑÐ° Ð¸ ÑƒÐ´ÐµÑ€Ð¶Ð¸Ð²Ð°ÐµÑ‚ Ð½Ð°Ð¹Ð´ÐµÐ½Ð½ÑƒÑŽ Ñ†ÐµÐ»ÑŒ 1,2 ÑÐµÐºÑƒÐ½Ð´Ñ‹.",
+    category: "sense",
+    icon: "âŒ",
+    maxLevel: 3,
+    baseCost: 18,
+    growth: 1.55,
+    requires: ["sense_instinct_spark"],
+    apply: (stats, level) => {
+      stats.echoPingCooldown = [0, 5, 4, 3][level] || 5;
+      stats.echoPingRadiusMultiplier = [1, 1.25, 1.4, 1.55][level] || 1.25;
+      stats.echoPingTargetHold = 1.2;
+    },
+  }),
+  defineUpgrade({
+    id: "sense_clear_signal",
+    name: "Ð—Ð°Ñ†ÐµÐ¿ Ð·Ð° Ð¶Ð¸Ð»Ñƒ",
+    description: "Ð£Ð´ÐµÑ€Ð¶Ð¸Ð²Ð°ÐµÑ‚ Ð²Ñ‹Ð±Ñ€Ð°Ð½Ð½ÑƒÑŽ Ð¶Ð¸Ð»Ñƒ Ð´Ð¾ Ð¸ÑÑ‡ÐµÑ€Ð¿Ð°Ð½Ð¸Ñ. ÐŸÐµÑ€ÐµÑ…Ð¾Ð´ Ðº ÑÐ»ÐµÐ´ÑƒÑŽÑ‰ÐµÐ¹ ÐµÑ‘ Ð½Ð¾Ð´Ðµ ÑƒÑÐºÐ¾Ñ€ÑÐµÑ‚ÑÑ Ð½Ð° 8/14/20%, Ð° Ð´Ð°Ð»ÑŒÐ½Ð¾ÑÑ‚ÑŒ Ð¿Ñ€Ð¾Ð´Ð¾Ð»Ð¶ÐµÐ½Ð¸Ñ Ð¶Ð¸Ð»Ñ‹ Ð²Ð¾Ð·Ñ€Ð°ÑÑ‚Ð°ÐµÑ‚ Ð´Ð¾ 120/140/160% Ñ‡ÑƒÑ‚ÑŒÑ.",
+    category: "sense",
+    icon: "âŒ–",
+    maxLevel: 3,
+    baseCost: 31,
+    growth: 1.54,
+    requires: [{ id: "sense_instinct_spark", level: 3 }],
+    apply: (stats, level) => {
+      stats.veinLockEnabled = true;
+      stats.veinLockMoveSpeedBonus = [0, 0.08, 0.14, 0.2][level] || 0.08;
+      stats.veinLockRangeMultiplier = [1, 1.2, 1.4, 1.6][level] || 1.2;
+    },
+  }),
+  defineUpgrade({
+    id: "sense_deep_resonance",
+    name: "Ð“Ð»ÑƒÐ±Ð¸Ð½Ð½Ñ‹Ð¹ Ñ€ÐµÐ·Ð¾Ð½Ð°Ð½Ñ",
+    description: "Ð§ÑƒÑ‚ÑŒÑ‘ Ð´Ð°Ð»ÑŒÑˆÐµ Ð·Ð°Ð¼ÐµÑ‡Ð°ÐµÑ‚ Ð¿Ð»Ð¾Ñ‚Ð½ÑƒÑŽ Ñ€ÑƒÐ´Ñƒ Ð¸ Ð¿Ð¾Ð»ÑƒÑ‡Ð°ÐµÑ‚ +16,7 Ðº Ñ€Ð°Ð´Ð¸ÑƒÑÑƒ Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ. Ð“Ð»ÑƒÐ±Ð¸Ð½Ð½Ñ‹Ð¹ ÑÐµÐºÑ‚Ð¾Ñ€ Ð¿Ñ€Ð¾Ð±Ð¸Ð²Ð°ÐµÑ‚ Ð¿Ð¾Ñ€Ð¾Ð´Ñƒ ÐºÐ¾Ð½ÑƒÑÐ¾Ð¼ Ð²Ð½Ð¸Ð· Ð¸ Ð¾Ñ‚Ð¼ÐµÑ‡Ð°ÐµÑ‚ 1/2/3 Ñ†ÐµÐ»Ð¸; ÑÐ»ÐµÐ´ÑƒÑŽÑ‰Ð¸Ðµ ÑƒÑ€Ð¾Ð²Ð½Ð¸ Ñ€Ð°ÑÑˆÐ¸Ñ€ÑÑŽÑ‚, ÑƒÐ³Ð»ÑƒÐ±Ð»ÑÑŽÑ‚ Ð¸ ÑƒÑÐºÐ¾Ñ€ÑÑŽÑ‚ Ð¾Ñ‚ÐºÐ»Ð¸Ðº.",
+    category: "sense",
+    icon: "â—",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 76,
+    growth: 1.45,
+    requires: [{ id: "sense_instinct_spark", level: 6 }],
+    firstRecipeOverride: { silver: 2, amber: 1, iron: 5 },
+    levelRecipeOverrides: [
+      null,
+      { silver: 30, amber: 40, iron: 68 },
+      null,
+    ],
+    apply: (stats, level) => {
+      const rank = clamp(Math.round(level * 3 / 5), 1, 3);
+      add(stats, "senseRadius", 10 * level);
+      add(stats, "deepOreSenseBonus", 0.1 * level);
+      stats.deepResonanceEnabled = true;
+      stats.deepResonanceCooldown = [0, 4, 3.25, 2.5][rank];
+      stats.deepResonanceRadiusMultiplier = [1, 1.55, 1.7, 1.85][rank];
+      stats.deepResonanceSolidLayers = [0, 4, 5, 6][rank];
+      stats.deepResonanceConeHalfAngle = [0, 35, 40, 45][rank] * Math.PI / 180;
+      stats.deepResonanceTargetHold = 1.35;
+      stats.deepResonanceTargetSlots = rank;
+    },
+  }),
+  defineUpgrade({
+    id: "sense_vein_whisper",
+    name: "Ð¡Ð»ÐµÐ´ Ð¶Ð¸Ð»Ñ‹",
+    description: "ÐŸÐ¾ÑÐ»Ðµ Ð¿ÐµÑ€Ð²Ð¾Ð³Ð¾ ÐºÑƒÑÐºÐ° Ð¿Ñ€Ð¾Ð´Ð¾Ð»Ð¶Ð°ÐµÑ‚ Ð¸ÑÐºÐ°Ñ‚ÑŒ Ñ‚Ñƒ Ð¶Ðµ Ð¶Ð¸Ð»Ñƒ Ð½Ð° 125/145/165% Ñ€Ð°Ð´Ð¸ÑƒÑÐ°; ÑÐºÐ¾Ñ€Ð¾ÑÑ‚ÑŒ Ð´Ð²Ð¸Ð¶ÐµÐ½Ð¸Ñ Ð²Ð´Ð¾Ð»ÑŒ Ð½ÐµÑ‘ +8/14/20%.",
+    category: "sense",
+    layoutLobe: "tools",
+    icon: "ã€°",
+    maxLevel: 3,
+    baseCost: 58,
+    growth: 1.58,
+    requires: ["sense_echo_pulse"],
+    apply: (stats, level) => {
+      stats.veinTrailEnabled = true;
+      stats.veinTrailRangeMultiplier = [1, 1.25, 1.45, 1.65][level] || 1.25;
+      stats.veinTrailMoveSpeedBonus = [0, 0.08, 0.14, 0.2][level] || 0.08;
+    },
+  }),
+  defineUpgrade({
+    id: "sense_greed_compass",
+    name: "ÐšÐ¾Ð¼Ð¿Ð°Ñ Ð¶Ð°Ð´Ð½Ð¾ÑÑ‚Ð¸",
+    description: "ÐÐ²Ñ‚Ð¾ÐºÐ¾Ð¿Ð°Ñ‚ÐµÐ»ÑŒ ÑÐ¸Ð»ÑŒÐ½ÐµÐµ Ð¿Ñ€ÐµÐ´Ð¿Ð¾Ñ‡Ð¸Ñ‚Ð°ÐµÑ‚ Ñ†ÐµÐ½Ð½ÑƒÑŽ Ñ€ÑƒÐ´Ñƒ.",
+    category: "sense",
+    icon: "âœ¥",
+    maxLevel: 1,
+    baseCost: 115,
+    growth: 1,
+    requires: ["sense_clear_signal"],
+    apply: (stats, level) => add(stats, "targetValueBias", 0.55 * level),
+  }),
+  defineUpgrade({
+    id: "sense_seismic_memory",
+    name: "ÐšÐ°Ñ€Ñ‚Ð° Ð½Ð°Ð¿Ñ€ÑÐ¶ÐµÐ½Ð¸Ð¹",
+    description: "Ð—Ð°Ð¿Ð¾Ð¼Ð¸Ð½Ð°ÐµÑ‚ 1/2/3 Ñ€ÐµÐ·ÐµÑ€Ð²Ð½Ñ‹Ðµ Ð¶Ð¸Ð»Ñ‹ Ð·Ð° Ð¿Ñ€ÐµÐ´ÐµÐ»Ð°Ð¼Ð¸ Ñ‡ÑƒÑ‚ÑŒÑ Ð¸ ÑÑ€Ð°Ð·Ñƒ Ð¿Ñ€Ð¾ÐºÐ»Ð°Ð´Ñ‹Ð²Ð°ÐµÑ‚ Ð¿ÑƒÑ‚ÑŒ Ðº ÑÐ»ÐµÐ´ÑƒÑŽÑ‰ÐµÐ¹ Ð¿Ð¾ÑÐ»Ðµ Ð¸ÑÑ‡ÐµÑ€Ð¿Ð°Ð½Ð¸Ñ Ñ‚ÐµÐºÑƒÑ‰ÐµÐ¹.",
+    category: "sense",
+    icon: "â‰‹",
+    maxLevel: 3,
+    baseCost: 104,
+    growth: 1.57,
+    requires: ["sense_vein_whisper"],
+    firstRecipeOverride: { silver: 3, amber: 1, iron: 7 },
+    apply: (stats, level) => add(stats, "seismicRouteSlots", level),
+  }),
+  defineUpgrade({
+    id: "sense_panoramic_intuition",
+    name: "ÐŸÐ°Ð½Ð¾Ñ€Ð°Ð¼Ð½Ð°Ñ Ð¸Ð½Ñ‚ÑƒÐ¸Ñ†Ð¸Ñ",
+    description: "Ð˜Ñ‚Ð¾Ð³Ð¾Ð²Ñ‹Ð¹ Ñ€Ð°Ð´Ð¸ÑƒÑ Ñ‡ÑƒÑ‚ÑŒÑ +8,3% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "sense",
+    icon: "â—Ž",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 160,
+    growth: 1.51,
+    requires: ["sense_deep_resonance"],
+    firstRecipeOverride: { silver: 3, amber: 3, iron: 4 },
+    apply: (stats, level) => add(stats, "senseRadiusMultiplier", 0.05 * level),
+  }),
+  defineUpgrade({
+    id: "sense_ore_focus",
+    name: "Ð ÑƒÐ´Ð½Ñ‹Ð¹ Ñ„Ð¾ÐºÑƒÑ",
+    description: "ÐžÑ‚ÐºÑ€Ñ‹Ð²Ð°ÐµÑ‚ Ð²Ñ‹Ð±Ð¾Ñ€ Ð¾Ð´Ð½Ð¾Ð³Ð¾ Ñ‚Ð¸Ð¿Ð° Ñ€ÑƒÐ´Ñ‹ Ð¸ ÑƒÐ²ÐµÐ»Ð¸Ñ‡Ð¸Ð²Ð°ÐµÑ‚ Ñ€Ð°Ð´Ð¸ÑƒÑ ÐµÑ‘ Ð¿Ð¾Ð¸ÑÐºÐ° Ð² 2,15 Ñ€Ð°Ð·Ð°.",
+    category: "sense",
+    layoutLobe: "tools",
+    icon: "âŒ¾",
+    maxLevel: 1,
+    baseCost: 250,
+    growth: 1,
+    requires: ["sense_deep_resonance", "tools_steel_pick"],
+    requiresOreDiscovery: "silver",
+    recipeOverride: { silver: 5, iron: 4 },
+    apply: (stats, level) => {
+      if (level > 0) {
+        stats.oreFocusUnlocked = true;
+        stats.oreFocusRadiusMultiplier = 2.15;
+      }
+    },
+  }),
+  defineUpgrade({
+    id: "sense_priority_tuning",
+    name: "ÐžÑ†ÐµÐ½ÐºÐ° Ð·Ð°Ð»ÐµÐ¶Ð¸",
+    description: "Ð ÑƒÐ´Ð½Ñ‹Ð¹ Ñ„Ð¾ÐºÑƒÑ Ð¿Ñ€ÐµÐ´Ð¿Ð¾Ñ‡Ð¸Ñ‚Ð°ÐµÑ‚ ÐºÑ€ÑƒÐ¿Ð½Ñ‹Ðµ Ð·Ð°Ð»ÐµÐ¶Ð¸. Ð’ÐµÑ Ñ€Ð°Ð·Ð¼ÐµÑ€Ð° Ð¶Ð¸Ð»Ñ‹ +30%, Ð° ÑÐºÐ¾Ñ€Ð¾ÑÑ‚ÑŒ Ð·Ð° ÐºÐ°Ð¶Ð´Ñ‹Ð¹ ÑÐ»ÐµÐ´ÑƒÑŽÑ‰Ð¸Ð¹ ÐµÑ‘ ÐºÑƒÑÐ¾Ðº +3% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "sense",
+    icon: "â˜·",
+    maxLevel: 4,
+    baseCost: 145,
+    growth: 1.8,
+    requires: ["sense_ore_focus"],
+    levelRecipeOverrides: [
+      { silver: 9 },
+      { amethyst: 1, gold: 1, silver: 2 },
+      { prism_crystal: 1, amethyst: 1, gold: 2 },
+      { prism_crystal: 8, amethyst: 10, gold: 12 },
+    ],
+    apply: (stats, level) => {
+      add(stats, "focusVeinSizeBias", 0.3 * level);
+      add(stats, "focusVeinMoveSpeedPerNode", 0.03 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "sense_ghost_outline",
+    name: "ÐŸÑ€Ð¸Ð·Ñ€Ð°Ñ‡Ð½Ñ‹Ð¹ ÑÐ»ÐµÐ´",
+    description: "ÐŸÐ¾Ñ‚ÐµÑ€ÑÐ½Ð½Ð°Ñ Ñ€ÑƒÐ´Ð½Ð°Ñ Ñ†ÐµÐ»ÑŒ ÐµÑ‰Ñ‘ 4 ÑÐµÐºÑƒÐ½Ð´Ñ‹ Ð¾ÑÑ‚Ð°Ñ‘Ñ‚ÑÑ Ð´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð¾Ð¹ Ð·Ð° Ð¿Ñ€ÐµÐ´ÐµÐ»Ð°Ð¼Ð¸ Ñ‡ÑƒÑ‚ÑŒÑ Ð¸ ÑÐºÐ²Ð¾Ð·ÑŒ Ñ‚Ñ€Ð¸ ÑÐ»Ð¾Ñ Ð¿Ð¾Ñ€Ð¾Ð´Ñ‹.",
+    category: "sense",
+    icon: "â–§",
+    maxLevel: 1,
+    baseCost: 260,
+    growth: 1,
+    requires: ["sense_seismic_memory", "sense_ore_focus"],
+    firstRecipeOverride: { prism_crystal: 4, amethyst: 6, gold: 8 },
+    apply: (stats, level) => {
+      if (level > 0) {
+        stats.oreOutline = true;
+        stats.ghostTrailDuration = 4;
+        stats.ghostTrailMaxLayers = 3;
+      }
+    },
+  }),
+  defineUpgrade({
+    id: "sense_far_echo",
+    name: "Ð”Ð°Ð»ÑŒÐ½ÐµÐµ ÑÑ…Ð¾",
+    description: "Ð Ð°Ð´Ð¸ÑƒÑ Ñ‡ÑƒÑ‚ÑŒÑ +53,3 Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "sense",
+    icon: "â— ",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 310,
+    growth: 1.53,
+    requires: ["sense_panoramic_intuition"],
+    firstRecipeOverride: { gold: 2, silver: 4, amber: 4 },
+    apply: (stats, level) => add(stats, "senseRadius", 32 * level),
+  }),
+  defineUpgrade({
+    id: "sense_clairvoyant_miner",
+    name: "Ð¨Ð°Ñ…Ñ‚Ñ‘Ñ€-ÑÑÐ½Ð¾Ð²Ð¸Ð´ÐµÑ†",
+    description: "Ð Ð°Ð´Ð¸ÑƒÑ +10%, ÑÐºÐ¾Ñ€Ð¾ÑÑ‚ÑŒ Ð·Ð°Ñ…Ð²Ð°Ñ‚Ð° Ñ†ÐµÐ»Ð¸ +15% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "sense",
+    icon: "â˜‰",
+    maxLevel: 3,
+    baseCost: 620,
+    growth: 1.62,
+    requires: ["sense_priority_tuning", "sense_far_echo"],
+    apply: (stats, level) => {
+      add(stats, "senseRadiusMultiplier", 0.1 * level);
+      add(stats, "targetLockSpeed", 0.15 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "sense_second_fix",
+    name: "Ð’Ñ‚Ð¾Ñ€Ð°Ñ Ð·Ð°ÑÐµÑ‡ÐºÐ°",
+    description: "Ð—Ð°Ð¿Ð¾Ð¼Ð¸Ð½Ð°ÐµÑ‚ Ð¾Ð´Ð½Ñƒ Ð·Ð°Ð¿Ð°ÑÐ½ÑƒÑŽ Ñ†ÐµÐ»ÑŒ Ð¸ Ð¼Ð³Ð½Ð¾Ð²ÐµÐ½Ð½Ð¾ Ð¿ÐµÑ€ÐµÐºÐ»ÑŽÑ‡Ð°ÐµÑ‚ÑÑ Ð½Ð° Ð½ÐµÑ‘ Ð¿Ð¾ÑÐ»Ðµ Ñ€Ð°Ð·Ñ€ÑƒÑˆÐµÐ½Ð¸Ñ Ñ‚ÐµÐºÑƒÑ‰ÐµÐ¹. ÐŸÑ€Ð¸ Ñ€ÑƒÐ´Ð½Ð¾Ð¼ Ñ„Ð¾ÐºÑƒÑÐµ Ð¾Ð±Ðµ Ñ†ÐµÐ»Ð¸ Ð¾Ñ‚Ð½Ð¾ÑÑÑ‚ÑÑ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ðº Ð²Ñ‹Ð±Ñ€Ð°Ð½Ð½Ð¾Ð¹ Ñ€ÑƒÐ´Ðµ.",
+    category: "sense",
+    icon: "â—Ž",
+    maxLevel: 1,
+    baseCost: 420,
+    growth: 1,
+    requires: ["sense_ore_focus", { id: "sense_priority_tuning", level: 2 }],
+    recipeOverride: { amethyst: 3, gold: 4, silver: 6 },
+    apply: (stats, level) => add(stats, "backupTargetSlots", level),
+  }),
+  defineUpgrade({
+    id: "sense_frequency_swing",
+    name: "Ð Ð°ÑÐºÐ°Ñ‡ÐºÐ° Ñ‡Ð°ÑÑ‚Ð¾Ñ‚Ñ‹",
+    description: "Ð•ÑÐ»Ð¸ Ñ€ÑƒÐ´Ð½Ñ‹Ð¹ Ñ„Ð¾ÐºÑƒÑ Ð½Ðµ Ð½Ð°Ñ…Ð¾Ð´Ð¸Ñ‚ Ñ†ÐµÐ»ÑŒ 1,5 ÑÐµÐºÑƒÐ½Ð´Ñ‹, Ñ€Ð°Ð´Ð¸ÑƒÑ ÐµÐ³Ð¾ Ð¿Ð¾Ð¸ÑÐºÐ° ÑƒÐ²ÐµÐ»Ð¸Ñ‡Ð¸Ð²Ð°ÐµÑ‚ÑÑ Ð½Ð° 25% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ Ð´Ð¾ Ð¾Ð±Ð½Ð°Ñ€ÑƒÐ¶ÐµÐ½Ð¸Ñ Ñ€ÑƒÐ´Ñ‹.",
+    category: "sense",
+    icon: "â‰‹",
+    maxLevel: 3,
+    baseCost: 290,
+    growth: 1.86,
+    requires: [
+      "sense_ore_focus",
+      "sense_second_fix",
+      { id: "sense_priority_tuning", level: 3 },
+    ],
+    requiresOreDiscovery: "prism_crystal",
+    firstRecipeOverride: { prism_crystal: 1, amethyst: 1, gold: 4 },
+    apply: (stats, level) => {
+      stats.oreFocusEscalationDelay = 1.5;
+      add(stats, "oreFocusEscalationBonus", 0.25 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "sense_deaf_knock",
+    name: "Ð“Ð»ÑƒÑ…Ð¾Ð¹ ÑÑ‚ÑƒÐº",
+    description: "ÐŸÐ¾ÑÐ»Ðµ 14/11/8 Ñ€Ð°Ð·Ñ€ÑƒÑˆÐµÐ½Ð½Ñ‹Ñ… Ð±Ð»Ð¾ÐºÐ¾Ð² Ð¾Ð±Ñ‹Ñ‡Ð½Ð¾Ð¹ Ð¿Ð¾Ñ€Ð¾Ð´Ñ‹ Ð·Ð°Ð¿ÑƒÑÐºÐ°ÐµÑ‚ Ð¸Ð¼Ð¿ÑƒÐ»ÑŒÑ Ñ‡ÑƒÑ‚ÑŒÑ Ñ€Ð°Ð´Ð¸ÑƒÑÐ¾Ð¼ 140%. ÐÐ°Ð¹Ð´ÐµÐ½Ð½Ð°Ñ Ð¸Ð¼ Ñ†ÐµÐ»ÑŒ Ð´Ð°Ñ‘Ñ‚ +20% ÑÐºÐ¾Ñ€Ð¾ÑÑ‚Ð¸ Ð´Ð²Ð¸Ð¶ÐµÐ½Ð¸Ñ Ð½Ð° 1,2 ÑÐµÐºÑƒÐ½Ð´Ñ‹. ÐŸÐµÑ€ÐµÐ·Ð°Ñ€ÑÐ´ÐºÐ° â€” 3 ÑÐµÐºÑƒÐ½Ð´Ñ‹; Ñ€ÑƒÐ´Ð½Ñ‹Ð¹ Ñ„Ð¾ÐºÑƒÑ Ð¸Ñ‰ÐµÑ‚ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð²Ñ‹Ð±Ñ€Ð°Ð½Ð½ÑƒÑŽ Ñ€ÑƒÐ´Ñƒ.",
+    category: "sense",
+    icon: "â—«",
+    maxLevel: 3,
+    baseCost: 430,
+    growth: 1.61,
+    requires: ["sense_echo_pulse", { id: "dig_wall_bite", level: 2 }],
+    firstRecipeOverride: { amethyst: 4, gold: 6, silver: 8 },
+    apply: (stats, level) => {
+      stats.deafKnockStoneThreshold = [0, 14, 11, 8][level] || 14;
+      stats.deafKnockSenseRadiusMultiplier = 1.4;
+      stats.deafKnockMoveSpeedBonus = 0.2;
+      stats.deafKnockMoveDuration = 1.2;
+      stats.deafKnockCooldown = 3;
+      stats.deafKnockFocusOnly = true;
+    },
+  }),
+  defineUpgrade({
+    id: "sense_triangular_fix",
+    name: "Ð¢Ñ€ÐµÑƒÐ³Ð¾Ð»ÑŒÐ½Ð°Ñ Ð·Ð°ÑÐµÑ‡ÐºÐ°",
+    description: "Ð£Ñ€Ð¾Ð²ÐµÐ½ÑŒ I: Ñ€ÑƒÐ´Ð° Ð² ÑÐµÐºÑ‚Ð¾Ñ€Ðµ ÑˆÐ°Ñ…Ñ‚Ñ‘Ñ€â€“Ð¾ÑÐ½Ð¾Ð²Ð½Ð°Ñâ€“Ð·Ð°Ð¿Ð°ÑÐ½Ð°Ñ Ñ†ÐµÐ»ÑŒ Ð·Ð°Ð¿Ð¾Ð¼Ð¸Ð½Ð°ÐµÑ‚ÑÑ Ð½Ð° 1,5 ÑÐµÐºÑƒÐ½Ð´Ñ‹ Ð¸ Ð¿Ð¾Ð»ÑƒÑ‡Ð°ÐµÑ‚ Ð¿Ñ€Ð¸Ð¾Ñ€Ð¸Ñ‚ÐµÑ‚ Ð´Ñ€Ð¾Ð½Ð¾Ð². Ð£Ñ€Ð¾Ð²ÐµÐ½ÑŒ II: Ð³Ð°Ð´Ð¶ÐµÑ‚Ñ‹ Ð½Ð°Ð½Ð¾ÑÑÑ‚ Ð² ÑÐµÐºÑ‚Ð¾Ñ€Ðµ +25% ÑƒÑ€Ð¾Ð½Ð°, Ð° Ð´Ð°Ð»ÑŒÐ½Ð¾ÑÑ‚ÑŒ Ñ†ÐµÐ¿ÐµÐ¹ Ð¸ Ð´Ñ€Ð¾Ð½Ð¾Ð² ÑƒÐ²ÐµÐ»Ð¸Ñ‡Ð¸Ð²Ð°ÐµÑ‚ÑÑ Ð½Ð° 20%.",
+    category: "sense",
+    icon: "â–³",
+    maxLevel: 2,
+    baseCost: 720,
+    growth: 1.7,
+    requires: [
+      "sense_second_fix",
+      "gadgets_scout_drone",
+      { id: "sense_priority_tuning", level: 4 },
+    ],
+    requiresOreDiscovery: "prism_crystal",
+    levelRecipeOverrides: [
+      { prism_crystal: 4, amethyst: 6, gold: 8 },
+      { void_ore: 12, prism_crystal: 18, amethyst: 22 },
+    ],
+    apply: (stats, level) => {
+      if (level > 0) {
+        stats.triangularFixUnlocked = true;
+        stats.triangularFixOreMemory = 1.5;
+        stats.triangularFixDronePriority = true;
+      }
+      if (level >= 2) {
+        stats.triangularFixGadgetDamageBonus = 0.25;
+        stats.triangularFixRangeBonus = 0.2;
+      }
+    },
+  }),
+  defineUpgrade({
+    id: "sense_earth_call",
+    name: "Ð—Ð¾Ð² Ð·ÐµÐ¼Ð»Ð¸",
+    description: "Ð§ÑƒÑ‚ÑŒÑ‘ Ð¿Ñ€Ð¾Ð½Ð¸ÐºÐ°ÐµÑ‚ ÑÐºÐ²Ð¾Ð·ÑŒ Ð»ÑŽÐ±Ñ‹Ðµ ÑÑ‚ÐµÐ½Ñ‹ Ð¸ Ð¿Ð¾Ð»ÑƒÑ‡Ð°ÐµÑ‚ +25% Ñ€Ð°Ð´Ð¸ÑƒÑÐ°.",
+    category: "sense",
+    icon: "â—‰",
+    maxLevel: 1,
+    baseCost: 1800,
+    growth: 1,
+    requires: [
+      "sense_clairvoyant_miner",
+      "sense_ghost_outline",
+      "sense_frequency_swing",
+      { id: "sense_triangular_fix", level: 2 },
+    ],
+    recipeOverride: { prism_crystal: 500, void_ore: 100, star_core: 30 },
+    apply: (stats, level) => {
+      if (level > 0) stats.senseThroughWalls = true;
+      add(stats, "senseRadiusMultiplier", 0.25 * level);
+    },
+  }),
+];
+
+const digUpgrades = [
+  defineUpgrade({
+    id: "dig_arm_swing",
+    name: "Ð Ð°Ð·Ð¼Ð°ÑˆÐ¸ÑÑ‚Ð°Ñ Ñ€ÑƒÐºÐ°",
+    description: "Ð”Ð°Ð»ÑŒÐ½Ð¾ÑÑ‚ÑŒ ÑƒÐ´Ð°Ñ€Ð° ÐºÐ¸Ñ€ÐºÐ¾Ð¹ +3,25 Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "dig",
+    icon: "â›",
+    maxLevel: 8,
+    effectLevelMultiplier: 1.5,
+    baseCost: 4,
+    growth: 1.29,
+    requires: ["core_first_descent"],
+    levelRecipeOverrides: [
+      null, null, null, null, null, null,
+      { gold: 4, amethyst: 2 },
+      { gold: 7, amethyst: 2 },
+    ],
+    apply: (stats, level) => add(stats, "digReach", (26 / 12) * level),
+  }),
+  defineUpgrade({
+    id: "dig_sweeping_arc",
+    name: "Ð‘Ð¾ÐºÐ¾Ð²Ð¾Ð¹ ÑÐºÐ¾Ð»",
+    description: "ÐšÐ°Ð¶Ð´Ñ‹Ð¹ 3-Ð¹/2-Ð¹/1-Ð¹ ÑƒÐ´Ð°Ñ€ Ñ‚Ð°ÐºÐ¶Ðµ Ð·Ð°Ð´ÐµÐ²Ð°ÐµÑ‚ Ð´Ð²Ð° Ð±Ð¾ÐºÐ¾Ð²Ñ‹Ñ… Ð±Ð»Ð¾ÐºÐ° Ð½Ð° 30/45/60% ÑÐ¸Ð»Ñ‹. Ð¡ Ð»Ð°Ð·ÐµÑ€Ð¾Ð¼ Ð²Ñ‹Ð¿ÑƒÑÐºÐ°ÐµÑ‚ Ð´Ð²Ð° ÐºÐ¾Ñ€Ð¾Ñ‚ÐºÐ¸Ñ… Ð±Ð¾ÐºÐ¾Ð²Ñ‹Ñ… Ð»ÑƒÑ‡Ð°.",
+    category: "dig",
+    icon: "âŒ’",
+    maxLevel: 3,
+    baseCost: 18,
+    growth: 1.55,
+    requires: ["dig_arm_swing"],
+    apply: (stats, level) => {
+      stats.sideChipEvery = [0, 3, 2, 1][level] || 3;
+      stats.sideChipTargets = 2;
+      stats.sideChipPower = [0, 0.3, 0.45, 0.6][level] || 0.3;
+      stats.sideChipLaserEnabled = true;
+    },
+  }),
+  defineUpgrade({
+    id: "dig_light_footwork",
+    name: "Ð›Ñ‘Ð³ÐºÐ°Ñ Ð¿Ð¾ÑÑ‚ÑƒÐ¿ÑŒ",
+    description: "Ð¡ÐºÐ¾Ñ€Ð¾ÑÑ‚ÑŒ Ð¿ÐµÑ€ÐµÐ¼ÐµÑ‰ÐµÐ½Ð¸Ñ +8% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ. ÐÐ° 2-Ð¼ ÑƒÑ€Ð¾Ð²Ð½Ðµ Ð¾Ñ‚ÐºÑ€Ñ‹Ð²Ð°ÐµÑ‚ ÑÑ‚Ð°Ñ€Ñ‚Ð¾Ð²Ñ‹Ð¹ Ñ€Ð°Ð·Ð³Ð¾Ð½: +40% ÑÐºÐ¾Ñ€Ð¾ÑÑ‚Ð¸ Ðº Ð¿ÐµÑ€Ð²Ð¾Ð¹ Ñ†ÐµÐ»Ð¸ ÑÐ¼ÐµÐ½Ñ‹ Ð´Ð¾ Ð¿ÐµÑ€Ð²Ð¾Ð³Ð¾ ÑƒÐ´Ð°Ñ€Ð°. ÐÐ° 4-Ð¼ ÑƒÑ€Ð¾Ð²Ð½Ðµ Ð½Ð¾Ð²Ð°Ñ Ñ€ÑƒÐ´Ð½Ð°Ñ Ñ†ÐµÐ»ÑŒ Ð´Ð°Ñ‘Ñ‚ Ñ€Ñ‹Ð²Ð¾Ðº +18% Ð½Ð° 0,65 ÑÐµÐºÑƒÐ½Ð´Ñ‹.",
+    category: "dig",
+    layoutLobe: "time",
+    icon: "âžœ",
+    maxLevel: 4,
+    effectLevelMultiplier: 1.5,
+    baseCost: 27,
+    growth: 1.35,
+    requires: ["dig_arm_swing"],
+    levelRecipeOverrides: [
+      null,
+      { silver: 3, amber: 4, iron: 5 },
+      { amber: 19, iron: 26, coal: 28 },
+      null,
+    ],
+    apply: (stats, level) => {
+      const rank = clamp(Math.round(level / 1.5), 1, 4);
+      add(stats, "moveSpeedMultiplier", (0.32 / 6) * level);
+      if (rank >= 2) stats.openingSprintMultiplier = 1.4;
+      if (rank >= 4) {
+        stats.targetRelaySprintMultiplier = 1.18;
+        stats.targetRelaySprintDuration = 0.65;
+      }
+    },
+  }),
+  defineUpgrade({
+    id: "dig_tunnel_step",
+    name: "Ð¢ÑƒÐ½Ð½ÐµÐ»ÑŒÐ½Ñ‹Ð¹ ÑˆÐ°Ð³",
+    description: "Ð’Ð¾ Ð²Ñ€ÐµÐ¼Ñ ÐºÐ¾Ð¿ÐºÐ¸ ÑˆÐ°Ñ…Ñ‚Ñ‘Ñ€ Ð´Ð²Ð¸Ð¶ÐµÑ‚ÑÑ Ð½Ð° 11,7% Ð±Ñ‹ÑÑ‚Ñ€ÐµÐµ Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "dig",
+    icon: "â‡¥",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 49,
+    growth: 1.43,
+    requires: ["dig_light_footwork"],
+    apply: (stats, level) => add(stats, "mineMoveMultiplier", 0.07 * level),
+  }),
+  defineUpgrade({
+    id: "dig_twin_stroke",
+    name: "Ð”Ð²Ð¾Ð¹Ð½Ð¾Ð¹ Ð·Ð°Ð¼Ð°Ñ…",
+    description: "Ð¨Ð°Ð½Ñ Ð½Ð°Ð½ÐµÑÑ‚Ð¸ Ð²Ñ‚Ð¾Ñ€Ð¾Ð¹ ÑƒÐ´Ð°Ñ€ +6,7% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "dig",
+    icon: "â‰»",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 61,
+    growth: 1.46,
+    requires: ["dig_sweeping_arc"],
+    apply: (stats, level) => add(stats, "multiHitChance", 0.04 * level),
+  }),
+  defineUpgrade({
+    id: "dig_precision_path",
+    name: "Ð£Ð´Ð°Ñ€ Ð½Ð° ÑÐ±Ð»Ð¸Ð¶ÐµÐ½Ð¸Ð¸",
+    description: "ÐŸÐ¾ÑÐ»Ðµ 0,9 ÑÐµÐºÑƒÐ½Ð´Ñ‹ Ð¿ÑƒÑ‚Ð¸ Ð¿ÐµÑ€Ð²Ñ‹Ð¹ ÑƒÐ´Ð°Ñ€ Ð¿Ð¾Ð»ÑƒÑ‡Ð°ÐµÑ‚ +50/75/100% ÑÐ¸Ð»Ñ‹ Ð¸ ÑÐºÐ°Ð»Ñ‹Ð²Ð°ÐµÑ‚ Ð±Ð¾Ðº Ð¼ÐµÑˆÐ°ÑŽÑ‰ÐµÐ³Ð¾ Ð±Ð»Ð¾ÐºÐ° Ð½Ð° 25/35/45%. Ð¡Ð±Ñ€Ð°ÑÑ‹Ð²Ð°ÐµÑ‚ÑÑ Ð¿Ñ€Ð¸ ÑÐ¼ÐµÐ½Ðµ Ñ†ÐµÐ»Ð¸.",
+    category: "dig",
+    icon: "âŒ–",
+    maxLevel: 3,
+    baseCost: 73,
+    growth: 1.58,
+    requires: [{ id: "dig_arm_swing", level: 4 }],
+    apply: (stats, level) => {
+      stats.approachStrikeTravelTime = 0.9;
+      stats.approachStrikePower = [0, 0.5, 0.75, 1][level] || 0.5;
+      stats.approachStrikeSideChipPower = [0, 0.25, 0.35, 0.45][level] || 0.25;
+    },
+  }),
+  defineUpgrade({
+    id: "dig_reach_training",
+    name: "Ð¢Ñ€ÐµÐ½Ð¸Ñ€Ð¾Ð²ÐºÐ° Ð·Ð°Ñ…Ð²Ð°Ñ‚Ð°",
+    description: "Ð˜Ñ‚Ð¾Ð³Ð¾Ð²Ð°Ñ Ð´Ð°Ð»ÑŒÐ½Ð¾ÑÑ‚ÑŒ ÐºÐ¾Ð¿ÐºÐ¸ +3,3% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "dig",
+    icon: "â†",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 92,
+    growth: 1.47,
+    requires: [{ id: "dig_arm_swing", level: 4 }],
+    apply: (stats, level) => add(stats, "digReachMultiplier", 0.02 * level),
+  }),
+  defineUpgrade({
+    id: "dig_wall_bite",
+    name: "Ð£ÐºÑƒÑ ÑÑ‚ÐµÐ½Ñ‹",
+    description: "ÐžÑ‚ÐºÑ€Ñ‹Ð²Ð°ÐµÑ‚ Ð¿Ð»Ð¾Ñ‰Ð°Ð´Ð½ÑƒÑŽ ÐºÐ¾Ð¿ÐºÑƒ; Ñ€Ð°Ð´Ð¸ÑƒÑ ÑƒÐ´Ð°Ñ€Ð° +12 Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "dig",
+    icon: "â—–",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 118,
+    growth: 1.45,
+    requires: ["dig_twin_stroke"],
+    firstRecipeOverride: { iron: 8, coal: 6 },
+    apply: (stats, level) => {
+      if (level > 0) stats.areaMiningUnlocked = true;
+      add(stats, "splashRadius", 3.6 * level);
+      add(stats, "digRadius", 7.2 * level);
+      add(stats, "splashDamage", 0.03 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "dig_excavator_stance",
+    name: "Ð¡Ñ‚Ð¾Ð¹ÐºÐ° ÑÐºÑÐºÐ°Ð²Ð°Ñ‚Ð¾Ñ€Ð°",
+    description: "Ð”Ð°Ð»ÑŒÐ½Ð¾ÑÑ‚ÑŒ +6 Ð¸ ÑÐºÐ¾Ñ€Ð¾ÑÑ‚ÑŒ ÑƒÐ´Ð°Ñ€Ð¾Ð² +5% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "dig",
+    icon: "âš’",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 205,
+    growth: 1.5,
+    requires: ["dig_reach_training", { id: "tools_balanced_handle", level: 4 }],
+    apply: (stats, level) => {
+      add(stats, "digReach", 3.6 * level);
+      add(stats, "digSpeedMultiplier", 0.03 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "dig_stone_dance",
+    name: "Ð¢Ð°Ð½ÐµÑ† ÑÑ€ÐµÐ´Ð¸ ÐºÐ°Ð¼Ð½ÐµÐ¹",
+    description: "Ð¡ÐºÐ¾Ñ€Ð¾ÑÑ‚ÑŒ Ð´Ð²Ð¸Ð¶ÐµÐ½Ð¸Ñ +10%, ÑÐºÐ¾Ñ€Ð¾ÑÑ‚ÑŒ Ð½Ð°Ð²ÐµÐ´ÐµÐ½Ð¸Ñ +13,3% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "dig",
+    icon: "â™¢",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 240,
+    growth: 1.49,
+    requires: ["dig_precision_path", "dig_tunnel_step"],
+    apply: (stats, level) => {
+      add(stats, "moveSpeedMultiplier", 0.06 * level);
+      add(stats, "aimTurnSpeed", 0.08 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "dig_master_reach",
+    name: "ÐœÐ°ÑÑ‚ÐµÑ€ÑÐºÐ°Ñ Ð´Ð¾ÑÑÐ³Ð°ÐµÐ¼Ð¾ÑÑ‚ÑŒ",
+    description: "Ð˜Ñ‚Ð¾Ð³Ð¾Ð²Ð°Ñ Ð´Ð°Ð»ÑŒÐ½Ð¾ÑÑ‚ÑŒ ÐºÐ¾Ð¿ÐºÐ¸ +5% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "dig",
+    icon: "â‡€",
+    maxLevel: 3,
+    effectLevelMultiplier: 4 / 3,
+    baseCost: 370,
+    growth: 1.57,
+    requires: ["dig_excavator_stance"],
+    apply: (stats, level) => add(stats, "digReachMultiplier", 0.0375 * level),
+  }),
+  defineUpgrade({
+    id: "dig_omni_swing",
+    name: "Ð£Ð´Ð°Ñ€Ð½Ð°Ñ Ð²Ð¾Ð»Ð½Ð°",
+    description: "ÐšÐ°Ð¶Ð´Ñ‹Ðµ 6/5/4 Ñ€Ð°Ð·Ñ€ÑƒÑˆÐµÐ½Ð½Ñ‹Ñ… Ð±Ð»Ð¾ÐºÐ° Ð»ÑŽÐ±Ð¾Ð¹ Ð¸Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚ ÑÐ¾Ð·Ð´Ð°Ñ‘Ñ‚ ÑƒÐ´Ð°Ñ€Ð½ÑƒÑŽ Ð²Ð¾Ð»Ð½Ñƒ Ñ€Ð°Ð´Ð¸ÑƒÑÐ¾Ð¼ 1/1,25/1,5 Ð±Ð»Ð¾ÐºÐ° Ð¸ ÑÐ¸Ð»Ð¾Ð¹ 35/50/65%.",
+    category: "dig",
+    icon: "âŸ³",
+    maxLevel: 3,
+    baseCost: 210,
+    growth: 1.82,
+    requires: ["dig_sweeping_arc", "power_furious_swing"],
+    firstRecipeOverride: { iron: 4, amber: 1, silver: 4 },
+    apply: (stats, level) => {
+      stats.impactWaveEvery = [0, 6, 5, 4][level] || 6;
+      stats.impactWaveRadiusTiles = [0, 1, 1.25, 1.5][level] || 1;
+      stats.impactWavePower = [0, 0.35, 0.5, 0.65][level] || 0.35;
+    },
+  }),
+  defineUpgrade({
+    id: "dig_least_resistance",
+    name: "Ð¢Ñ€Ð¾Ð¿Ð° Ð½Ð°Ð¸Ð¼ÐµÐ½ÑŒÑˆÐµÐ³Ð¾ ÑÐ¾Ð¿Ñ€Ð¾Ñ‚Ð¸Ð²Ð»ÐµÐ½Ð¸Ñ",
+    description: "ÐÐ²Ñ‚Ð¾Ð¼Ð°Ð¹Ð½ÐµÑ€ ÑÑ€Ð°Ð²Ð½Ð¸Ð²Ð°ÐµÑ‚ Ð²Ñ€ÐµÐ¼Ñ Ð¿Ñ€ÑÐ¼Ð¾Ð³Ð¾ Ð¿Ñ€Ð¾Ð±Ð¸Ð²Ð°Ð½Ð¸Ñ Ð¸ Ð¾Ð±Ñ…Ð¾Ð´Ð° Ð¿Ð»Ð¾Ñ‚Ð½Ð¾Ð¹ Ð¿Ð¾Ñ€Ð¾Ð´Ñ‹, Ð·Ð°Ñ‚ÐµÐ¼ Ð²Ñ‹Ð±Ð¸Ñ€Ð°ÐµÑ‚ Ð±Ð¾Ð»ÐµÐµ Ð±Ñ‹ÑÑ‚Ñ€Ñ‹Ð¹ Ð¼Ð°Ñ€ÑˆÑ€ÑƒÑ‚.",
+    category: "dig",
+    icon: "âŒ",
+    maxLevel: 1,
+    baseCost: 150,
+    growth: 1,
+    requires: ["dig_sweeping_arc", "sense_echo_pulse"],
+    recipeOverride: { copper: 6, coal: 6, iron: 1 },
+    apply: (stats, level) => {
+      if (level > 0) stats.leastResistancePathing = true;
+    },
+  }),
+  defineUpgrade({
+    id: "dig_mine_lift",
+    name: "Ð¨Ð°Ñ…Ñ‚Ð½Ñ‹Ð¹ Ð»Ð¸Ñ„Ñ‚",
+    description: "ÐÐ°Ñ‡Ð¸Ð½Ð°ÐµÑ‚ Ð·Ð°Ð±ÐµÐ³ Ð½Ð° 15/30/45% Ð¾Ñ‚ Ñ€ÐµÐºÐ¾Ñ€Ð´Ð½Ð¾Ð¹ Ð³Ð»ÑƒÐ±Ð¸Ð½Ñ‹, Ð½Ð¾ Ð½Ðµ Ð½Ð¸Ð¶Ðµ ÑƒÐ¶Ðµ Ð¾ÑÐ²Ð¾ÐµÐ½Ð½Ð¾Ð³Ð¾ Ñ€ÑƒÐ´Ð½Ð¾Ð³Ð¾ ÑÐ»Ð¾Ñ.",
+    category: "dig",
+    icon: "â‡“",
+    maxLevel: 3,
+    baseCost: 520,
+    growth: 1.82,
+    requires: [
+      "dig_tunnel_step",
+      { id: "time_clockwork_heart", level: 1 },
+      "tools_pneumatic_pick",
+    ],
+    levelRecipeOverrides: [
+      { silver: 3, amber: 5 },
+      { amethyst: 8, gold: 12, silver: 18 },
+      { void_ore: 6, prism_crystal: 10, amethyst: 16 },
+    ],
+    apply: (stats, level) => {
+      stats.mineLiftRecordDepthRatio = [0, 0.15, 0.3, 0.45][level] || 0;
+    },
+  }),
+  defineUpgrade({
+    id: "dig_quarry_presence",
+    name: "ÐšÐ°Ñ€ÑŒÐµÑ€Ð½Ñ‹Ð¹ Ñ‚ÐµÐ¼Ð¿",
+    description: "Ð¢Ñ€Ð¸ Ð±Ñ‹ÑÑ‚Ñ€Ñ‹Ñ… Ñ€Ð°Ð·Ñ€ÑƒÑˆÐµÐ½Ð¸Ñ Ð²ÐºÐ»ÑŽÑ‡Ð°ÑŽÑ‚ ÐºÐ°Ñ€ÑŒÐµÑ€Ð½Ñ‹Ð¹ Ñ€ÐµÐ¶Ð¸Ð¼ Ð½Ð° 2,5 ÑÐµÐºÑƒÐ½Ð´Ñ‹: Ð´Ð²Ð¸Ð¶ÐµÐ½Ð¸Ðµ Ð¸ ÐºÐ¾Ð¿ÐºÐ° +25%, ÐºÐ°Ð¶Ð´Ð¾Ðµ Ñ€Ð°Ð·Ñ€ÑƒÑˆÐµÐ½Ð¸Ðµ Ñ€Ð°ÑÐºÐ°Ð»Ñ‹Ð²Ð°ÐµÑ‚ Ð±Ð¾ÐºÐ¾Ð²Ñ‹Ðµ Ð±Ð»Ð¾ÐºÐ¸ Ð½Ð° 40% ÑÐ¸Ð»Ñ‹.",
+    category: "dig",
+    icon: "â—¯",
+    maxLevel: 1,
+    baseCost: 1750,
+    growth: 1,
+    requires: [
+      "dig_omni_swing",
+      "dig_stone_dance",
+      { id: "dig_mine_lift", level: 2 },
+    ],
+    recipeOverride: { prism_crystal: 200, void_ore: 80, star_core: 330 },
+    apply: (stats, level) => {
+      stats.quarryModeRequiredBreaks = 3;
+      stats.quarryModeWindow = 1.2;
+      stats.quarryModeDuration = 2.5;
+      add(stats, "quarryModeMoveSpeedBonus", 0.25 * level);
+      add(stats, "quarryModeDigSpeedBonus", 0.25 * level);
+      add(stats, "quarryModeSideFracturePower", 0.4 * level);
+    },
+  }),
+];
+
+const powerUpgrades = [
+  defineUpgrade({
+    id: "power_sharpened_edge",
+    name: "ÐžÑÑ‚Ñ€Ð¾Ðµ Ð¶Ð°Ð»Ð¾",
+    description: "Ð¡Ð¸Ð»Ð° ÐºÐ¸Ñ€ÐºÐ¸ +1,0125 Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "power",
+    icon: "â—†",
+    maxLevel: 8,
+    effectLevelMultiplier: 1.5,
+    baseCost: 5,
+    growth: 1.3,
+    requires: ["core_first_descent"],
+    levelRecipeOverrides: [
+      null, null, null, null, null, null,
+      { gold: 5, amethyst: 3 },
+      { gold: 9, amethyst: 3 },
+    ],
+    apply: (stats, level) => add(stats, "pickPower", 0.675 * level),
+  }),
+  defineUpgrade({
+    id: "power_tempered_steel",
+    name: "Ð—Ð°ÐºÐ°Ð»Ñ‘Ð½Ð½Ð°Ñ ÑÑ‚Ð°Ð»ÑŒ",
+    description: "Ð˜Ð³Ð½Ð¾Ñ€Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¸Ðµ Ð¿Ð»Ð¾Ñ‚Ð½Ð¾ÑÑ‚Ð¸ Ñ€ÑƒÐ´Ñ‹ +0,7 Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "power",
+    icon: "â–°",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 24,
+    growth: 1.41,
+    requires: ["power_sharpened_edge"],
+    apply: (stats, level) => add(stats, "hardnessPierce", 0.42 * level),
+  }),
+  defineUpgrade({
+    id: "power_furious_swing",
+    name: "Ð¯Ñ€Ð¾ÑÑ‚Ð½Ñ‹Ð¹ Ð²Ð·Ð¼Ð°Ñ…",
+    description: "Ð¨Ð°Ð½Ñ ÐºÑ€Ð¸Ñ‚Ð¸Ñ‡ÐµÑÐºÐ¾Ð³Ð¾ ÑƒÐ´Ð°Ñ€Ð° +3,75% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "power",
+    layoutLobe: "fortune",
+    icon: "âœ¦",
+    maxLevel: 4,
+    effectLevelMultiplier: 1.5,
+    baseCost: 37,
+    growth: 1.44,
+    requires: [{ id: "power_sharpened_edge", level: 4 }],
+    apply: (stats, level) => add(stats, "critChance", 0.025 * level),
+  }),
+  defineUpgrade({
+    id: "power_fault_finder",
+    name: "Ð˜ÑÐºÐ°Ñ‚ÐµÐ»ÑŒ Ñ‚Ñ€ÐµÑ‰Ð¸Ð½",
+    description: "ÐœÐ½Ð¾Ð¶Ð¸Ñ‚ÐµÐ»ÑŒ ÐºÑ€Ð¸Ñ‚Ð¸Ñ‡ÐµÑÐºÐ¾Ð³Ð¾ ÑƒÐ´Ð°Ñ€Ð° +0,375 Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ. Ð¡ 3-Ð³Ð¾ ÑƒÑ€Ð¾Ð²Ð½Ñ ÐºÐ°Ð¶Ð´Ñ‹Ð¹ 18-Ð¹ ÑƒÐ´Ð°Ñ€ Ð³Ð°Ñ€Ð°Ð½Ñ‚Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð½Ð¾ Ð½Ð°Ñ…Ð¾Ð´Ð¸Ñ‚ Ñ‚Ñ€ÐµÑ‰Ð¸Ð½Ñƒ Ð¸ ÑÑ‚Ð°Ð½Ð¾Ð²Ð¸Ñ‚ÑÑ ÐºÑ€Ð¸Ñ‚Ð¸Ñ‡ÐµÑÐºÐ¸Ð¼; Ð½Ð° 4-Ð¼ â€” ÐºÐ°Ð¶Ð´Ñ‹Ð¹ 15-Ð¹.",
+    category: "power",
+    icon: "âŒ",
+    maxLevel: 4,
+    effectLevelMultiplier: 1.5,
+    baseCost: 52,
+    growth: 1.45,
+    requires: ["power_tempered_steel"],
+    apply: (stats, level) => {
+      const rank = clamp(Math.round(level / 1.5), 1, 4);
+      add(stats, "critMultiplier", 0.25 * level);
+      if (rank >= 3) stats.faultFinderCadenceEvery = rank >= 4 ? 15 : 18;
+    },
+  }),
+  defineUpgrade({
+    id: "power_shatterpoint",
+    name: "Ð¢Ð¾Ñ‡ÐºÐ° Ñ€Ð°ÑÐºÐ¾Ð»Ð°",
+    description: "Ð Ð°Ð·Ñ€ÑƒÑˆÐµÐ½Ð½Ñ‹Ð¹ Ð±Ð»Ð¾Ðº Ñ ÑˆÐ°Ð½ÑÐ¾Ð¼ 8,3% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ Ñ€Ð°Ð½Ð¸Ñ‚ ÑÐ¾ÑÐµÐ´ÐµÐ¹.",
+    category: "power",
+    icon: "âœ£",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 78,
+    growth: 1.48,
+    requires: ["power_furious_swing"],
+    apply: (stats, level) => {
+      add(stats, "breakSplashChance", 0.05 * level);
+      add(stats, "breakSplashPower", 0.04 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "power_adamant_grip",
+    name: "ÐÐ´Ð°Ð¼Ð°Ð½Ñ‚Ð¾Ð²Ð°Ñ Ñ…Ð²Ð°Ñ‚ÐºÐ°",
+    description: "Ð˜Ñ‚Ð¾Ð³Ð¾Ð²Ð°Ñ ÑÐ¸Ð»Ð° ÐºÐ¸Ñ€ÐºÐ¸ +10% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "power",
+    icon: "âœŠ",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 96,
+    growth: 1.5,
+    requires: [{ id: "power_sharpened_edge", level: 4 }],
+    apply: (stats, level) => add(stats, "pickPowerMultiplier", 0.06 * level),
+  }),
+  defineUpgrade({
+    id: "power_momentum",
+    name: "ÐÐ°ÐºÐ¾Ð¿Ð»ÐµÐ½Ð½Ñ‹Ð¹ Ð¸Ð¼Ð¿ÑƒÐ»ÑŒÑ",
+    description: "ÐšÐ°Ð¶Ð´Ñ‹Ð¹ Ð±Ñ‹ÑÑ‚Ñ€Ñ‹Ð¹ ÑƒÐ´Ð°Ñ€ Ð¿Ð¾ Ð¾Ð´Ð½Ð¾Ð¹ Ð¶Ð¸Ð»Ðµ Ð´Ð¾Ð±Ð°Ð²Ð»ÑÐµÑ‚ 3,3% ÑÐ¸Ð»Ñ‹ Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "power",
+    icon: "âž¤",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 125,
+    growth: 1.47,
+    requires: ["power_furious_swing"],
+    firstRecipeOverride: { silver: 3 },
+    apply: (stats, level) => {
+      add(stats, "streakPower", 0.02 * level);
+      add(stats, "streakCap", 1 * level);
+      add(stats, "comboWindow", 0.06 * level);
+      add(stats, "comboMultiplier", 0.03 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "power_diamond_tip",
+    name: "ÐÐ»Ð¼Ð°Ð·Ð½Ñ‹Ð¹ Ð½Ð°ÐºÐ¾Ð½ÐµÑ‡Ð½Ð¸Ðº",
+    description: "Ð¡Ð¸Ð»Ð° +1,35 Ð¸ Ð¿Ñ€Ð¾Ð±Ð¸Ð²Ð°Ð½Ð¸Ðµ Ð¿Ð»Ð¾Ñ‚Ð½Ð¾ÑÑ‚Ð¸ +0,525 Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "power",
+    icon: "â—‡",
+    maxLevel: 4,
+    effectLevelMultiplier: 1.5,
+    baseCost: 105,
+    growth: 1.78,
+    requires: ["power_tempered_steel"],
+    firstRecipeOverride: { silver: 4, amber: 4, iron: 6 },
+    apply: (stats, level) => {
+      add(stats, "pickPower", 0.9 * level);
+      add(stats, "hardnessPierce", 0.35 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "power_tectonic_blow",
+    name: "Ð¢ÐµÐºÑ‚Ð¾Ð½Ð¸Ñ‡ÐµÑÐºÐ¸Ð¹ ÑƒÐ´Ð°Ñ€",
+    description: "Ð£Ñ€Ð¾Ð½ Ð¿Ð¾ Ð¿Ð»Ð¾Ñ‰Ð°Ð´Ð¸ Ð¸ Ð¿Ð»Ð¾Ñ‚Ð½Ð¾Ð¹ Ñ€ÑƒÐ´Ðµ +13,3% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "power",
+    icon: "â™’",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 230,
+    growth: 1.53,
+    requires: ["power_shatterpoint"],
+    apply: (stats, level) => {
+      add(stats, "splashDamage", 0.08 * level);
+      add(stats, "oreDamageBonus", 0.08 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "power_overcharge_strike",
+    name: "ÐŸÐµÑ€ÐµÐ³Ñ€ÑƒÐ¶ÐµÐ½Ð½Ñ‹Ð¹ ÑƒÐ´Ð°Ñ€",
+    description: "ÐšÐ°Ð¶Ð´Ñ‹Ð¹ Ð²Ð¾ÑÑŒÐ¼Ð¾Ð¹ ÑƒÐ´Ð°Ñ€ Ð¿Ð¾Ð»ÑƒÑ‡Ð°ÐµÑ‚ +46,7% ÑÐ¸Ð»Ñ‹ Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "power",
+    icon: "ÏŸ",
+    maxLevel: 3,
+    effectLevelMultiplier: 4 / 3,
+    baseCost: 310,
+    growth: 1.58,
+    requires: ["power_momentum", "power_diamond_tip"],
+    apply: (stats, level) => add(stats, "chargedHitPower", 0.35 * level),
+  }),
+  defineUpgrade({
+    id: "power_geologist_force",
+    name: "Ð¡Ð¸Ð»Ð° Ð³ÐµÐ¾Ð»Ð¾Ð³Ð°",
+    description: "Ð£Ñ€Ð¾Ð½ Ð¿Ð¾ Ñ€ÐµÐ´ÐºÐ¾Ð¹ Ñ€ÑƒÐ´Ðµ +20% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "power",
+    icon: "â–¦",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 360,
+    growth: 1.55,
+    requires: ["power_diamond_tip"],
+    apply: (stats, level) => add(stats, "rareOreDamageBonus", 0.12 * level),
+  }),
+  defineUpgrade({
+    id: "power_corebreaker",
+    name: "ÐšÑ€ÑƒÑˆÐ¸Ñ‚ÐµÐ»ÑŒ ÑÐ´ÐµÑ€",
+    description: "Ð˜Ñ‚Ð¾Ð³Ð¾Ð²Ð°Ñ ÑÐ¸Ð»Ð° +13,3%, Ð¿Ñ€Ð¾Ð±Ð¸Ð²Ð°Ð½Ð¸Ðµ +0,93 Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "power",
+    icon: "â˜„",
+    maxLevel: 3,
+    effectLevelMultiplier: 4 / 3,
+    baseCost: 520,
+    growth: 1.62,
+    requires: ["power_tectonic_blow", "power_geologist_force"],
+    levelRecipeOverrides: [
+      { gold: 11, silver: 13 },
+      { amethyst: 34, gold: 72, silver: 1 },
+      { amethyst: 69, gold: 147 },
+    ],
+    apply: (stats, level) => {
+      add(stats, "pickPowerMultiplier", 0.1 * level);
+      add(stats, "hardnessPierce", 0.7 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "power_one_hit_legend",
+    name: "Ð›ÐµÐ³ÐµÐ½Ð´Ð° Ð¾Ð´Ð½Ð¾Ð³Ð¾ ÑƒÐ´Ð°Ñ€Ð°",
+    description: "ÐšÑ€Ð¸Ñ‚Ñ‹ ÑÐ¸Ð»ÑŒÐ½ÐµÐµ Ð½Ð° 0,5 Ð¸ Ñ ÑˆÐ°Ð½ÑÐ¾Ð¼ 4% Ð¿ÐµÑ€ÐµÐ½Ð¾ÑÑÑ‚ Ð»Ð¸ÑˆÐ½Ð¸Ð¹ ÑƒÑ€Ð¾Ð½ Ð´Ð°Ð»ÑŒÑˆÐµ.",
+    category: "power",
+    icon: "â˜…",
+    maxLevel: 3,
+    baseCost: 790,
+    growth: 1.68,
+    requires: ["power_overcharge_strike", "power_corebreaker"],
+    levelRecipeOverrides: [
+      { gold: 13, silver: 26 },
+      { amethyst: 19, gold: 39 },
+      { amethyst: 42, gold: 88 },
+    ],
+    apply: (stats, level) => {
+      add(stats, "critMultiplier", 0.5 * level);
+      add(stats, "overkillCarry", 0.04 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "power_sample_calibration",
+    name: "ÐšÐ°Ð»Ð¸Ð±Ñ€Ð¾Ð²ÐºÐ° Ð¿Ð¾ Ð¾Ð±Ñ€Ð°Ð·Ñ†Ñƒ",
+    description: "Ð­Ñ„Ñ„ÐµÐºÑ‚Ð¸Ð²Ð½Ð°Ñ Ð¿Ð»Ð¾Ñ‚Ð½Ð¾ÑÑ‚ÑŒ Ð²Ñ‹Ð±Ñ€Ð°Ð½Ð½Ð¾Ð¹ Ñ‡ÐµÑ€ÐµÐ· Ñ€ÑƒÐ´Ð½Ñ‹Ð¹ Ñ„Ð¾ÐºÑƒÑ Ñ€ÑƒÐ´Ñ‹ ÑƒÐ¼ÐµÐ½ÑŒÑˆÐ°ÐµÑ‚ÑÑ Ð½Ð° 10,7% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ; ÑÐ¼ÐµÐ½Ð° Ñ„Ð¾ÐºÑƒÑÐ° Ð¼ÐµÐ½ÑÐµÑ‚ ÑÐ¿ÐµÑ†Ð¸Ð°Ð»Ð¸Ð·Ð°Ñ†Ð¸ÑŽ.",
+    category: "power",
+    icon: "â—‡",
+    maxLevel: 3,
+    effectLevelMultiplier: 4 / 3,
+    baseCost: 310,
+    growth: 1.84,
+    requires: [
+      "tools_pneumatic_pick",
+      "sense_ore_focus",
+      "sense_second_fix",
+      { id: "sense_priority_tuning", level: 2 },
+    ],
+    levelRecipeOverrides: [
+      { amethyst: 5, gold: 6, silver: 8 },
+      { gold: 60, silver: 65 },
+      { gold: 139, silver: 150 },
+    ],
+    apply: (stats, level) => add(stats, "focusedOreHardnessReduction", 0.08 * level),
+  }),
+  defineUpgrade({
+    id: "power_mountain_splitter",
+    name: "Ð›Ð¸Ð½Ð¸Ñ Ñ€Ð°Ð·Ð»Ð¾Ð¼Ð°",
+    description: "ÐšÑ€Ð¸Ñ‚Ð¸Ñ‡ÐµÑÐºÐ¾Ðµ Ñ€Ð°Ð·Ñ€ÑƒÑˆÐµÐ½Ð¸Ðµ Ð¿ÐµÑ€ÐµÐ½Ð¾ÑÐ¸Ñ‚ 75% Ñ€ÐµÐ°Ð»ÑŒÐ½Ð¾Ð³Ð¾ Ð»Ð¸ÑˆÐ½ÐµÐ³Ð¾ ÑƒÑ€Ð¾Ð½Ð° Ñ‡ÐµÑ€ÐµÐ· Ñ‡ÐµÑ‚Ñ‹Ñ€Ðµ Ð±Ð»Ð¾ÐºÐ° Ð¿Ð¾ Ð½Ð°Ð¿Ñ€Ð°Ð²Ð»ÐµÐ½Ð¸ÑŽ ÑƒÐ´Ð°Ñ€Ð°. ÐšÐ°Ð¶Ð´Ð¾Ðµ Ð½Ð¾Ð²Ð¾Ðµ Ñ€Ð°Ð·Ñ€ÑƒÑˆÐµÐ½Ð¸Ðµ Ð¿Ñ€Ð¾Ð´Ð»ÐµÐ²Ð°ÐµÑ‚ Ñ€Ð°Ð·Ð»Ð¾Ð¼ ÐµÑ‰Ñ‘ Ð½Ð° Ð±Ð»Ð¾Ðº.",
+    category: "power",
+    icon: "âœ·",
+    maxLevel: 1,
+    baseCost: 2200,
+    growth: 1,
+    requires: [
+      "power_one_hit_legend",
+      "power_sample_calibration",
+      { id: "power_corebreaker", level: 2 },
+    ],
+    recipeOverride: { prism_crystal: 550, void_ore: 200, star_core: 200 },
+    apply: (stats, level) => {
+      stats.faultLineEnabled = level > 0;
+      stats.faultLineMaxBlocks = 4;
+      stats.faultLinePower = 0.75;
+      stats.faultLineExtendOnBreak = true;
+    },
+  }),
+];
+
+// Kept out of the exported catalog only long enough to make save migration
+// readable in game.js. The live tree uses the four condensed nodes below.
+const legacyTimeUpgrades = [
+  defineUpgrade({
+    id: "time_extra_breath",
+    name: "Ð›Ð¸ÑˆÐ½Ð¸Ð¹ Ð²Ð´Ð¾Ñ…",
+    description: "ÐÐ°Ñ‡Ð°Ð»ÑŒÐ½Ñ‹Ð¹ Ñ‚Ð°Ð¹Ð¼ÐµÑ€ +0,25 ÑÐµÐº Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "time",
+    icon: "â—·",
+    maxLevel: 5,
+    baseCost: 6,
+    growth: 1.38,
+    requires: ["core_first_descent"],
+    apply: (stats, level) => add(stats, "runDuration", 0.25 * level),
+  }),
+  defineUpgrade({
+    id: "time_wound_spring",
+    name: "Ð—Ð°Ð²ÐµÐ´Ñ‘Ð½Ð½Ð°Ñ Ð¿Ñ€ÑƒÐ¶Ð¸Ð½Ð°",
+    description: "ÐÐ°Ñ‡Ð°Ð»ÑŒÐ½Ñ‹Ð¹ Ñ‚Ð°Ð¹Ð¼ÐµÑ€ +0,35 ÑÐµÐº Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "time",
+    icon: "â†»",
+    maxLevel: 5,
+    baseCost: 20,
+    growth: 1.43,
+    requires: ["time_extra_breath"],
+    apply: (stats, level) => add(stats, "runDuration", 0.35 * level),
+  }),
+  defineUpgrade({
+    id: "time_sand_reserve",
+    name: "Ð—Ð°Ð¿Ð°Ñ Ð¿ÐµÑÐºÐ°",
+    description: "ÐÐ°Ñ‡Ð°Ð»ÑŒÐ½Ñ‹Ð¹ Ñ‚Ð°Ð¹Ð¼ÐµÑ€ +0,5 ÑÐµÐº Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "time",
+    icon: "âŒ›",
+    maxLevel: 4,
+    baseCost: 36,
+    growth: 1.48,
+    requires: ["time_extra_breath"],
+    apply: (stats, level) => add(stats, "runDuration", 0.5 * level),
+  }),
+  defineUpgrade({
+    id: "time_stolen_second",
+    name: "Ð£ÐºÑ€Ð°Ð´ÐµÐ½Ð½Ð°Ñ ÑÐµÐºÑƒÐ½Ð´Ð°",
+    description: "ÐÐ°Ñ‡Ð°Ð»ÑŒÐ½Ñ‹Ð¹ Ñ‚Ð°Ð¹Ð¼ÐµÑ€ +0,75 ÑÐµÐº Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "time",
+    icon: "â—´",
+    maxLevel: 3,
+    baseCost: 64,
+    growth: 1.53,
+    requires: ["time_wound_spring"],
+    apply: (stats, level) => add(stats, "runDuration", 0.75 * level),
+  }),
+  defineUpgrade({
+    id: "time_clockwork_heart",
+    name: "Ð—Ð°Ð²Ð¾Ð´Ð½Ð¾Ðµ ÑÐµÑ€Ð´Ñ†Ðµ",
+    description: "ÐÐ°Ñ‡Ð°Ð»ÑŒÐ½Ñ‹Ð¹ Ñ‚Ð°Ð¹Ð¼ÐµÑ€ +0,6 ÑÐµÐº Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "time",
+    icon: "â™¥",
+    maxLevel: 5,
+    baseCost: 89,
+    growth: 1.47,
+    requires: ["time_sand_reserve"],
+    apply: (stats, level) => add(stats, "runDuration", 0.6 * level),
+  }),
+  defineUpgrade({
+    id: "time_capsule",
+    name: "ÐšÐ°Ð¿ÑÑƒÐ»Ð° Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸",
+    description: "ÐÐ°Ñ‡Ð°Ð»ÑŒÐ½Ñ‹Ð¹ Ñ‚Ð°Ð¹Ð¼ÐµÑ€ +1 ÑÐµÐº Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "time",
+    icon: "â¬¡",
+    maxLevel: 3,
+    baseCost: 145,
+    growth: 1.57,
+    requires: ["time_stolen_second", "time_clockwork_heart"],
+    apply: (stats, level) => add(stats, "runDuration", 1 * level),
+  }),
+  defineUpgrade({
+    id: "time_overtime_protocol",
+    name: "ÐŸÑ€Ð¾Ñ‚Ð¾ÐºÐ¾Ð» ÑÐ²ÐµÑ€Ñ…ÑƒÑ€Ð¾Ñ‡Ð½Ñ‹Ñ…",
+    description: "ÐÐ°Ñ‡Ð°Ð»ÑŒÐ½Ñ‹Ð¹ Ñ‚Ð°Ð¹Ð¼ÐµÑ€ +1,25 ÑÐµÐº Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "time",
+    icon: "+",
+    maxLevel: 3,
+    baseCost: 235,
+    growth: 1.61,
+    requires: ["time_capsule"],
+    apply: (stats, level) => add(stats, "runDuration", 1.25 * level),
+  }),
+  defineUpgrade({
+    id: "time_frozen_moment",
+    name: "Ð—Ð°Ð¼Ñ‘Ñ€Ð·ÑˆÐ¸Ð¹ Ð¼Ð¸Ð³",
+    description: "Ð’ Ð½Ð°Ñ‡Ð°Ð»Ðµ Ð·Ð°Ð±ÐµÐ³Ð° Ñ‚Ð°Ð¹Ð¼ÐµÑ€ Ð½Ðµ ÑƒÐ±Ñ‹Ð²Ð°ÐµÑ‚ 0,4 ÑÐµÐº Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "time",
+    icon: "â„",
+    maxLevel: 4,
+    baseCost: 120,
+    growth: 1.51,
+    requires: ["time_clockwork_heart"],
+    apply: (stats, level) => add(stats, "startTimeFreeze", 0.4 * level),
+  }),
+  defineUpgrade({
+    id: "time_aftershock_clock",
+    name: "Ð§Ð°ÑÑ‹ Ð¾Ñ‚Ð´Ð°Ñ‡Ð¸",
+    description: "Ð Ð°Ð·Ñ€ÑƒÑˆÐµÐ½Ð¸Ðµ Ñ€ÑƒÐ´Ñ‹ Ñ ÑˆÐ°Ð½ÑÐ¾Ð¼ 2% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ Ð²Ð¾Ð·Ð²Ñ€Ð°Ñ‰Ð°ÐµÑ‚ 0,12 ÑÐµÐº.",
+    category: "time",
+    icon: "â—¶",
+    maxLevel: 5,
+    baseCost: 180,
+    growth: 1.55,
+    requires: ["time_frozen_moment"],
+    apply: (stats, level) => {
+      add(stats, "timeRefundChance", 0.02 * level);
+      add(stats, "timeRefundAmount", 0.12 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "time_last_second",
+    name: "ÐŸÐ¾ÑÐ»ÐµÐ´Ð½ÑÑ ÑÐµÐºÑƒÐ½Ð´Ð°",
+    description: "ÐžÐ´Ð¸Ð½ Ñ€Ð°Ð· Ð·Ð° Ð·Ð°Ð±ÐµÐ³ Ñ‚Ð°Ð¹Ð¼ÐµÑ€ ÑÐ¿Ð°ÑÐ°ÐµÑ‚ ÑˆÐ°Ñ…Ñ‚Ñ‘Ñ€Ð° ÐµÑ‰Ñ‘ Ð½Ð° 1 ÑÐµÐºÑƒÐ½Ð´Ñƒ.",
+    category: "time",
+    icon: "!",
+    maxLevel: 1,
+    baseCost: 390,
+    growth: 1,
+    requires: ["time_overtime_protocol"],
+    apply: (stats, level) => {
+      add(stats, "lastChanceCharges", level);
+      add(stats, "lastChanceSeconds", level);
+    },
+  }),
+  defineUpgrade({
+    id: "time_chrono_shard",
+    name: "Ð¥Ñ€Ð¾Ð½Ð¾Ð¾ÑÐºÐ¾Ð»Ð¾Ðº",
+    description: "Ð ÑƒÐ´Ð° Ñ ÑˆÐ°Ð½ÑÐ¾Ð¼ 1,5% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ Ñ€Ð¾Ð½ÑÐµÑ‚ Ð¾ÑÐºÐ¾Ð»Ð¾Ðº Ð½Ð° 0,3 ÑÐµÐº.",
+    category: "time",
+    icon: "âœ§",
+    maxLevel: 5,
+    baseCost: 330,
+    growth: 1.58,
+    requires: ["time_aftershock_clock"],
+    apply: (stats, level) => {
+      add(stats, "timeShardChance", 0.015 * level);
+      add(stats, "timeShardSeconds", 0.3 + 0.04 * Math.max(0, level - 1));
+    },
+  }),
+  defineUpgrade({
+    id: "time_elastic_second",
+    name: "Ð­Ð»Ð°ÑÑ‚Ð¸Ñ‡Ð½Ð°Ñ ÑÐµÐºÑƒÐ½Ð´Ð°",
+    description: "Ð¢Ð°Ð¹Ð¼ÐµÑ€ ÑƒÐ±Ñ‹Ð²Ð°ÐµÑ‚ Ð½Ð° 3% Ð¼ÐµÐ´Ð»ÐµÐ½Ð½ÐµÐµ Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "time",
+    icon: "âˆ¿",
+    maxLevel: 4,
+    baseCost: 470,
+    growth: 1.61,
+    requires: ["time_last_second", "time_chrono_shard"],
+    apply: (stats, level) => add(stats, "timerDrainReduction", 0.03 * level),
+  }),
+  defineUpgrade({
+    id: "time_deep_shift",
+    name: "Ð“Ð»ÑƒÐ±Ð¸Ð½Ð½Ð°Ñ ÑÐ¼ÐµÐ½Ð°",
+    description: "ÐÐ°Ñ‡Ð°Ð»ÑŒÐ½Ñ‹Ð¹ Ñ‚Ð°Ð¹Ð¼ÐµÑ€ +1,2 ÑÐµÐº Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "time",
+    icon: "â–£",
+    maxLevel: 4,
+    baseCost: 620,
+    growth: 1.63,
+    requires: ["time_elastic_second"],
+    apply: (stats, level) => add(stats, "runDuration", 1.2 * level),
+  }),
+  defineUpgrade({
+    id: "time_keeper",
+    name: "Ð¥Ñ€Ð°Ð½Ð¸Ñ‚ÐµÐ»ÑŒ Ñ…Ð¾Ð´Ð°",
+    description: "ÐÐ°Ñ‡Ð°Ð»ÑŒÐ½Ñ‹Ð¹ Ñ‚Ð°Ð¹Ð¼ÐµÑ€ +1,5 ÑÐµÐº Ð¸ Ð²Ð¾Ð·Ð²Ñ€Ð°Ñ‚ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸ +10% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "time",
+    icon: "â™œ",
+    maxLevel: 3,
+    baseCost: 980,
+    growth: 1.69,
+    requires: ["time_deep_shift", "time_chrono_shard"],
+    apply: (stats, level) => {
+      add(stats, "runDuration", 1.5 * level);
+      add(stats, "timeRefundMultiplier", 0.1 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "time_discovery_bonus",
+    name: "ÐŸÑ€ÐµÐ¼Ð¸Ñ Ð·Ð° Ð¾Ñ‚ÐºÑ€Ñ‹Ñ‚Ð¸Ðµ",
+    description: "ÐŸÐµÑ€Ð²Ñ‹Ð¹ Ð´Ð¾Ð±Ñ‹Ñ‚Ñ‹Ð¹ ÐºÑƒÑÐ¾Ðº ÐºÐ°Ð¶Ð´Ð¾Ð³Ð¾ Ð½Ð¾Ð²Ð¾Ð³Ð¾ Ñ‚Ð¸Ð¿Ð° Ñ€ÑƒÐ´Ñ‹ Ð·Ð° Ð·Ð°Ð±ÐµÐ³ Ð²Ð¾Ð·Ð²Ñ€Ð°Ñ‰Ð°ÐµÑ‚ 0,15 ÑÐµÐºÑƒÐ½Ð´Ñ‹ Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ. Ð‘Ð¾Ð½ÑƒÑÐ½Ð¾Ðµ Ð²Ñ€ÐµÐ¼Ñ Ð¾Ð³Ñ€Ð°Ð½Ð¸Ñ‡ÐµÐ½Ð¾ Ð¾Ð±Ñ‰ÐµÐ¹ Ð¾Ñ‚Ð¼ÐµÑ‚ÐºÐ¾Ð¹ 60 ÑÐµÐºÑƒÐ½Ð´.",
+    category: "time",
+    icon: "â—´",
+    maxLevel: 3,
+    baseCost: 680,
+    growth: 1.64,
+    requires: ["time_aftershock_clock", "fortune_glimmer_hunter"],
+    apply: (stats, level) => add(stats, "discoveryTimeBonus", 0.15 * level),
+  }),
+  defineUpgrade({
+    id: "time_thirty_second_oath",
+    name: "ÐšÐ»ÑÑ‚Ð²Ð° ÑÐ¾Ñ€Ð¾ÐºÐ° Ð¿ÑÑ‚Ð¸ ÑÐµÐºÑƒÐ½Ð´",
+    description: "Ð”Ð¾Ð²Ð¾Ð´Ð¸Ñ‚ Ñ‚Ð°Ð¹Ð¼ÐµÑ€ Ð´Ð¾ 45 ÑÐµÐºÑƒÐ½Ð´; Ð»Ð¸ÑˆÐ½ÑÑ Ñ…Ñ€Ð¾Ð½Ð¾ÑÐ½ÐµÑ€Ð³Ð¸Ñ ÑƒÑÐºÐ¾Ñ€ÑÐµÑ‚ Ð¸Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚.",
+    category: "time",
+    icon: "45",
+    maxLevel: 1,
+    baseCost: 3200,
+    growth: 1,
+    requires: [
+      { id: "time_keeper", level: 3 },
+      { id: "time_deep_shift", level: 3 },
+      { id: "time_overtime_protocol", level: 3 },
+      { id: "time_capsule", level: 3 },
+      { id: "time_clockwork_heart", level: 4 },
+      { id: "time_stolen_second", level: 3 },
+      { id: "time_last_second", level: 1 },
+    ],
+    apply: (stats, level) => {
+      if (level > 0) {
+        stats.runDuration = stats.maxRunDuration;
+        stats.chronoOverclock = true;
+      }
+    },
+  }),
+];
+
+const timeUpgrades = [
+  defineUpgrade({
+    id: "time_extra_breath",
+    name: "Ð—Ð°Ð¿Ð°Ñ ÑÐ¼ÐµÐ½Ñ‹",
+    description: "ÐÐ°Ñ‡Ð°Ð»ÑŒÐ½Ñ‹Ð¹ Ñ‚Ð°Ð¹Ð¼ÐµÑ€ +0,75 ÑÐµÐºÑƒÐ½Ð´Ñ‹ Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ. 8 ÑƒÑ€Ð¾Ð²Ð½ÐµÐ¹ Ð´Ð°ÑŽÑ‚ Ð¿ÐµÑ€Ð²Ñ‹Ðµ Ð´Ð¾Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ñ‹Ðµ 6 ÑÐµÐºÑƒÐ½Ð´.",
+    category: "time",
+    icon: "â—·",
+    maxLevel: 8,
+    baseCost: 4,
+    growth: 1.27,
+    requires: ["core_first_descent"],
+    apply: (stats, level) => add(stats, "runDuration", 0.75 * level),
+  }),
+  defineUpgrade({
+    id: "time_clockwork_heart",
+    name: "Ð—Ð°Ð²Ð¾Ð´Ð½Ð¾Ðµ ÑÐµÑ€Ð´Ñ†Ðµ",
+    description: "Ð¢Ð°Ð¹Ð¼ÐµÑ€ +1,125 ÑÐµÐºÑƒÐ½Ð´Ñ‹ Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ. ÐÐ° 3-Ð¼ ÑƒÑ€Ð¾Ð²Ð½Ðµ Ð´Ð°Ñ‘Ñ‚ ÑÑ‚Ð°Ñ€Ñ‚Ð¾Ð²ÑƒÑŽ Ð¿Ð°ÑƒÐ·Ñƒ, Ð½Ð° 4-Ð¼ â€” Ð²Ð¾Ð·Ð²Ñ€Ð°Ñ‚ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸, Ð½Ð° 8-Ð¼ â€” Ð¾Ð´Ð¸Ð½ Ð°Ð²Ð°Ñ€Ð¸Ð¹Ð½Ñ‹Ð¹ Ð·Ð°Ñ€ÑÐ´.",
+    category: "time",
+    layoutLobe: "dig",
+    icon: "â™¥",
+    maxLevel: 8,
+    baseCost: 20,
+    growth: 1.24,
+    requires: [
+      { id: "time_extra_breath", level: 3 },
+      { id: "dig_light_footwork", level: 2 },
+    ],
+    levelRecipeOverrides: [
+      { coal: 2, copper: 3 },
+      { coal: 4, iron: 2, copper: 4 },
+      { iron: 4, coal: 6, copper: 6 },
+      { iron: 3, coal: 4 },
+      { silver: 4, amber: 6, iron: 8 },
+      { gold: 4, silver: 6, amber: 8 },
+      { amethyst: 8, gold: 12, silver: 16 },
+      { prism_crystal: 8, amethyst: 14, gold: 18 },
+    ],
+    apply: (stats, level) => {
+      add(stats, "runDuration", 1.125 * level);
+      if (level >= 3) add(stats, "startTimeFreeze", 0.5);
+      if (level >= 4) {
+        add(stats, "timeRefundChance", 0.06 + (level - 4) * 0.015);
+        add(stats, "timeRefundAmount", 0.12 + (level - 4) * 0.05);
+      }
+      if (level >= 8) {
+        add(stats, "lastChanceCharges", 1);
+        add(stats, "lastChanceSeconds", 1.25);
+      }
+    },
+  }),
+  defineUpgrade({
+    id: "time_capsule",
+    name: "ÐšÐ°Ð¿ÑÑƒÐ»Ð° Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸",
+    description: "Ð¢Ð°Ð¹Ð¼ÐµÑ€ +4 ÑÐµÐºÑƒÐ½Ð´Ñ‹ Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ. ÐŸÐµÑ€Ð²Ñ‹Ð¹ Ð¾Ð±Ñ€Ð°Ð·ÐµÑ† Ð½Ð¾Ð²Ð¾Ð³Ð¾ Ñ‚Ð¸Ð¿Ð° Ñ€ÑƒÐ´Ñ‹ Ð²Ð¾Ð·Ð²Ñ€Ð°Ñ‰Ð°ÐµÑ‚ Ð´Ð¾ 0,48 ÑÐµÐºÑƒÐ½Ð´Ñ‹; Ð¿Ð¾Ð·Ð´Ð½Ð¸Ðµ ÑƒÑ€Ð¾Ð²Ð½Ð¸ Ð¾Ñ‚ÐºÑ€Ñ‹Ð²Ð°ÑŽÑ‚ Ñ…Ñ€Ð¾Ð½Ð¾Ð¾ÑÐºÐ¾Ð»ÐºÐ¸. Ð‘Ð¾Ð½ÑƒÑÑ‹ Ð¾Ð³Ñ€Ð°Ð½Ð¸Ñ‡ÐµÐ½Ñ‹ 60 ÑÐµÐºÑƒÐ½Ð´Ð°Ð¼Ð¸.",
+    category: "time",
+    layoutLobe: "tools",
+    icon: "â¬¡",
+    maxLevel: 6,
+    baseCost: 150,
+    growth: 1.38,
+    requires: [
+      { id: "time_clockwork_heart", level: 4 },
+      { id: "tools_balanced_handle", level: 4 },
+    ],
+    levelRecipeOverrides: [
+      { amber: 7, iron: 9, coal: 8 },
+      { silver: 6, amber: 8, iron: 10 },
+      { gold: 5, silver: 8, amber: 10 },
+      { amethyst: 5, gold: 8, silver: 12 },
+      { prism_crystal: 6, amethyst: 10, gold: 14 },
+      { void_ore: 4, prism_crystal: 10, amethyst: 16 },
+    ],
+    apply: (stats, level) => {
+      add(stats, "runDuration", 4 * level);
+      add(stats, "discoveryTimeBonus", 0.08 * level);
+      if (level >= 5) {
+        add(stats, "timeShardChance", 0.04 + (level - 5) * 0.01);
+        add(stats, "timeShardSeconds", 0.24 + (level - 5) * 0.04);
+      }
+    },
+  }),
+  defineUpgrade({
+    id: "time_thirty_second_oath",
+    name: "Ð¥Ñ€Ð¾Ð½Ð¾Ñ„Ð¾Ñ€ÑÐ°Ð¶",
+    description: "Ð‘Ð¾Ð½ÑƒÑÐ½Ð¾Ðµ Ð²Ñ€ÐµÐ¼Ñ ÑÐ²ÐµÑ€Ñ… 45 ÑÐµÐºÑƒÐ½Ð´ ÑÑ‚Ð°Ð½Ð¾Ð²Ð¸Ñ‚ÑÑ Ð²Ð¸Ð´Ð¸Ð¼Ð¾Ð¹ Ð¿ÐµÑ€ÐµÐ³Ñ€ÑƒÐ·ÐºÐ¾Ð¹: Ð¸Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚ Ñ€Ð°Ð±Ð¾Ñ‚Ð°ÐµÑ‚ Ð½Ð° 25% Ð±Ñ‹ÑÑ‚Ñ€ÐµÐµ Ð¸ ÐºÐ°Ð¶Ð´Ñ‹Ð¹ Ð¿ÑÑ‚Ñ‹Ð¹ ÑƒÐ´Ð°Ñ€ Ð¿Ð¾Ð²Ñ‚Ð¾Ñ€ÑÐµÑ‚ÑÑ. ÐžÐ±Ñ‰Ð¸Ð¹ Ð¿Ñ€ÐµÐ´ÐµÐ» â€” 60 ÑÐµÐºÑƒÐ½Ð´.",
+    category: "time",
+    layoutLobe: "power",
+    icon: "45",
+    maxLevel: 1,
+    baseCost: 3200,
+    growth: 1,
+    requires: [
+      { id: "time_extra_breath", level: 8 },
+      { id: "time_clockwork_heart", level: 8 },
+      { id: "time_capsule", level: 6 },
+    ],
+    recipeOverride: { prism_crystal: 500, void_ore: 180, star_core: 150 },
+    apply: (stats, level) => {
+      if (level > 0) {
+        stats.chronoOverclock = true;
+        stats.chronoOverdrive = true;
+        stats.chronoOverflowThreshold = 45;
+        stats.chronoOverflowSpeedBonus = 0.25;
+        stats.chronoOverflowRepeatEvery = 5;
+      }
+    },
+  }),
+];
+
+const gadgetUpgrades = [
+  defineUpgrade({
+    id: "gadgets_powder_pocket",
+    name: "ÐšÐ°Ñ€Ð¼Ð°Ð½ Ð¿Ð¾Ñ€Ð¾Ñ…Ð°",
+    description: "Ð£Ð´Ð°Ñ€ Ñ ÑˆÐ°Ð½ÑÐ¾Ð¼ 3,3% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ Ð²Ñ‹Ð±Ñ€Ð°ÑÑ‹Ð²Ð°ÐµÑ‚ Ð±Ð¾Ð¼Ð±Ð¾Ñ‡ÐºÑƒ.",
+    category: "gadgets",
+    icon: "â—",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 8,
+    growth: 1.4,
+    requires: ["core_first_descent"],
+    apply: (stats, level) => add(stats, "bombChance", 0.02 * level),
+  }),
+  defineUpgrade({
+    id: "gadgets_packed_charge",
+    name: "ÐŸÐ»Ð¾Ñ‚Ð½Ñ‹Ð¹ Ð·Ð°Ñ€ÑÐ´",
+    description: "Ð£Ñ€Ð¾Ð½ Ð±Ð¾Ð¼Ð± +42% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "gadgets",
+    icon: "âœ¹",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 26,
+    growth: 1.42,
+    requires: ["gadgets_powder_pocket"],
+    apply: (stats, level) => add(stats, "bombPower", 0.252 * level),
+  }),
+  defineUpgrade({
+    id: "gadgets_wide_fuse",
+    name: "Ð¨Ð¸Ñ€Ð¾ÐºÐ¸Ð¹ Ñ„Ð¸Ñ‚Ð¸Ð»ÑŒ",
+    description: "Ð Ð°Ð´Ð¸ÑƒÑ Ð²Ð·Ñ€Ñ‹Ð²Ð° +7,5 Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "gadgets",
+    icon: "â—‰",
+    maxLevel: 4,
+    effectLevelMultiplier: 1.5,
+    baseCost: 34,
+    growth: 1.43,
+    requires: ["gadgets_powder_pocket"],
+    apply: (stats, level) => add(stats, "bombRadius", 5 * level),
+  }),
+  defineUpgrade({
+    id: "gadgets_cluster_shell",
+    name: "ÐšÐ°ÑÑÐµÑ‚Ð½Ð°Ñ Ð¾Ð±Ð¾Ð»Ð¾Ñ‡ÐºÐ°",
+    description: "Ð’Ð·Ñ€Ñ‹Ð² ÑÐ¾Ð·Ð´Ð°Ñ‘Ñ‚ Ð¿Ð¾ Ð¾Ð´Ð½Ð¾Ð¼Ñƒ Ð¾ÑÐºÐ¾Ð»Ð¾Ñ‡Ð½Ð¾Ð¼Ñƒ Ð·Ð°Ñ€ÑÐ´Ñƒ Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "gadgets",
+    icon: "â™",
+    maxLevel: 3,
+    baseCost: 78,
+    growth: 1.52,
+    requires: ["gadgets_packed_charge", "gadgets_wide_fuse"],
+    apply: (stats, level) => {
+      add(stats, "bombFragments", level);
+      add(stats, "bombFragmentPower", 0.06 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "gadgets_sticky_charge",
+    name: "Ð›Ð¸Ð¿ÐºÐ¸Ð¹ Ð·Ð°Ñ€ÑÐ´",
+    description: "Ð¨Ð°Ð½Ñ Ð¿Ñ€Ð¸ÐºÐ»ÐµÐ¸Ñ‚ÑŒ ÑƒÑÐ¸Ð»ÐµÐ½Ð½ÑƒÑŽ Ð±Ð¾Ð¼Ð±Ñƒ Ðº Ñ€ÑƒÐ´Ðµ +11,7% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "gadgets",
+    icon: "â¬¢",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 95,
+    growth: 1.49,
+    requires: ["gadgets_packed_charge"],
+    firstRecipeOverride: { silver: 3, amber: 1, iron: 5 },
+    apply: (stats, level) => add(stats, "stickyBombChance", 0.07 * level),
+  }),
+  defineUpgrade({
+    id: "gadgets_chain_spark",
+    name: "Ð¦ÐµÐ¿Ð½Ð°Ñ Ð¸ÑÐºÑ€Ð°",
+    description: "Ð£Ð´Ð°Ñ€ Ñ ÑˆÐ°Ð½ÑÐ¾Ð¼ 6% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ Ð¿ÐµÑ€ÐµÑÐºÐ°ÐºÐ¸Ð²Ð°ÐµÑ‚ Ð½Ð° ÑÐ¾ÑÐµÐ´Ð½ÑŽÑŽ Ñ€ÑƒÐ´Ñƒ.",
+    category: "gadgets",
+    icon: "ÏŸ",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 112,
+    growth: 1.48,
+    requires: ["gadgets_wide_fuse"],
+    apply: (stats, level) => add(stats, "chainChance", 0.036 * level),
+  }),
+  defineUpgrade({
+    id: "gadgets_chain_links",
+    name: "Ð—Ð²ÐµÐ½ÑŒÑ Ñ€Ð°Ð·Ñ€ÑÐ´Ð°",
+    description: "Ð¦ÐµÐ¿Ð½Ð¾Ð¹ ÑƒÐ´Ð°Ñ€ Ð¿Ð¾Ð»ÑƒÑ‡Ð°ÐµÑ‚ +1 Ñ†ÐµÐ»ÑŒ Ð¸ +5% ÑÐ¸Ð»Ñ‹ Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "gadgets",
+    icon: "â›“",
+    maxLevel: 4,
+    baseCost: 170,
+    growth: 1.54,
+    requires: ["gadgets_chain_spark"],
+    apply: (stats, level) => {
+      add(stats, "chainCount", level);
+      add(stats, "chainPower", 0.05 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "gadgets_shock_capsule",
+    name: "Ð¨Ð¾Ðº-ÐºÐ°Ð¿ÑÑƒÐ»Ð°",
+    description: "Ð Ð°Ð·Ñ€ÑÐ´ ÑƒÐ´ÐµÑ€Ð¶Ð¸Ð²Ð°ÐµÑ‚ÑÑ Ð½Ð° Ñ†ÐµÐ»Ð¸ Ð½Ð° 0,2 ÑÐµÐº Ð´Ð¾Ð»ÑŒÑˆÐµ Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "gadgets",
+    icon: "â˜‡",
+    maxLevel: 3,
+    effectLevelMultiplier: 4 / 3,
+    baseCost: 205,
+    growth: 1.52,
+    requires: ["gadgets_chain_links"],
+    levelRecipeOverrides: [
+      { silver: 12 },
+      { gold: 27, silver: 30 },
+      { gold: 52, silver: 56 },
+    ],
+    apply: (stats, level) => add(stats, "shockDuration", 0.15 * level),
+  }),
+  defineUpgrade({
+    id: "gadgets_magnet_mine",
+    name: "ÐœÐ°Ð³Ð½Ð¸Ñ‚Ð½Ð¾Ðµ Ð¿Ð¾Ð»Ðµ",
+    description: "ÐŸÐ¾ÑÐ»Ðµ Ð²Ð·Ñ€Ñ‹Ð²Ð° Ð½Ð° 2,55â€“4,8 ÑÐµÐºÑƒÐ½Ð´Ñ‹ Ñ€Ð°ÑÐºÑ€Ñ‹Ð²Ð°ÐµÑ‚ Ñ€ÑƒÐ´Ñƒ Ð² Ñ€Ð°Ð´Ð¸ÑƒÑÐµ 3,75â€“6 ÐºÐ»ÐµÑ‚Ð¾Ðº Ð¸ Ð·Ð°Ð¼ÐµÑ‚Ð½Ð¾ ÑƒÑÐ¸Ð»Ð¸Ð²Ð°ÐµÑ‚ Ð½Ð°Ð²ÐµÐ´ÐµÐ½Ð¸Ðµ, Ð´Ð°Ð»ÑŒÐ½Ð¾ÑÑ‚ÑŒ Ð¸ ÑƒÑ€Ð¾Ð½ Ð±Ð¾Ð¼Ð±, Ñ€Ð°Ð·Ñ€ÑÐ´Ð¾Ð² Ð¸ Ð´Ñ€Ð¾Ð½Ð¾Ð² Ð²Ð½ÑƒÑ‚Ñ€Ð¸ Ð¿Ð¾Ð»Ñ.",
+    category: "gadgets",
+    layoutLobe: "fortune",
+    icon: "âˆ©",
+    maxLevel: 4,
+    effectLevelMultiplier: 1.5,
+    baseCost: 72,
+    growth: 1.45,
+    requires: ["gadgets_powder_pocket"],
+    apply: (stats, level) => {
+      add(stats, "pickupRadius", 18 * level);
+      stats.magneticFieldEnabled = true;
+      stats.magneticFieldDuration = 1.8 + 0.5 * level;
+      stats.magneticFieldRadiusTiles = 3 + 0.5 * level;
+      add(stats, "magneticFieldTargetingBonus", 0.12 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "gadgets_scout_drone",
+    name: "Ð”Ñ€Ð¾Ð½-Ñ€Ð°Ð·Ð²ÐµÐ´Ñ‡Ð¸Ðº",
+    description: "ÐžÑ‚ÐºÑ€Ñ‹Ð²Ð°ÐµÑ‚ Ð´Ñ€Ð¾Ð½Ð°, ÐºÐ¾Ñ‚Ð¾Ñ€Ñ‹Ð¹ ÑÐ°Ð¼ Ð¸Ñ‰ÐµÑ‚ Ð¸ Ð±ÑŒÑ‘Ñ‚ Ñ€ÑƒÐ´Ñƒ.",
+    category: "gadgets",
+    icon: "â–£",
+    maxLevel: 1,
+    baseCost: 190,
+    growth: 1,
+    requires: ["gadgets_magnet_mine", "sense_echo_pulse"],
+    recipeOverride: { silver: 1, amber: 2, iron: 2 },
+    apply: (stats, level) => {
+      if (level > 0) stats.droneUnlocked = true;
+      add(stats, "droneCount", level);
+    },
+  }),
+  defineUpgrade({
+    id: "gadgets_drone_battery",
+    name: "Ð‘Ð°Ñ‚Ð°Ñ€ÐµÑ Ð´Ñ€Ð¾Ð½Ð°",
+    description: "Ð¡ÐºÐ¾Ñ€Ð¾ÑÑ‚ÑŒ Ð´Ñ€Ð¾Ð½Ð¾Ð² +20%, Ð²Ñ€ÐµÐ¼Ñ Ð¸Ñ… Ñ€Ð°Ð±Ð¾Ñ‚Ñ‹ +18,3% ÑÐ¼ÐµÐ½Ñ‹ Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ. Ð¢Ñ€ÐµÑ‚Ð¸Ð¹ ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ Ð´Ð°Ñ‘Ñ‚ Ð¿Ð¾Ð»Ð½ÑƒÑŽ Ð°Ð²Ñ‚Ð¾Ð½Ð¾Ð¼Ð½Ð¾ÑÑ‚ÑŒ.",
+    category: "gadgets",
+    icon: "â–¥",
+    maxLevel: 3,
+    effectLevelMultiplier: 5 / 3,
+    baseCost: 360,
+    growth: 1.55,
+    requires: ["gadgets_scout_drone"],
+    firstRecipeOverride: { silver: 3, amber: 4, iron: 5 },
+    apply: (stats, level) => {
+      add(stats, "droneSpeed", 0.12 * level);
+      add(stats, "droneLifetime", 0.11 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "gadgets_drone_drill",
+    name: "Ð‘ÑƒÑ€ Ð´Ñ€Ð¾Ð½Ð°",
+    description: "Ð¡Ð¸Ð»Ð° Ð´Ñ€Ð¾Ð½Ð¾Ð² +33% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "gadgets",
+    icon: "âš™",
+    maxLevel: 4,
+    effectLevelMultiplier: 1.5,
+    baseCost: 410,
+    growth: 1.55,
+    requires: ["gadgets_scout_drone"],
+    firstRecipeOverride: { silver: 4, amber: 5, iron: 6 },
+    apply: (stats, level) => add(stats, "dronePower", 0.22 * level),
+  }),
+  defineUpgrade({
+    id: "gadgets_drone_swarm",
+    name: "Ð Ð¾Ð¹ Ð¿Ñ€Ð¾Ñ…Ð¾Ð´Ñ‡Ð¸ÐºÐ¾Ð²",
+    description: "Ð”Ð¾Ð±Ð°Ð²Ð»ÑÐµÑ‚ Ð¿Ð¾ Ð¾Ð´Ð½Ð¾Ð¼Ñƒ Ð´Ñ€Ð¾Ð½Ñƒ Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "gadgets",
+    icon: "â¬¡",
+    maxLevel: 3,
+    baseCost: 560,
+    growth: 1.68,
+    requires: ["gadgets_drone_battery", "gadgets_drone_drill"],
+    levelRecipeOverrides: [
+      { gold: 3, silver: 6 },
+      { amethyst: 13, gold: 28 },
+      { amethyst: 30, gold: 63 },
+    ],
+    apply: (stats, level) => add(stats, "droneCount", level),
+  }),
+  defineUpgrade({
+    id: "gadgets_volatile_jackpot",
+    name: "Ð’Ð·Ñ€Ñ‹Ð²Ð½Ð¾Ð¹ ÐºÑƒÑˆ",
+    description: "Ð¨Ð°Ð½Ñ Ð³Ð¸Ð³Ð°Ð½Ñ‚ÑÐºÐ¾Ð¹ Ð±Ð¾Ð¼Ð±Ñ‹ +2,5%, Ð²Ñ‹Ñ…Ð¾Ð´ Ð²Ð·Ð¾Ñ€Ð²Ð°Ð½Ð½Ð¾Ð¹ Ñ€ÑƒÐ´Ñ‹ +13,3% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "gadgets",
+    icon: "âœº",
+    maxLevel: 3,
+    effectLevelMultiplier: 4 / 3,
+    baseCost: 580,
+    growth: 1.6,
+    requires: ["gadgets_cluster_shell", "gadgets_sticky_charge"],
+    requiresOreDiscovery: "gold",
+    firstRecipeOverride: { gold: 6, silver: 8, amber: 10 },
+    apply: (stats, level) => {
+      add(stats, "volatileBombChance", 0.01875 * level);
+      add(stats, "bombValueMultiplier", 0.1 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "gadgets_geo_charge",
+    name: "ÐšÑƒÐ¼ÑƒÐ»ÑÑ‚Ð¸Ð²Ð½Ñ‹Ð¹ Ð³ÐµÐ¾Ð·Ð°Ñ€ÑÐ´",
+    description: "Ð‘Ð¾Ð¼Ð±Ñ‹ Ð²Ð·Ñ€Ñ‹Ð²Ð°ÑŽÑ‚ÑÑ Ð½Ð°Ð¿Ñ€Ð°Ð²Ð»ÐµÐ½Ð½Ñ‹Ð¼ ÐºÐ¾Ð½ÑƒÑÐ¾Ð¼ Ðº Ñ†ÐµÐ»Ð¸; ÐºÐ°Ð¶Ð´Ñ‹Ð¹ ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ ÑƒÐ´Ð»Ð¸Ð½ÑÐµÑ‚ ÐºÐ¾Ð½ÑƒÑ Ð½Ð° Ð¾Ð´Ð¸Ð½ Ð±Ð»Ð¾Ðº.",
+    category: "gadgets",
+    icon: "â—",
+    maxLevel: 3,
+    baseCost: 760,
+    growth: 1.66,
+    requires: ["gadgets_cluster_shell", "power_tectonic_blow", "power_sample_calibration"],
+    levelRecipeOverrides: [
+      { gold: 5, silver: 5 },
+      { amethyst: 18, gold: 37 },
+      { amethyst: 39, gold: 83 },
+    ],
+    apply: (stats, level) => {
+      if (level > 0) stats.directionalBombs = true;
+      add(stats, "directionalBombConeTiles", level);
+    },
+  }),
+  defineUpgrade({
+    id: "gadgets_crew_beacon",
+    name: "ÐœÐ°ÑÐº Ð°Ñ€Ñ‚ÐµÐ»Ð¸",
+    description: "ÐœÐµÑ‡ÐµÐ½Ð°Ñ Ð¶Ð¸Ð»Ð° ÑÑ‚Ð°Ð½Ð¾Ð²Ð¸Ñ‚ÑÑ Ð¾Ð±Ñ‰ÐµÐ¹ Ñ†ÐµÐ»ÑŒÑŽ Ð´Ñ€Ð¾Ð½Ð¾Ð², Ñ†ÐµÐ¿Ð½Ñ‹Ñ… Ñ€Ð°Ð·Ñ€ÑÐ´Ð¾Ð² Ð¸ Ð»Ð¸Ð¿ÐºÐ¸Ñ… Ð±Ð¾Ð¼Ð±; Ð»Ð¸ÑˆÐ½Ð¸Ð¹ ÑƒÑ€Ð¾Ð½ Ð¿ÐµÑ€ÐµÐ½Ð¾ÑÐ¸Ñ‚ÑÑ Ð½Ð° ÑÐ¾ÑÐµÐ´Ð½Ð¸Ð¹ ÐºÑƒÑÐ¾Ðº Ñ‚Ð¾Ð¹ Ð¶Ðµ Ð¶Ð¸Ð»Ñ‹.",
+    category: "gadgets",
+    icon: "âŒ–",
+    maxLevel: 1,
+    baseCost: 1250,
+    growth: 1,
+    requires: [
+      "gadgets_scout_drone",
+      "gadgets_sticky_charge",
+      "sense_ore_focus",
+      "gadgets_geo_charge",
+    ],
+    requiresOreDiscovery: "void_ore",
+    firstRecipeOverride: { void_ore: 2, prism_crystal: 5, amethyst: 6 },
+    apply: (stats, level) => {
+      if (level > 0) {
+        stats.crewBeaconUnlocked = true;
+        stats.crewBeaconOverkillCarry = 1;
+      }
+    },
+  }),
+  defineUpgrade({
+    id: "gadgets_demolition_orchestra",
+    name: "ÐžÑ€ÐºÐµÑÑ‚Ñ€ Ð¿Ð¾Ð´Ñ€Ñ‹Ð²Ð½Ð¸ÐºÐ¾Ð²",
+    description: "ÐžÑ‚ÐºÑ€Ñ‹Ð²Ð°ÐµÑ‚ Ñ‚Ñ€Ñ‘Ñ…Ñ‚Ð°ÐºÑ‚Ð½Ð¾Ðµ ÐºÐ¾Ð¼Ð±Ð¾: Ð´Ñ€Ð¾Ð½ ÑÑ‚Ð°Ð²Ð¸Ñ‚ Ð¼ÐµÑ‚ÐºÑƒ, Ñ†ÐµÐ¿Ð½Ð¾Ð¹ Ñ€Ð°Ð·Ñ€ÑÐ´ Ð·Ð°Ñ€ÑÐ¶Ð°ÐµÑ‚ ÐµÑ‘, Ð° Ð±Ð¾Ð¼Ð±Ð° Ð·Ð°Ð²ÐµÑ€ÑˆÐ°ÐµÑ‚ ÑƒÑÐ¸Ð»ÐµÐ½Ð½Ñ‹Ð¼ Ð½Ð° 75% Ð²Ð·Ñ€Ñ‹Ð²Ð¾Ð¼ Ð¿Ð¾ Ð¶Ð¸Ð»Ðµ.",
+    category: "gadgets",
+    icon: "â™«",
+    maxLevel: 1,
+    baseCost: 2400,
+    growth: 1,
+    requires: [
+      "gadgets_drone_swarm",
+      "gadgets_volatile_jackpot",
+      "gadgets_shock_capsule",
+      "gadgets_geo_charge",
+      "gadgets_crew_beacon",
+    ],
+    recipeOverride: { prism_crystal: 750, void_ore: 200, star_core: 50 },
+    apply: (stats, level) => {
+      stats.demolitionComboEnabled = level > 0;
+      stats.demolitionComboMarkDuration = 3;
+      stats.demolitionComboFinishPower = 0.75;
+      stats.demolitionComboVeinRadiusTiles = 2;
+      add(stats, "droneBombChance", 0.1 * level);
+    },
+  }),
+];
+
+const toolUpgrades = [
+  defineUpgrade({
+    id: "tools_balanced_handle",
+    name: "Ð¡Ð±Ð°Ð»Ð°Ð½ÑÐ¸Ñ€Ð¾Ð²Ð°Ð½Ð½Ð°Ñ Ñ€ÑƒÐºÐ¾ÑÑ‚ÑŒ",
+    description: "Ð¡ÐºÐ¾Ñ€Ð¾ÑÑ‚ÑŒ ÑƒÐ´Ð°Ñ€Ð¾Ð² +10% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "tools",
+    layoutLobe: "dig",
+    icon: "âš’",
+    maxLevel: 6,
+    effectLevelMultiplier: 1.5,
+    baseCost: 7,
+    growth: 1.32,
+    requires: ["core_first_descent"],
+    levelRecipeOverrides: [
+      null, null, null, null,
+      { gold: 4, amethyst: 1 },
+      { gold: 4, amethyst: 2 },
+    ],
+    apply: (stats, level) => add(stats, "digSpeedMultiplier", (0.6 / 9) * level),
+  }),
+  defineUpgrade({
+    id: "tools_iron_pick",
+    name: "Ð–ÐµÐ»ÐµÐ·Ð½Ð°Ñ ÐºÐ¸Ñ€ÐºÐ°",
+    description: "Ð˜Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚ II Ñ€Ð°Ð½Ð³Ð°: ÑÐ¸Ð»Ð° +12%, ÑÐºÐ¾Ñ€Ð¾ÑÑ‚ÑŒ +5%.",
+    category: "tools",
+    icon: "â›",
+    maxLevel: 1,
+    baseCost: 32,
+    growth: 1,
+    requires: ["tools_balanced_handle"],
+    recipeOverride: { copper: 2, coal: 3, iron: 2 },
+    apply: (stats, level) => {
+      if (level > 0) {
+        stats.tool = "ironPick";
+        stats.toolTier = Math.max(stats.toolTier, 2);
+      }
+      add(stats, "pickPowerMultiplier", 0.12 * level);
+      add(stats, "digSpeedMultiplier", 0.05 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "tools_steel_pick",
+    name: "Ð¡Ñ‚Ð°Ð»ÑŒÐ½Ð°Ñ ÐºÐ¸Ñ€ÐºÐ°",
+    description: "Ð˜Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚ III Ñ€Ð°Ð½Ð³Ð°: ÑÐ¸Ð»Ð° +18%, Ð´Ð°Ð»ÑŒÐ½Ð¾ÑÑ‚ÑŒ +8%.",
+    category: "tools",
+    icon: "âš’",
+    maxLevel: 1,
+    baseCost: 78,
+    growth: 1,
+    requires: ["tools_iron_pick", "power_tempered_steel"],
+    recipeOverride: { iron: 4, coal: 8, amber: 2 },
+    apply: (stats, level) => {
+      if (level > 0) {
+        stats.tool = "steelPick";
+        stats.toolTier = Math.max(stats.toolTier, 3);
+      }
+      add(stats, "pickPowerMultiplier", 0.18 * level);
+      add(stats, "digReachMultiplier", 0.08 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "tools_pneumatic_pick",
+    name: "ÐŸÐ½ÐµÐ²Ð¼Ð°Ñ‚Ð¸Ñ‡ÐµÑÐºÐ°Ñ ÐºÐ¸Ñ€ÐºÐ°",
+    description: "Ð˜Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚ IV Ñ€Ð°Ð½Ð³Ð°: ÑÐºÐ¾Ñ€Ð¾ÑÑ‚ÑŒ ÑƒÐ´Ð°Ñ€Ð¾Ð² +25%, ÑÐ¸Ð»Ð° +18% Ð¸ Ð¿Ñ€Ð¾Ð±Ð¸Ð²Ð°Ð½Ð¸Ðµ Ð¿Ð»Ð¾Ñ‚Ð½Ð¾ÑÑ‚Ð¸ +0,35.",
+    category: "tools",
+    icon: "âš™",
+    maxLevel: 1,
+    baseCost: 145,
+    growth: 1,
+    requires: ["tools_steel_pick", { id: "tools_balanced_handle", level: 4 }],
+    recipeOverride: { silver: 4, amber: 9 },
+    apply: (stats, level) => {
+      if (level > 0) {
+        stats.tool = "pneumaticPick";
+        stats.toolTier = Math.max(stats.toolTier, 4);
+      }
+      add(stats, "digSpeedMultiplier", 0.25 * level);
+      add(stats, "pickPowerMultiplier", 0.18 * level);
+      add(stats, "hardnessPierce", 0.35 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "tools_super_pick",
+    name: "Ð¡ÑƒÐ¿ÐµÑ€ÐºÐ¸Ñ€ÐºÐ°",
+    description: "Ð˜Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚ V Ñ€Ð°Ð½Ð³Ð°: Ð¾Ð³Ñ€Ð¾Ð¼Ð½Ð°Ñ ÑÐ¸Ð»Ð° Ð¸ Ð´Ð²Ð° ÑƒÐ´Ð°Ñ€Ð° Ð·Ð° Ð·Ð°Ð¼Ð°Ñ….",
+    category: "tools",
+    icon: "â˜…",
+    maxLevel: 1,
+    baseCost: 420,
+    growth: 1,
+    requires: ["tools_pneumatic_pick", "power_diamond_tip", "power_sample_calibration"],
+    recipeOverride: { silver: 10, gold: 6, amethyst: 4 },
+    apply: (stats, level) => {
+      if (level > 0) {
+        stats.tool = "superPick";
+        stats.toolTier = Math.max(stats.toolTier, 5);
+        stats.superPickUnlocked = true;
+      }
+      add(stats, "pickPowerMultiplier", 0.35 * level);
+      add(stats, "multiHitCount", level);
+    },
+  }),
+  defineUpgrade({
+    id: "tools_super_motor",
+    name: "ÐœÐ¾Ñ‚Ð¾Ñ€ ÑÑƒÐ¿ÐµÑ€ÐºÐ¸Ñ€ÐºÐ¸",
+    description: "Ð¡ÐºÐ¾Ñ€Ð¾ÑÑ‚ÑŒ ÑÑƒÐ¿ÐµÑ€ÐºÐ¸Ñ€ÐºÐ¸ +11,25% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "tools",
+    icon: "âš™",
+    maxLevel: 4,
+    effectLevelMultiplier: 1.25,
+    baseCost: 320,
+    growth: 1.76,
+    requires: ["tools_super_pick"],
+    levelRecipeOverrides: [
+      { prism_crystal: 2, silver: 3 },
+      { prism_crystal: 3, void_ore: 1, silver: 4 },
+      { void_ore: 2, prism_crystal: 8, amethyst: 10 },
+      { void_ore: 5, prism_crystal: 12, amethyst: 14 },
+    ],
+    apply: (stats, level) => add(stats, "digSpeedMultiplier", 0.09 * level),
+  }),
+  defineUpgrade({
+    id: "tools_super_teeth",
+    name: "Ð—ÑƒÐ±ÑŒÑ ÑÑƒÐ¿ÐµÑ€ÐºÐ¸Ñ€ÐºÐ¸",
+    description: "Ð¡Ð¸Ð»Ð° ÑÑƒÐ¿ÐµÑ€ÐºÐ¸Ñ€ÐºÐ¸ +16,25% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "tools",
+    icon: "â–´",
+    maxLevel: 4,
+    effectLevelMultiplier: 1.25,
+    baseCost: 380,
+    growth: 1.78,
+    requires: ["tools_super_pick"],
+    levelRecipeOverrides: [
+      { prism_crystal: 2, silver: 4 },
+      { prism_crystal: 3, void_ore: 1, silver: 5 },
+      { void_ore: 3, prism_crystal: 9, amethyst: 11 },
+      { void_ore: 6, prism_crystal: 13, amethyst: 15 },
+    ],
+    apply: (stats, level) => add(stats, "pickPowerMultiplier", 0.13 * level),
+  }),
+  defineUpgrade({
+    id: "tools_super_field",
+    name: "ÐÐ°ÐºÐ¾Ð¿Ð¸Ñ‚ÐµÐ»ÑŒ Ð¿Ð¾Ð»Ñ",
+    description: "Ð£Ð´Ð°Ñ€Ñ‹ ÑÑƒÐ¿ÐµÑ€ÐºÐ¸Ñ€ÐºÐ¸ ÑÐ¾Ð·Ð´Ð°ÑŽÑ‚ Ð¿Ð¾Ð»Ðµ Ñ€Ð°Ð´Ð¸ÑƒÑÐ¾Ð¼ 1,0â€“1,75 Ð±Ð»Ð¾ÐºÐ° Ð¸ ÑÐ¸Ð»Ð¾Ð¹ 30â€“60%. ÐŸÐ¾ÑÐ»Ðµ Ð¿Ð¾Ð»ÑƒÑ‡ÐµÐ½Ð¸Ñ Ð»Ð°Ð·ÐµÑ€Ð° Ð¿Ð¾Ð»Ðµ Ð²Ð¾Ð·Ð½Ð¸ÐºÐ°ÐµÑ‚ Ð² Ñ‚Ð¾Ñ‡ÐºÐµ Ð¿Ð¾Ð¿Ð°Ð´Ð°Ð½Ð¸Ñ Ð»ÑƒÑ‡Ð°.",
+    category: "tools",
+    icon: "â—Œ",
+    maxLevel: 4,
+    baseCost: 430,
+    growth: 1.82,
+    requires: [
+      { id: "tools_super_motor", level: 2 },
+      { id: "tools_super_teeth", level: 2 },
+    ],
+    requiresOreDiscovery: "void_ore",
+    levelRecipeOverrides: [
+      { void_ore: 3, prism_crystal: 6, amethyst: 6 },
+      { void_ore: 6, prism_crystal: 10, amethyst: 12 },
+      { void_ore: 9, prism_crystal: 14, amethyst: 16 },
+      { void_ore: 13, prism_crystal: 19, amethyst: 22 },
+    ],
+    apply: (stats, level) => {
+      stats.superFieldEnabled = true;
+      stats.superFieldRadiusTiles = 0.75 + 0.25 * level;
+      stats.superFieldPower = 0.2 + 0.1 * level;
+      stats.superFieldDuration = 0.8 + 0.2 * level;
+      stats.superFieldLaserPersistent = true;
+    },
+  }),
+  defineUpgrade({
+    id: "tools_laser_emitter",
+    name: "Ð”Ð°Ð»ÑŒÐ½Ð¾Ð±Ð¾Ð¹Ð½Ñ‹Ð¹ Ð»Ð°Ð·ÐµÑ€",
+    description: "Ð˜Ð½ÑÑ‚Ñ€ÑƒÐ¼ÐµÐ½Ñ‚ VI Ñ€Ð°Ð½Ð³Ð°: Ð·Ð°Ð¼ÐµÐ½ÑÐµÑ‚ ÐºÐ¸Ñ€ÐºÑƒ Ð»ÑƒÑ‡Ð¾Ð¼, Ð´Ð¾ÑÑ‚Ð°ÑŽÑ‰Ð¸Ð¼ Ð´Ð°Ð»Ñ‘ÐºÑƒÑŽ Ñ€ÑƒÐ´Ñƒ.",
+    category: "tools",
+    icon: "â”",
+    maxLevel: 1,
+    baseCost: 1500,
+    growth: 1,
+    requires: [
+      { id: "tools_super_field", level: 4 },
+      "sense_far_echo",
+      "tools_super_pick",
+      "sense_frequency_swing",
+    ],
+    requiresOreDiscovery: "void_ore",
+    recipeOverride: { void_ore: 10, prism_crystal: 18, amethyst: 18 },
+    apply: (stats, level) => {
+      if (level > 0) {
+        stats.tool = "miningLaser";
+        stats.toolTier = Math.max(stats.toolTier, 6);
+        stats.laserUnlocked = true;
+      }
+      add(stats, "laserPower", 0.7 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "tools_laser_range",
+    name: "Ð¢ÐµÐ»ÐµÑÐºÐ¾Ð¿Ð¸Ñ‡ÐµÑÐºÐ¸Ð¹ Ð»ÑƒÑ‡",
+    description: "Ð”Ð°Ð»ÑŒÐ½Ð¾ÑÑ‚ÑŒ Ð»Ð°Ð·ÐµÑ€Ð° +42 Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "tools",
+    icon: "âŸ¶",
+    maxLevel: 5,
+    effectLevelMultiplier: 1.2,
+    baseCost: 2000,
+    growth: 1.5,
+    requires: ["tools_laser_emitter"],
+    maximumGeneratedTier: 8,
+    firstRecipeOverride: { void_ore: 40, prism_crystal: 60, gold: 30 },
+    apply: (stats, level) => add(stats, "laserRange", 35 * level),
+  }),
+  defineUpgrade({
+    id: "tools_laser_power",
+    name: "Ð ÐµÐ·Ð¾Ð½Ð°Ñ‚Ð¾Ñ€ Ð»ÑƒÑ‡Ð°",
+    description: "ÐœÐ¾Ñ‰Ð½Ð¾ÑÑ‚ÑŒ Ð»Ð°Ð·ÐµÑ€Ð° +21,6% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "tools",
+    icon: "â•",
+    maxLevel: 5,
+    effectLevelMultiplier: 1.2,
+    baseCost: 2100,
+    growth: 1.59,
+    requires: ["tools_laser_emitter"],
+    firstRecipeOverride: { void_ore: 55, prism_crystal: 70, gold: 35 },
+    apply: (stats, level) => add(stats, "laserPower", 0.18 * level),
+  }),
+  defineUpgrade({
+    id: "tools_laser_width",
+    name: "Ð¢ÐµÑ€Ð¼Ð¸Ñ‡ÐµÑÐºÐ¸Ð¹ ÑÐ»ÐµÐ´",
+    description: "Ð¨Ð¸Ñ€Ð¸Ð½Ð° Ð»ÑƒÑ‡Ð° +3,75. Ð•Ð³Ð¾ ÐºÑ€Ð°Ñ Ð½Ð°Ð½Ð¾ÑÑÑ‚ 26â€“45% ÑÐ¸Ð»Ñ‹ Ð¸ Ð½Ð° 1,2 ÑÐµÐºÑƒÐ½Ð´Ñ‹ Ð½Ð°Ð³Ñ€ÐµÐ²Ð°ÑŽÑ‚ ÑÐ¾ÑÐµÐ´Ð½Ð¸Ðµ Ð±Ð»Ð¾ÐºÐ¸; ÑÐ»ÐµÐ´ÑƒÑŽÑ‰ÐµÐµ Ð¿Ð¾Ð¿Ð°Ð´Ð°Ð½Ð¸Ðµ Ð¿Ð¾ Ð½Ð¸Ð¼ ÑÐ¸Ð»ÑŒÐ½ÐµÐµ Ð½Ð° 7,5â€“30%.",
+    category: "tools",
+    icon: "â–°",
+    maxLevel: 4,
+    effectLevelMultiplier: 1.25,
+    baseCost: 2400,
+    growth: 1.61,
+    requires: ["tools_laser_power", "time_thirty_second_oath"],
+    firstRecipeOverride: { void_ore: 70, prism_crystal: 90, gold: 40 },
+    apply: (stats, level) => {
+      add(stats, "laserWidth", 3 * level);
+      stats.laserHeatEdgePower = 0.2 + 0.05 * level;
+      stats.laserHeatDuration = 1.2;
+      add(stats, "laserHeatNextHitBonus", 0.06 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "tools_laser_splitter",
+    name: "ÐŸÑ€Ð¸Ð·Ð¼Ð°Ñ‚Ð¸Ñ‡ÐµÑÐºÐ¸Ð¹ Ð´ÐµÐ»Ð¸Ñ‚ÐµÐ»ÑŒ",
+    description: "Ð”Ð¾Ð±Ð°Ð²Ð»ÑÐµÑ‚ Ð±Ð¾ÐºÐ¾Ð²Ð¾Ð¹ Ð»ÑƒÑ‡; ÑÐ»ÐµÐ´ÑƒÑŽÑ‰Ð¸Ð¹ ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ ÑƒÑÐ¸Ð»Ð¸Ð²Ð°ÐµÑ‚ Ñ€Ð°ÑÑ‰ÐµÐ¿Ð»ÐµÐ½Ð¸Ðµ.",
+    category: "tools",
+    icon: "â‹”",
+    maxLevel: 3,
+    baseCost: 2800,
+    growth: 1.35,
+    requires: ["tools_laser_range", "tools_laser_width"],
+    firstRecipeOverride: { void_ore: 90, prism_crystal: 120, gold: 50 },
+    apply: (stats, level) => {
+      add(stats, "laserBeams", level);
+      add(stats, "laserPierce", 0.18 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "tools_mirror_crystal",
+    name: "Ð—ÐµÑ€ÐºÐ°Ð»ÑŒÐ½Ñ‹Ð¹ ÐºÑ€Ð¸ÑÑ‚Ð°Ð»Ð»",
+    description: "Ð›Ð°Ð·ÐµÑ€ Ð¾Ñ‚Ñ€Ð°Ð¶Ð°ÐµÑ‚ÑÑ Ðº Ð½Ð°Ð¹Ð´ÐµÐ½Ð½Ð¾Ð¹ Ñ€ÑƒÐ´Ðµ Ð·Ð° ÑƒÐ³Ð»Ð¾Ð¼: Ð¿ÐµÑ€Ð²Ð¾Ðµ Ð¾Ñ‚Ñ€Ð°Ð¶ÐµÐ½Ð¸Ðµ ÑÐ¾Ñ…Ñ€Ð°Ð½ÑÐµÑ‚ 65% Ð¼Ð¾Ñ‰Ð½Ð¾ÑÑ‚Ð¸, Ð²Ñ‚Ð¾Ñ€Ð¾Ðµ â€” 45%. ÐŸÑ€Ð¸ Ñ„Ð¾ÐºÑƒÑÐµ Ð¸Ñ‰ÐµÑ‚ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð²Ñ‹Ð±Ñ€Ð°Ð½Ð½ÑƒÑŽ Ñ€ÑƒÐ´Ñƒ.",
+    category: "tools",
+    icon: "â—ˆ",
+    maxLevel: 2,
+    baseCost: 2100,
+    growth: 1.72,
+    requires: [
+      "tools_laser_emitter",
+      "sense_ore_focus",
+      { id: "tools_laser_range", level: 1 },
+    ],
+    firstRecipeOverride: { void_ore: 45, prism_crystal: 60, amethyst: 40 },
+    apply: (stats, level) => {
+      add(stats, "laserRicochetCount", level);
+      stats.laserFirstRicochetMultiplier = 0.65;
+      stats.laserSecondRicochetMultiplier = 0.45;
+    },
+  }),
+  defineUpgrade({
+    id: "tools_super_pick_echo",
+    name: "Ð­Ñ…Ð¾ ÑÑƒÐ¿ÐµÑ€ÐºÐ¸Ñ€ÐºÐ¸",
+    description: "ÐšÐ°Ð¶Ð´Ñ‹Ð¹ 6-Ð¹/4-Ð¹ Ð¾ÑÐ½Ð¾Ð²Ð½Ð¾Ð¹ Ð²Ñ‹ÑÑ‚Ñ€ÐµÐ» Ð»Ð°Ð·ÐµÑ€Ð° ÑÐ¾Ð·Ð´Ð°Ñ‘Ñ‚ Ð² Ñ‚Ð¾Ñ‡ÐºÐµ Ð¿Ð¾Ð¿Ð°Ð´Ð°Ð½Ð¸Ñ ÐºÑ€ÑƒÐ³Ð¾Ð²Ð¾Ð¹ ÑƒÐ´Ð°Ñ€ Ñ€Ð°Ð´Ð¸ÑƒÑÐ¾Ð¼ 1/1,4 Ð±Ð»Ð¾ÐºÐ° Ð¸ ÑÐ¸Ð»Ð¾Ð¹ 60/85% Ð¿Ñ€ÑÐ¼Ð¾Ð³Ð¾ ÑƒÐ´Ð°Ñ€Ð°. Ð­Ñ…Ð¾ Ð½Ðµ Ð²Ñ‹Ð·Ñ‹Ð²Ð°ÐµÑ‚ ÐºÑ€Ð¸Ñ‚Ð¾Ð² Ð¸ Ð´Ð¾Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ñ‹Ñ… ÑÑ€Ð°Ð±Ð°Ñ‚Ñ‹Ð²Ð°Ð½Ð¸Ð¹.",
+    category: "tools",
+    icon: "âœ¹",
+    maxLevel: 2,
+    baseCost: 2800,
+    growth: 1.74,
+    requires: ["tools_laser_splitter", "dig_omni_swing"],
+    levelRecipeOverrides: [
+      { void_ore: 40, prism_crystal: 40, silver: 15 },
+      { void_ore: 22, prism_crystal: 32, amethyst: 30 },
+    ],
+    apply: (stats, level) => {
+      stats.laserSuperPickEchoEvery = [0, 6, 4][level] || 6;
+      stats.laserSuperPickEchoRadiusTiles = [0, 1, 1.4][level] || 1;
+      stats.laserSuperPickEchoPower = [0, 0.6, 0.85][level] || 0.6;
+      stats.laserSuperPickEchoNoProcs = true;
+    },
+  }),
+  defineUpgrade({
+    id: "tools_solar_drill",
+    name: "Ð¡Ð¾Ð»Ð½ÐµÑ‡Ð½Ñ‹Ð¹ Ð±ÑƒÑ€",
+    description: "Ð›Ð°Ð·ÐµÑ€ ÑÑ‚Ð°Ð½Ð¾Ð²Ð¸Ñ‚ÑÑ Ð¿Ñ€Ð¸Ð·Ð¼Ð¾Ð±ÑƒÑ€Ð¾Ð¼: ÐºÐ°Ð¶Ð´Ñ‹Ð¹ Ð¿ÑÑ‚Ñ‹Ð¹ Ð²Ñ‹ÑÑ‚Ñ€ÐµÐ» ÑƒÐ´ÐµÑ€Ð¶Ð¸Ð²Ð°ÐµÑ‚ Ð»ÑƒÑ‡ 0,7 ÑÐµÐºÑƒÐ½Ð´Ñ‹ Ð½Ð° Ð¶Ð¸Ð»Ðµ Ð¸ Ð·Ð°Ð²ÐµÑ€ÑˆÐ°ÐµÑ‚ Ð¿Ñ€Ð¾Ñ…Ð¾Ð´ ÑÐ¾Ð»Ð½ÐµÑ‡Ð½Ñ‹Ð¼ Ñ€Ð°Ð·Ñ€ÑÐ´Ð¾Ð¼ ÑÐ¸Ð»Ð¾Ð¹ 90%.",
+    category: "tools",
+    icon: "â˜€",
+    maxLevel: 1,
+    baseCost: 7200,
+    growth: 1,
+    requires: [
+      { id: "tools_laser_splitter", level: 2 },
+      { id: "power_corebreaker", level: 2 },
+      "tools_mirror_crystal",
+      "tools_super_pick_echo",
+    ],
+    recipeOverride: { prism_crystal: 250, void_ore: 100, star_core: 50 },
+    apply: (stats, level) => {
+      if (level > 0) {
+        stats.tool = "prismaticLaser";
+        stats.toolTier = Math.max(stats.toolTier, 7);
+      }
+      stats.solarDrillEnabled = level > 0;
+      stats.solarDrillProcEvery = 5;
+      stats.solarDrillBeamDuration = 0.7;
+      stats.solarDrillFinalBurstPower = 0.9;
+      add(stats, "laserPower", 0.15 * level);
+      add(stats, "laserChargeRate", 0.1 * level);
+    },
+  }),
+];
+
+const fortuneUpgrades = [
+  defineUpgrade({
+    id: "fortune_prospector_ledger",
+    name: "Ð”Ð½ÐµÐ²Ð½Ð¸Ðº ÑÑ‚Ð°Ñ€Ð°Ñ‚ÐµÐ»Ñ",
+    description: "Ð¡Ñ€ÐµÐ´Ð½Ð¸Ð¹ Ð²Ñ‹Ñ…Ð¾Ð´ ÐºÑƒÑÐºÐ¾Ð² Ñ€ÑƒÐ´Ñ‹ +9% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "fortune",
+    layoutLobe: "sense",
+    icon: "â–¤",
+    maxLevel: 8,
+    effectLevelMultiplier: 1.5,
+    baseCost: 5,
+    growth: 1.3,
+    requires: ["core_first_descent"],
+    levelRecipeOverrides: [
+      null, null, null, null, null, null,
+      { gold: 6, amethyst: 2 },
+      { gold: 9, amethyst: 3 },
+    ],
+    apply: (stats, level) => add(stats, "oreValueMultiplier", 0.06 * level),
+  }),
+  defineUpgrade({
+    id: "fortune_lucky_chip",
+    name: "Ð¡Ñ‡Ð°ÑÑ‚Ð»Ð¸Ð²Ñ‹Ð¹ Ð¶ÐµÑ‚Ð¾Ð½",
+    description: "Ð£Ð´Ð°Ñ‡Ð° +7% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ; Ð²Ð»Ð¸ÑÐµÑ‚ Ð½Ð° Ð²ÑÐµ Ñ€ÐµÐ´ÐºÐ¸Ðµ ÑÑ€Ð°Ð±Ð°Ñ‚Ñ‹Ð²Ð°Ð½Ð¸Ñ.",
+    category: "fortune",
+    icon: "âœ¦",
+    maxLevel: 4,
+    effectLevelMultiplier: 1.25,
+    baseCost: 23,
+    growth: 1.41,
+    requires: ["fortune_prospector_ledger"],
+    apply: (stats, level) => add(stats, "luck", 0.056 * level),
+  }),
+  defineUpgrade({
+    id: "fortune_glimmer_hunter",
+    name: "ÐžÑ…Ð¾Ñ‚Ð½Ð¸Ðº Ð·Ð° Ð±Ð»ÐµÑÐºÐ¾Ð¼",
+    description: "Ð¨Ð°Ð½Ñ Ð¿Ð¾Ð»ÑƒÑ‡Ð¸Ñ‚ÑŒ Ð´Ð¾Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ñ‹Ð¹ ÐºÑƒÑÐ¾Ðº Ð±Ð¾Ð»ÐµÐµ Ñ€ÐµÐ´ÐºÐ¾Ð¹ Ñ€ÑƒÐ´Ñ‹ +3,6% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ. Ð˜ÑÑ…Ð¾Ð´Ð½Ð°Ñ Ð´Ð¾Ð±Ñ‹Ñ‡Ð° Ð²ÑÐµÐ³Ð´Ð° ÑÐ¾Ñ…Ñ€Ð°Ð½ÑÐµÑ‚ÑÑ.",
+    category: "fortune",
+    icon: "âœ§",
+    maxLevel: 5,
+    effectLevelMultiplier: 1.2,
+    baseCost: 42,
+    growth: 1.45,
+    requires: ["fortune_lucky_chip"],
+    firstRecipeOverride: { copper: 2, coal: 1 },
+    apply: (stats, level) => add(stats, "rareOreAdditiveChance", 0.03 * level),
+  }),
+  defineUpgrade({
+    id: "fortune_gem_polish",
+    name: "ÐžÐ³Ñ€Ð°Ð½ÐºÐ° ÑÐ°Ð¼Ð¾Ñ†Ð²ÐµÑ‚Ð¾Ð²",
+    description: "ÐÐ¼ÐµÑ‚Ð¸ÑÑ‚ Ð¸ Ð±Ð¾Ð»ÐµÐµ Ñ€ÐµÐ´ÐºÐ¸Ðµ Ð¶Ð¸Ð»Ñ‹ Ð´Ð°ÑŽÑ‚ Ð½Ð° 10,8% Ð±Ð¾Ð»ÑŒÑˆÐµ ÐºÑƒÑÐºÐ¾Ð² Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "fortune",
+    icon: "â—‡",
+    maxLevel: 5,
+    effectLevelMultiplier: 1.2,
+    baseCost: 58,
+    growth: 1.47,
+    requires: [{ id: "fortune_prospector_ledger", level: 3 }],
+    firstRecipeOverride: { coal: 3, iron: 1 },
+    apply: (stats, level) => add(stats, "gemValueMultiplier", 0.09 * level),
+  }),
+  defineUpgrade({
+    id: "fortune_rich_vein",
+    name: "Ð‘Ð¾Ð³Ð°Ñ‚Ð°Ñ Ð¶Ð¸Ð»Ð°",
+    description: "ÐŸÐµÑ€Ð²Ñ‹Ð¹ ÐºÑƒÑÐ¾Ðº Ñ ÑˆÐ°Ð½ÑÐ¾Ð¼ +3,6% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ Ð¿Ð¾Ð¼ÐµÑ‡Ð°ÐµÑ‚ Ð²ÑÑŽ ÑÑƒÑ‰ÐµÑÑ‚Ð²ÑƒÑŽÑ‰ÑƒÑŽ Ð¶Ð¸Ð»Ñƒ Ð±Ð¾Ð³Ð°Ñ‚Ð¾Ð¹: Ð¾ÑÑ‚Ð°Ð²ÑˆÐ¸ÐµÑÑ Ð½Ð¾Ð´Ñ‹ Ð´Ð°ÑŽÑ‚ +50%, Ð° Ð·Ð°Ð²ÐµÑ€ÑˆÐµÐ½Ð¸Ðµ Ð¿Ñ€Ð¸Ð½Ð¾ÑÐ¸Ñ‚ 1/2/3/4/6 Ð´Ð¾Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ñ‹Ñ… ÐºÑƒÑÐºÐ¾Ð².",
+    category: "fortune",
+    icon: "â–¦",
+    maxLevel: 5,
+    effectLevelMultiplier: 1.2,
+    baseCost: 88,
+    growth: 1.48,
+    requires: ["fortune_glimmer_hunter"],
+    firstRecipeOverride: { coal: 2, iron: 1 },
+    apply: (stats, level) => {
+      add(stats, "richVeinWholeChance", 0.03 * level);
+      stats.richVeinYieldBonus = 0.5;
+      add(stats, "richVeinCompletionBonus", level);
+    },
+  }),
+  defineUpgrade({
+    id: "fortune_double_yield",
+    name: "Ð”Ð²Ð¾Ð¹Ð½Ð°Ñ Ð´Ð¾Ð±Ñ‹Ñ‡Ð°",
+    description: "Ð¨Ð°Ð½Ñ Ð¿Ð¾Ð»ÑƒÑ‡Ð¸Ñ‚ÑŒ Ð´Ð²Ð¾Ð¹Ð½ÑƒÑŽ Ð½Ð°Ð³Ñ€Ð°Ð´Ñƒ +4,5% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "fortune",
+    icon: "â…¡",
+    maxLevel: 4,
+    effectLevelMultiplier: 1.25,
+    baseCost: 112,
+    growth: 1.5,
+    requires: [{ id: "fortune_prospector_ledger", level: 3 }],
+    firstRecipeOverride: { coal: 2, iron: 1 },
+    apply: (stats, level) => add(stats, "doubleDropChance", 0.036 * level),
+  }),
+  defineUpgrade({
+    id: "fortune_triple_seam",
+    name: "Ð¢Ñ€Ð¾Ð¹Ð½Ð°Ñ Ð¿Ñ€Ð¾Ð±Ð°",
+    description: "ÐšÐ°Ð¶Ð´Ñ‹Ð¹ 5-Ð¹/4-Ð¹/3-Ð¹ ÐºÑƒÑÐ¾Ðº Ð¾Ð´Ð½Ð¾Ð¹ Ð¶Ð¸Ð»Ñ‹ Ð³Ð°Ñ€Ð°Ð½Ñ‚Ð¸Ñ€ÑƒÐµÑ‚ +1/+2/+2 Ð´Ð¾Ð±Ñ‹Ñ‡Ð¸ Ð¸ Ñ€Ð°ÑÐºÐ°Ð»Ñ‹Ð²Ð°ÐµÑ‚ ÑÐ»ÐµÐ´ÑƒÑŽÑ‰ÑƒÑŽ Ð½Ð¾Ð´Ñƒ Ð½Ð° 25/40/50%.",
+    category: "fortune",
+    icon: "â…¢",
+    maxLevel: 3,
+    baseCost: 190,
+    growth: 1.68,
+    requires: ["fortune_double_yield", "fortune_rich_vein"],
+    levelRecipeOverrides: [
+      { silver: 2 },
+      { silver: 26 },
+      { gold: 18, silver: 36 },
+    ],
+    apply: (stats, level) => {
+      stats.tripleSampleEvery = [0, 5, 4, 3][level] || 5;
+      stats.tripleSampleBonusYield = [0, 1, 2, 2][level] || 1;
+      stats.tripleSampleNextNodeDamage = [0, 0.25, 0.4, 0.5][level] || 0.25;
+    },
+  }),
+  defineUpgrade({
+    id: "fortune_alchemist_scales",
+    name: "ÐŸÐµÑ€ÐµÐ¿Ð»Ð°Ð²ÐºÐ° Ð¸Ð¼Ð¿ÑƒÐ»ÑŒÑÐ°",
+    description: "25/40/55/70/85% Ñ€ÐµÐ°Ð»ÑŒÐ½Ð¾Ð³Ð¾ Ð»Ð¸ÑˆÐ½ÐµÐ³Ð¾ ÑƒÑ€Ð¾Ð½Ð° Ð¾Ñ‚ ÐºÐ¸Ñ€ÐºÐ¸, Ð»Ð°Ð·ÐµÑ€Ð° Ð¸ Ð³Ð°Ð´Ð¶ÐµÑ‚Ð¾Ð² ÑÐ¾Ñ…Ñ€Ð°Ð½ÑÐµÑ‚ÑÑ Ð² ÑˆÐºÐ°Ð»Ðµ Ð¸ Ð¿ÐµÑ€ÐµÐ½Ð¾ÑÐ¸Ñ‚ÑÑ Ð½Ð° ÑÐ»ÐµÐ´ÑƒÑŽÑ‰ÑƒÑŽ Ð½Ð¾Ð´Ñƒ Ð¶Ð¸Ð»Ñ‹; Ð¿Ð¾Ð»Ð½Ñ‹Ð¹ Ð·Ð°Ñ€ÑÐ´ Ð´Ð°Ñ‘Ñ‚ Ð´Ð¾Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÐµÐ»ÑŒÐ½ÑƒÑŽ Ð´Ð¾Ð±Ñ‹Ñ‡Ñƒ.",
+    category: "fortune",
+    icon: "âš–",
+    maxLevel: 5,
+    baseCost: 230,
+    growth: 1.54,
+    requires: ["fortune_gem_polish", "power_shatterpoint"],
+    firstRecipeOverride: { iron: 3, amber: 2, silver: 1 },
+    apply: (stats, level) => {
+      stats.trueOverkillEnabled = true;
+      stats.overkillReservoirRatio = [0, 0.25, 0.4, 0.55, 0.7, 0.85][level] || 0.25;
+      stats.overkillReservoirYieldThreshold = 1;
+    },
+  }),
+  defineUpgrade({
+    id: "fortune_deep_market",
+    name: "ÐšÐ¾Ð½Ñ‚Ñ€Ð°ÐºÑ‚ Ð³Ð»ÑƒÐ±Ð¸Ð½Ñ‹",
+    description: "ÐšÐ°Ð¶Ð´Ñ‹Ðµ 100 Ð¼ÐµÑ‚Ñ€Ð¾Ð² Ð¾Ð±Ñ‰ÐµÐ¹ Ð³Ð»ÑƒÐ±Ð¸Ð½Ñ‹ Ð´Ð°ÑŽÑ‚ ÑÑ‚Ð°Ðº Ð²Ñ‹Ñ…Ð¾Ð´Ð° Ñ€ÑƒÐ´Ñ‹: +3,6% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ. Ð’ Ð·Ð°Ð±ÐµÐ³Ðµ Ð¼Ð¾Ð¶ÐµÑ‚ Ð½Ð°ÐºÐ¾Ð¿Ð¸Ñ‚ÑŒÑÑ Ð´Ð¾ Ð²Ð¾ÑÑŒÐ¼Ð¸ ÑÑ‚Ð°ÐºÐ¾Ð².",
+    category: "fortune",
+    icon: "â†§",
+    maxLevel: 5,
+    effectLevelMultiplier: 1.2,
+    baseCost: 285,
+    growth: 1.56,
+    requires: ["fortune_gem_polish"],
+    apply: (stats, level) => {
+      stats.depthContractStep = 100;
+      add(stats, "depthContractBonusPerStack", 0.03 * level);
+      stats.depthContractMaxStacks = 8;
+    },
+  }),
+  defineUpgrade({
+    id: "fortune_golden_touch",
+    name: "Ð—Ð¾Ð»Ð¾Ñ‚Ð¾Ðµ ÐºÐ°ÑÐ°Ð½Ð¸Ðµ",
+    description: "Ð¨Ð°Ð½Ñ Ð¿Ð¾Ð»ÑƒÑ‡Ð¸Ñ‚ÑŒ Ð´Ð¾Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ñ‹Ð¹ ÐºÑƒÑÐ¾Ðº Ð·Ð¾Ð»Ð¾Ñ‚Ð° +1,9% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ. Ð˜ÑÑ…Ð¾Ð´Ð½Ð°Ñ Ñ€ÑƒÐ´Ð° Ð½Ðµ Ð·Ð°Ð¼ÐµÐ½ÑÐµÑ‚ÑÑ.",
+    category: "fortune",
+    icon: "â˜€",
+    maxLevel: 4,
+    baseCost: 420,
+    growth: 1.59,
+    requires: ["fortune_triple_seam"],
+    apply: (stats, level) => add(stats, "goldenOreAdditiveChance", 0.01875 * level),
+  }),
+  defineUpgrade({
+    id: "fortune_relic_magnet",
+    name: "ÐœÐ°Ð³Ð½Ð¸Ñ‚ Ñ€ÐµÐ»Ð¸ÐºÐ²Ð¸Ð¹",
+    description: "Ð¨Ð°Ð½Ñ Ð¿Ð¾Ð»ÑƒÑ‡Ð¸Ñ‚ÑŒ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð½ÑƒÑŽ Ñ€ÐµÐ»Ð¸ÐºÐ²Ð¸ÑŽ +1,9% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ: Ð²Ñ‚Ð¾Ñ€Ð¾Ð¹ Ð»ÑƒÑ‡, Ð¼ÑÐ³ÐºÐ°Ñ Ð¿Ð¾Ñ€Ð¾Ð´Ð°, Ð±Ð¾Ð½ÑƒÑ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð¸ Ð¸Ð»Ð¸ ÑƒÑÐ¸Ð»ÐµÐ½Ð½Ñ‹Ð¹ ÑÑƒÐ½Ð´ÑƒÐº. Ð­Ñ„Ñ„ÐµÐºÑ‚ Ð·Ð°Ð¼ÐµÑ‚Ð½Ð¾ Ð¿Ð¾ÐºÐ°Ð·Ñ‹Ð²Ð°ÐµÑ‚ÑÑ ÑÐ²ÐµÑ€Ñ…Ñƒ.",
+    category: "fortune",
+    icon: "âŒ‘",
+    maxLevel: 4,
+    effectLevelMultiplier: 1.25,
+    baseCost: 510,
+    growth: 1.6,
+    requires: ["fortune_lucky_chip", "gadgets_magnet_mine"],
+    apply: (stats, level) => {
+      add(stats, "pickupRadius", 10 * level);
+      add(stats, "relicEffectChance", 0.015 * level);
+      stats.relicEffectDuration = 6;
+      add(stats, "relicEffectPower", 0.08 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "fortune_kings_ransom",
+    name: "ÐšÐ¾Ñ€Ð¾Ð»ÐµÐ²ÑÐºÐ¸Ð¹ Ð²Ñ‹ÐºÑƒÐ¿",
+    description: "Ð’Ñ‹Ñ…Ð¾Ð´ Ñ€ÑƒÐ´Ñ‹ +12% Ð¸ ÑˆÐ°Ð½Ñ Ð´Ð¾Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾Ð³Ð¾ ÐºÑƒÑÐºÐ° +5% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "fortune",
+    icon: "â™›",
+    maxLevel: 4,
+    baseCost: 720,
+    growth: 1.64,
+    requires: ["fortune_deep_market", "fortune_golden_touch"],
+    apply: (stats, level) => {
+      add(stats, "oreValueMultiplier", 0.12 * level);
+      add(stats, "extraYieldChance", 0.05 * level);
+    },
+  }),
+  defineUpgrade({
+    id: "fortune_wheel",
+    name: "ÐšÐ¾Ð»ÐµÑÐ¾ Ñ„Ð¾Ñ€Ñ‚ÑƒÐ½Ñ‹",
+    description: "ÐŸÐ¾ÑÐ»Ðµ 8/7/6/5 ÐºÑƒÑÐºÐ¾Ð² Ñ€ÑƒÐ´Ñ‹ Ð±ÐµÐ· Ñ€ÐµÐ´ÐºÐ¾Ð³Ð¾ ÑÑ„Ñ„ÐµÐºÑ‚Ð° ÑÐ»ÐµÐ´ÑƒÑŽÑ‰Ð¸Ð¹ Ð³Ð°Ñ€Ð°Ð½Ñ‚Ð¸Ñ€Ð¾Ð²Ð°Ð½. ÐšÐ¾Ð»ÐµÑÐ¾ Ð¿Ð¾ ÐºÑ€ÑƒÐ³Ñƒ Ð²Ñ‹Ð´Ð°Ñ‘Ñ‚ Ð´Ð¾Ð±Ñ‹Ñ‡Ñƒ, Ð±Ð¾Ð¼Ð±Ñƒ, Ð²Ñ€ÐµÐ¼Ñ Ð¸ Ð±Ð¾Ð³Ð°Ñ‚ÑƒÑŽ Ð½Ð¾Ð´Ñƒ.",
+    category: "fortune",
+    icon: "âŠ›",
+    maxLevel: 4,
+    baseCost: 960,
+    growth: 1.67,
+    requires: ["fortune_relic_magnet", "fortune_kings_ransom"],
+    apply: (stats, level) => {
+      stats.fortuneWheelEnabled = true;
+      stats.fortunePityThreshold = [0, 8, 7, 6, 5][level] || 8;
+      stats.fortuneWheelCycleLength = 4;
+    },
+  }),
+  defineUpgrade({
+    id: "fortune_findings_catalog",
+    name: "ÐšÐ°Ñ‚Ð°Ð»Ð¾Ð³ Ð½Ð°Ñ…Ð¾Ð´Ð¾Ðº",
+    description: "ÐšÐ°Ð¶Ð´Ñ‹Ð¹ Ð´Ð¾Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ñ‹Ð¹ Ñ‚Ð¸Ð¿ Ñ€ÑƒÐ´Ñ‹, Ð´Ð¾Ð±Ñ‹Ñ‚Ñ‹Ð¹ Ð² Ñ‚ÐµÐºÑƒÑ‰ÐµÐ¼ Ð·Ð°Ð±ÐµÐ³Ðµ, Ð¿Ð¾Ð²Ñ‹ÑˆÐ°ÐµÑ‚ Ð¸Ñ‚Ð¾Ð³Ð¾Ð²ÑƒÑŽ Ð´Ð¾Ð±Ñ‹Ñ‡Ñƒ Ð½Ð° 2% Ð·Ð° ÑƒÑ€Ð¾Ð²ÐµÐ½ÑŒ.",
+    category: "fortune",
+    icon: "â–¤",
+    maxLevel: 3,
+    baseCost: 550,
+    growth: 1.62,
+    requires: ["fortune_deep_market", "sense_vein_whisper", "sense_ore_focus"],
+    apply: (stats, level) => add(stats, "oreDiversityBonusPerType", 0.02 * level),
+  }),
+  defineUpgrade({
+    id: "fortune_motherlode_covenant",
+    name: "Ð”Ð¾Ð³Ð¾Ð²Ð¾Ñ€ Ñ ÐœÐ°Ñ‚ÐµÑ€Ð¸Ð½ÑÐºÐ¾Ð¹ Ð¶Ð¸Ð»Ð¾Ð¹",
+    description: "ÐŸÐ¾ÑÐ»Ðµ 20 Ð´Ð¾Ð±Ñ‹Ñ‚Ñ‹Ñ… ÐºÑƒÑÐºÐ¾Ð² Ð³Ð°Ñ€Ð°Ð½Ñ‚Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð½Ð¾ Ð¿Ð¾Ð¼ÐµÑ‡Ð°ÐµÑ‚ Ð¾Ð´Ð½Ñƒ ÑÑƒÑ‰ÐµÑÑ‚Ð²ÑƒÑŽÑ‰ÑƒÑŽ Ð¶Ð¸Ð»Ñƒ Ð²Ñ‹ÑÑˆÐµÐ³Ð¾ Ð´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð¾Ð³Ð¾ Ñ‚Ð¸Ñ€Ð° ÐœÐ°Ñ‚ÐµÑ€Ð¸Ð½ÑÐºÐ¾Ð¹: Ð²Ñ‹Ñ…Ð¾Ð´ Ã—2, Ð° Ð·Ð°Ð²ÐµÑ€ÑˆÐµÐ½Ð¸Ðµ Ð´Ð°Ñ‘Ñ‚ ÑÐ¼ÐµÑˆÐ°Ð½Ð½Ñ‹Ð¹ Ñ‚Ð°Ð¹Ð½Ð¸Ðº Ð¸ +2,5 ÑÐµÐºÑƒÐ½Ð´Ñ‹.",
+    category: "fortune",
+    icon: "â™¢",
+    maxLevel: 1,
+    baseCost: 2600,
+    growth: 1,
+    requires: ["fortune_wheel", "fortune_alchemist_scales", "fortune_findings_catalog"],
+    recipeOverride: { prism_crystal: 550, void_ore: 360, star_core: 70 },
+    apply: (stats, level) => {
+      stats.motherlodeGuaranteed = level > 0;
+      stats.motherlodeTriggerBreaks = 20;
+      stats.motherlodeYieldMultiplier = 2;
+      stats.motherlodeCompletionCache = 6;
+      stats.motherlodeCompletionTimeBonus = 2.5;
+    },
+  }),
+];
+
+const coreFinalUpgrade = defineUpgrade({
+  id: "core_bon_voyage",
+  name: "Ð’ Ð´Ð¾Ð±Ñ€Ñ‹Ð¹ Ð¿ÑƒÑ‚ÑŒ",
+  description: "Ð’ÑÐµ ÑÐµÐ¼ÑŒ Ð¿ÑƒÑ‚ÐµÐ¹ Ð¾ÑÐ²Ð¾ÐµÐ½Ñ‹. ÐŸÑ€Ð¾Ð²ÐµÐ´Ð¸Ñ‚Ðµ Ð´Ð²Ðµ ÑÐ¼ÐµÐ½Ñ‹ Ñ Ð¡Ð¾Ð»Ð½ÐµÑ‡Ð½Ñ‹Ð¼ Ð±ÑƒÑ€Ð¾Ð¼, Ð¿Ð¾Ð´Ð³Ð¾Ñ‚Ð¾Ð²ÑŒÑ‚Ðµ ÐºÐ¾Ñ€Ð°Ð±Ð»ÑŒ Ð¸ Ð¾Ñ‚Ð¿Ñ€Ð°Ð²Ð»ÑÐ¹Ñ‚ÐµÑÑŒ Ð´Ð°Ð»ÑŒÑˆÐµ.",
+  category: "core",
+  icon: "ðŸš€",
+  maxLevel: 1,
+  baseCost: 24000,
+  growth: 1,
+  requires: [
+    "sense_earth_call",
+    "dig_quarry_presence",
+    "power_mountain_splitter",
+    "time_thirty_second_oath",
+    "gadgets_demolition_orchestra",
+    "tools_solar_drill",
+    "fortune_motherlode_covenant",
+  ],
+  recipeOverride: {
+    prism_crystal: 5300,
+    void_ore: 1800,
+    star_core: 260,
+  },
+  apply: (stats, level) => {
+    if (level > 0) stats.bonVoyageUnlocked = true;
+  },
+});
+
+// The spreads intentionally keep the exported catalog grouped by category.
+const UPGRADE_DEFS = Object.freeze([
+  coreRootUpgrade,
+  ...senseUpgrades,
+  ...digUpgrades,
+  ...powerUpgrades,
+  ...timeUpgrades,
+  ...gadgetUpgrades,
+  ...toolUpgrades,
+  ...fortuneUpgrades,
+  coreFinalUpgrade,
+]);
+
+/** Create a fresh mutable stat block for one meta-progression calculation. */
+function createBaseMetaStats() {
+  return {
+    // Detection and autonomous targeting.
+    senseRadius: 76,
+    senseRadiusMultiplier: 1,
+    sensePulseSpeed: 1,
+    sensePersistence: 0.7,
+    senseThroughWalls: false,
+    echoPingCooldown: 0,
+    echoPingRadiusMultiplier: 1,
+    echoPingTargetHold: 0,
+    deepOreSenseBonus: 0,
+    deepResonanceEnabled: false,
+    deepResonanceCooldown: 0,
+    deepResonanceRadiusMultiplier: 1,
+    deepResonanceSolidLayers: 0,
+    deepResonanceConeHalfAngle: 0,
+    deepResonanceTargetHold: 0,
+    deepResonanceTargetSlots: 0,
+    veinRevealChance: 0,
+    veinTrailEnabled: false,
+    veinTrailRangeMultiplier: 1,
+    veinTrailMoveSpeedBonus: 0,
+    veinLockEnabled: false,
+    veinLockRangeMultiplier: 1,
+    veinLockMoveSpeedBonus: 0,
+    targetLockSpeed: 1,
+    targetValueBias: 0.12,
+    backupTargetSlots: 0,
+    seismicRouteSlots: 0,
+    oreOutline: false,
+    ghostTrailDuration: 0,
+    ghostTrailMaxLayers: 0,
+    oreFocusUnlocked: false,
+    oreFocusRadiusMultiplier: 1,
+    focusVeinSizeBias: 0,
+    focusVeinMoveSpeedPerNode: 0,
+    oreFocusEscalationDelay: 0,
+    oreFocusEscalationBonus: 0,
+    deafKnockStoneThreshold: 0,
+    deafKnockSenseRadiusMultiplier: 1,
+    deafKnockMoveSpeedBonus: 0,
+    deafKnockMoveDuration: 0,
+    deafKnockCooldown: 0,
+    deafKnockFocusOnly: false,
+    triangularFixUnlocked: false,
+    triangularFixOreMemory: 0,
+    triangularFixDronePriority: false,
+    triangularFixGadgetDamageBonus: 0,
+    triangularFixRangeBonus: 0,
+    bonVoyageUnlocked: false,
+
+    // Movement and mining geometry.
+    moveSpeed: 82,
+    moveSpeedMultiplier: 1,
+    mineMoveMultiplier: 1,
+    openingSprintMultiplier: 1,
+    targetRelaySprintMultiplier: 1,
+    targetRelaySprintDuration: 0,
+    digReach: 38,
+    digRadius: 8,
+    areaMiningUnlocked: false,
+    digReachMultiplier: 1,
+    digArc: Math.PI / 3,
+    digSpeed: 2.25,
+    digSpeedMultiplier: 1,
+    aimTurnSpeed: 1,
+    multiHitChance: 0,
+    multiHitCount: 1,
+    sideChipEvery: 0,
+    sideChipTargets: 0,
+    sideChipPower: 0,
+    sideChipLaserEnabled: false,
+    approachStrikeTravelTime: 0,
+    approachStrikePower: 0,
+    approachStrikeSideChipPower: 0,
+    splashRadius: 0,
+    splashDamage: 0,
+    impactWaveEvery: 0,
+    impactWaveRadiusTiles: 0,
+    impactWavePower: 0,
+    leastResistancePathing: false,
+    mineLiftRecordDepthRatio: 0,
+    quarryModeRequiredBreaks: 0,
+    quarryModeWindow: 0,
+    quarryModeDuration: 0,
+    quarryModeMoveSpeedBonus: 0,
+    quarryModeDigSpeedBonus: 0,
+    quarryModeSideFracturePower: 0,
+
+    // Direct mining damage.
+    pickPower: 1,
+    pickPowerMultiplier: 1,
+    hardnessPierce: 0,
+    critChance: 0.02,
+    critMultiplier: 1.75,
+    faultFinderCadenceEvery: 0,
+    breakSplashChance: 0,
+    breakSplashPower: 0.25,
+    streakPower: 0,
+    streakCap: 0,
+    comboWindow: 0.72,
+    comboMultiplier: 1,
+    oreDamageBonus: 0,
+    rareOreDamageBonus: 0,
+    chargedHitPower: 0,
+    overkillCarry: 0,
+    focusedOreHardnessReduction: 0,
+    faultLineEnabled: false,
+    faultLineMaxBlocks: 0,
+    faultLinePower: 0,
+    faultLineExtendOnBreak: false,
+
+    // Permanent upgrades stay between 6 and 45 seconds; in-run bonuses can
+    // extend the live countdown only as far as the separate 60-second cap.
+    runDuration: 6,
+    maxRunDuration: 45,
+    bonusRunDurationCap: 60,
+    discoveryTimeBonus: 0,
+    startTimeFreeze: 0,
+    timeRefundChance: 0,
+    timeRefundAmount: 0,
+    timeRefundMultiplier: 1,
+    timeShardChance: 0,
+    timeShardSeconds: 0,
+    lastChanceCharges: 0,
+    lastChanceSeconds: 0,
+    timerDrainReduction: 0,
+    timerDrainMultiplier: 1,
+    chronoOverclock: false,
+    chronoOverdrive: false,
+    chronoOverflowThreshold: 45,
+    chronoOverflowSpeedBonus: 0,
+    chronoOverflowRepeatEvery: 0,
+
+    // Gadgets.
+    bombChance: 0,
+    bombPower: 1,
+    bombRadius: 34,
+    bombFragments: 0,
+    bombFragmentPower: 0.3,
+    stickyBombChance: 0,
+    volatileBombChance: 0,
+    bombValueMultiplier: 1,
+    directionalBombs: false,
+    directionalBombConeTiles: 0,
+    chainChance: 0,
+    chainCount: 1,
+    chainPower: 0.55,
+    shockDuration: 0,
+    pickupRadius: 46,
+    droneUnlocked: false,
+    droneCount: 0,
+    dronePower: 0.35,
+    droneSpeed: 1,
+    droneLifetime: 0.45,
+    droneBombChance: 0,
+    crewBeaconUnlocked: false,
+    crewBeaconOverkillCarry: 0,
+    magneticFieldEnabled: false,
+    magneticFieldDuration: 0,
+    magneticFieldRadiusTiles: 0,
+    magneticFieldTargetingBonus: 0,
+    demolitionComboEnabled: false,
+    demolitionComboMarkDuration: 0,
+    demolitionComboFinishPower: 0,
+    demolitionComboVeinRadiusTiles: 0,
+
+    // Tool progression.
+    tool: "pickaxe",
+    toolTier: 1,
+    superPickUnlocked: false,
+    laserUnlocked: false,
+    laserRange: 210,
+    laserPower: 1,
+    laserWidth: 8,
+    laserPierce: 1,
+    laserBeams: 1,
+    laserChargeRate: 1,
+    laserRicochetCount: 0,
+    laserFirstRicochetMultiplier: 0.65,
+    laserSecondRicochetMultiplier: 0.45,
+    laserSuperPickEchoEvery: 0,
+    laserSuperPickEchoRadiusTiles: 0,
+    laserSuperPickEchoPower: 0,
+    laserSuperPickEchoNoProcs: false,
+    superFieldEnabled: false,
+    superFieldRadiusTiles: 0,
+    superFieldPower: 0,
+    superFieldDuration: 0,
+    superFieldLaserPersistent: false,
+    laserHeatEdgePower: 0,
+    laserHeatDuration: 0,
+    laserHeatNextHitBonus: 0,
+    solarDrillEnabled: false,
+    solarDrillProcEvery: 0,
+    solarDrillBeamDuration: 0,
+    solarDrillFinalBurstPower: 0,
+
+    // Rewards and procedural fortune. Consumers combine `luck` and explicit
+    // proc chances; this module does not roll random values itself.
+    oreValueMultiplier: 1,
+    luck: 0,
+    rareOreChance: 0,
+    rareOreAdditiveChance: 0,
+    gemValueMultiplier: 1,
+    richVeinChance: 0,
+    richVeinWholeChance: 0,
+    richVeinYieldBonus: 0,
+    richVeinCompletionBonus: 0,
+    doubleDropChance: 0,
+    extraYieldChance: 0,
+    tripleDropChance: 0,
+    tripleSampleEvery: 0,
+    tripleSampleBonusYield: 0,
+    tripleSampleNextNodeDamage: 0,
+    oreConversionBonus: 0,
+    trueOverkillEnabled: false,
+    overkillReservoirRatio: 0,
+    overkillReservoirYieldThreshold: 0,
+    depthValueBonus: 0,
+    depthContractStep: 0,
+    depthContractBonusPerStack: 0,
+    depthContractMaxStacks: 0,
+    goldenOreChance: 0,
+    goldenOreAdditiveChance: 0,
+    relicChance: 0,
+    relicEffectChance: 0,
+    relicEffectDuration: 0,
+    relicEffectPower: 0,
+    fortuneProcChance: 0,
+    fortuneWheelEnabled: false,
+    fortunePityThreshold: 0,
+    fortuneWheelCycleLength: 0,
+    motherlodeChance: 0,
+    motherlodeGuaranteed: false,
+    motherlodeTriggerBreaks: 0,
+    motherlodeYieldMultiplier: 1,
+    motherlodeCompletionCache: 0,
+    motherlodeCompletionTimeBonus: 0,
+    oreDiversityBonusPerType: 0,
+  };
+}
+
+const probabilityKeys = [
+  "veinRevealChance",
+  "multiHitChance",
+  "critChance",
+  "breakSplashChance",
+  "overkillCarry",
+  "timeRefundChance",
+  "timeShardChance",
+  "bombChance",
+  "stickyBombChance",
+  "volatileBombChance",
+  "chainChance",
+  "droneBombChance",
+  "luck",
+  "rareOreChance",
+  "rareOreAdditiveChance",
+  "richVeinChance",
+  "richVeinWholeChance",
+  "doubleDropChance",
+  "extraYieldChance",
+  "tripleDropChance",
+  "goldenOreChance",
+  "goldenOreAdditiveChance",
+  "relicChance",
+  "relicEffectChance",
+  "fortuneProcChance",
+  "motherlodeChance",
+  "focusedOreHardnessReduction",
+];
+
+function normalizeMetaStats(stats) {
+  stats.senseRadius = Math.max(1, stats.senseRadius * stats.senseRadiusMultiplier);
+  stats.echoPingCooldown = Math.max(0, stats.echoPingCooldown);
+  stats.echoPingRadiusMultiplier = Math.max(1, stats.echoPingRadiusMultiplier);
+  stats.echoPingTargetHold = Math.max(0, stats.echoPingTargetHold);
+  stats.veinTrailRangeMultiplier = Math.max(1, stats.veinTrailRangeMultiplier);
+  stats.veinTrailMoveSpeedBonus = Math.max(0, stats.veinTrailMoveSpeedBonus);
+  stats.veinLockRangeMultiplier = Math.max(1, stats.veinLockRangeMultiplier);
+  stats.veinLockMoveSpeedBonus = Math.max(0, stats.veinLockMoveSpeedBonus);
+  stats.seismicRouteSlots = Math.max(0, Math.floor(stats.seismicRouteSlots));
+  stats.ghostTrailDuration = Math.max(0, stats.ghostTrailDuration);
+  stats.ghostTrailMaxLayers = Math.max(0, Math.floor(stats.ghostTrailMaxLayers));
+  stats.focusVeinSizeBias = Math.max(0, stats.focusVeinSizeBias);
+  stats.focusVeinMoveSpeedPerNode = Math.max(0, stats.focusVeinMoveSpeedPerNode);
+  stats.moveSpeed = Math.max(1, stats.moveSpeed * stats.moveSpeedMultiplier);
+  stats.mineMoveMultiplier = Math.max(0.1, stats.mineMoveMultiplier);
+  const rawDigReach = Math.max(1, stats.digReach * stats.digReachMultiplier);
+  const toolTier = clamp(Math.floor(Number(stats.toolTier) || 1), 1, 7);
+  const reachBands = [
+    null,
+    { min: 38, max: 64 },
+    { min: 38, max: 68 },
+    { min: 38, max: 76 },
+    { min: 56, max: 88 },
+    { min: 72, max: 112 },
+    { min: 72, max: 112 },
+    { min: 72, max: 112 },
+  ];
+  const reachBand = reachBands[toolTier];
+  stats.toolTier = toolTier;
+  stats.pickReachCap = reachBand.max;
+  stats.digReach = clamp(rawDigReach, reachBand.min, reachBand.max);
+  stats.digRadius = Math.max(1, stats.digRadius);
+  stats.digArc = clamp(stats.digArc, Math.PI / 18, Math.PI * 2);
+  stats.digSpeed = Math.max(0.1, stats.digSpeed * stats.digSpeedMultiplier);
+  stats.sideChipEvery = Math.max(0, Math.floor(stats.sideChipEvery));
+  stats.sideChipTargets = Math.max(0, Math.floor(stats.sideChipTargets));
+  stats.sideChipPower = clamp(stats.sideChipPower, 0, 1);
+  stats.approachStrikeTravelTime = Math.max(0, stats.approachStrikeTravelTime);
+  stats.approachStrikePower = Math.max(0, stats.approachStrikePower);
+  stats.approachStrikeSideChipPower = clamp(stats.approachStrikeSideChipPower, 0, 1);
+  stats.impactWaveEvery = Math.max(0, Math.floor(stats.impactWaveEvery));
+  stats.impactWaveRadiusTiles = Math.max(0, stats.impactWaveRadiusTiles);
+  stats.impactWavePower = clamp(stats.impactWavePower, 0, 1);
+  stats.quarryModeRequiredBreaks = Math.max(0, Math.floor(stats.quarryModeRequiredBreaks));
+  stats.quarryModeWindow = Math.max(0, stats.quarryModeWindow);
+  stats.quarryModeDuration = Math.max(0, stats.quarryModeDuration);
+  stats.quarryModeMoveSpeedBonus = Math.max(0, stats.quarryModeMoveSpeedBonus);
+  stats.quarryModeDigSpeedBonus = Math.max(0, stats.quarryModeDigSpeedBonus);
+  stats.quarryModeSideFracturePower = clamp(stats.quarryModeSideFracturePower, 0, 1);
+  stats.pickPower = Math.max(0.1, stats.pickPower * stats.pickPowerMultiplier);
+  stats.faultLineMaxBlocks = Math.max(0, Math.floor(stats.faultLineMaxBlocks));
+  stats.faultLinePower = clamp(stats.faultLinePower, 0, 1);
+  stats.maxRunDuration = clamp(stats.maxRunDuration, 6, 45);
+  stats.runDuration = clamp(stats.runDuration, 6, stats.maxRunDuration);
+  stats.bonusRunDurationCap = clamp(stats.bonusRunDurationCap, stats.maxRunDuration, 60);
+  stats.discoveryTimeBonus = Math.max(0, stats.discoveryTimeBonus);
+  stats.chronoOverflowThreshold = clamp(stats.chronoOverflowThreshold, 45, 60);
+  stats.chronoOverflowSpeedBonus = Math.max(0, stats.chronoOverflowSpeedBonus);
+  stats.chronoOverflowRepeatEvery = Math.max(0, Math.floor(stats.chronoOverflowRepeatEvery));
+  stats.timerDrainReduction = clamp(stats.timerDrainReduction, 0, 0.5);
+  stats.timerDrainMultiplier = 1 - stats.timerDrainReduction;
+  stats.timeRefundAmount *= stats.timeRefundMultiplier;
+  stats.bombPower = Math.max(0, stats.bombPower);
+  stats.directionalBombConeTiles = Math.max(0, Math.floor(stats.directionalBombConeTiles));
+  stats.crewBeaconOverkillCarry = clamp(stats.crewBeaconOverkillCarry, 0, 1);
+  stats.magneticFieldDuration = Math.max(0, stats.magneticFieldDuration);
+  stats.magneticFieldRadiusTiles = Math.max(0, stats.magneticFieldRadiusTiles);
+  stats.magneticFieldTargetingBonus = Math.max(0, stats.magneticFieldTargetingBonus);
+  stats.demolitionComboMarkDuration = Math.max(0, stats.demolitionComboMarkDuration);
+  stats.demolitionComboFinishPower = Math.max(0, stats.demolitionComboFinishPower);
+  stats.demolitionComboVeinRadiusTiles = Math.max(0, stats.demolitionComboVeinRadiusTiles);
+  stats.chainPower = Math.max(0, stats.chainPower);
+  stats.dronePower = Math.max(0, stats.dronePower);
+  stats.laserRange = clamp(stats.laserRange, 210, 420);
+  stats.laserPower = Math.max(0, stats.laserPower);
+  stats.laserRicochetCount = clamp(Math.floor(stats.laserRicochetCount), 0, 2);
+  stats.laserFirstRicochetMultiplier = clamp(stats.laserFirstRicochetMultiplier, 0, 1);
+  stats.laserSecondRicochetMultiplier = clamp(stats.laserSecondRicochetMultiplier, 0, 1);
+  stats.oreValueMultiplier = Math.max(0, stats.oreValueMultiplier);
+  stats.gemValueMultiplier = Math.max(0, stats.gemValueMultiplier);
+  stats.backupTargetSlots = Math.max(0, Math.floor(stats.backupTargetSlots));
+  stats.oreFocusEscalationDelay = Math.max(0, stats.oreFocusEscalationDelay);
+  stats.oreFocusEscalationBonus = Math.max(0, stats.oreFocusEscalationBonus);
+  stats.deafKnockStoneThreshold = Math.max(0, Math.floor(stats.deafKnockStoneThreshold));
+  stats.deafKnockSenseRadiusMultiplier = Math.max(1, stats.deafKnockSenseRadiusMultiplier);
+  stats.deafKnockMoveSpeedBonus = Math.max(0, stats.deafKnockMoveSpeedBonus);
+  stats.deafKnockMoveDuration = Math.max(0, stats.deafKnockMoveDuration);
+  stats.deafKnockCooldown = Math.max(0, stats.deafKnockCooldown);
+  stats.triangularFixOreMemory = Math.max(0, stats.triangularFixOreMemory);
+  stats.triangularFixGadgetDamageBonus = Math.max(0, stats.triangularFixGadgetDamageBonus);
+  stats.triangularFixRangeBonus = Math.max(0, stats.triangularFixRangeBonus);
+  stats.mineLiftRecordDepthRatio = clamp(stats.mineLiftRecordDepthRatio, 0, 0.9);
+  stats.oreDiversityBonusPerType = Math.max(0, stats.oreDiversityBonusPerType);
+  stats.laserSuperPickEchoEvery = Math.max(0, Math.floor(stats.laserSuperPickEchoEvery));
+  stats.laserSuperPickEchoRadiusTiles = Math.max(0, stats.laserSuperPickEchoRadiusTiles);
+  stats.laserSuperPickEchoPower = clamp(stats.laserSuperPickEchoPower, 0, 1);
+  stats.superFieldRadiusTiles = Math.max(0, stats.superFieldRadiusTiles);
+  stats.superFieldPower = clamp(stats.superFieldPower, 0, 1);
+  stats.superFieldDuration = Math.max(0, stats.superFieldDuration);
+  stats.laserHeatEdgePower = clamp(stats.laserHeatEdgePower, 0, 1);
+  stats.laserHeatDuration = Math.max(0, stats.laserHeatDuration);
+  stats.laserHeatNextHitBonus = Math.max(0, stats.laserHeatNextHitBonus);
+  stats.solarDrillProcEvery = Math.max(0, Math.floor(stats.solarDrillProcEvery));
+  stats.solarDrillBeamDuration = Math.max(0, stats.solarDrillBeamDuration);
+  stats.solarDrillFinalBurstPower = Math.max(0, stats.solarDrillFinalBurstPower);
+  stats.richVeinYieldBonus = Math.max(0, stats.richVeinYieldBonus);
+  stats.richVeinCompletionBonus = Math.max(0, Math.floor(stats.richVeinCompletionBonus));
+  stats.tripleSampleEvery = Math.max(0, Math.floor(stats.tripleSampleEvery));
+  stats.tripleSampleBonusYield = Math.max(0, Math.floor(stats.tripleSampleBonusYield));
+  stats.tripleSampleNextNodeDamage = clamp(stats.tripleSampleNextNodeDamage, 0, 1);
+  stats.overkillReservoirRatio = clamp(stats.overkillReservoirRatio, 0, 1);
+  stats.overkillReservoirYieldThreshold = Math.max(0, stats.overkillReservoirYieldThreshold);
+  stats.depthContractStep = Math.max(0, stats.depthContractStep);
+  stats.depthContractBonusPerStack = Math.max(0, stats.depthContractBonusPerStack);
+  stats.depthContractMaxStacks = Math.max(0, Math.floor(stats.depthContractMaxStacks));
+  stats.relicEffectDuration = Math.max(0, stats.relicEffectDuration);
+  stats.relicEffectPower = Math.max(0, stats.relicEffectPower);
+  stats.fortunePityThreshold = Math.max(0, Math.floor(stats.fortunePityThreshold));
+  stats.fortuneWheelCycleLength = Math.max(0, Math.floor(stats.fortuneWheelCycleLength));
+  stats.motherlodeTriggerBreaks = Math.max(0, Math.floor(stats.motherlodeTriggerBreaks));
+  stats.motherlodeYieldMultiplier = Math.max(1, stats.motherlodeYieldMultiplier);
+  stats.motherlodeCompletionCache = Math.max(0, Math.floor(stats.motherlodeCompletionCache));
+  stats.motherlodeCompletionTimeBonus = Math.max(0, stats.motherlodeCompletionTimeBonus);
+
+  for (const key of probabilityKeys) {
+    stats[key] = clamp(stats[key], 0, 0.95);
+  }
+
+  // Rounding makes save comparisons and deterministic tests stable while
+  // retaining far more precision than the UI needs.
+  for (const [key, value] of Object.entries(stats)) {
+    if (typeof value === "number" && Number.isFinite(value)) stats[key] = round(value);
+  }
+  return stats;
+}
+
+const readLevel = (levels, id) => {
+  if (levels instanceof Map) return levels.get(id);
+  return levels?.[id];
+};
+
+/**
+ * Calculate the complete stat block from a save's purchased upgrade levels.
+ * Invalid, fractional, negative and above-cap levels are safely normalized.
+ */
+function calculateMetaStats(levels = {}) {
+  const stats = createBaseMetaStats();
+  for (const definition of UPGRADE_DEFS) {
+    const rawLevel = Number(readLevel(levels, definition.id));
+    const level = clamp(Number.isFinite(rawLevel) ? Math.floor(rawLevel) : 0, 0, definition.maxLevel);
+    if (level > 0) definition.apply(stats, level * definition.effectLevelMultiplier);
+  }
+  return normalizeMetaStats(stats);
+}
+
+/**
+ * Return the next purchase cost, or Infinity when the definition is invalid or
+ * already at its maximum level.
+ */
+function getUpgradeCost(definition, level = 0) {
+  if (!definition || typeof definition.cost !== "function") return Infinity;
+  const currentLevel = Math.max(0, Math.floor(Number(level) || 0));
+  if (currentLevel >= definition.maxLevel) return Infinity;
+  const result = definition.cost(currentLevel);
+  return Number.isFinite(result) && result > 0 ? Math.round(result) : Infinity;
+}
+
+/** Count valid purchased levels, respecting every node's maximum. */
+function countPurchasedLevels(levels = {}) {
+  return UPGRADE_DEFS.reduce((total, definition) => {
+    const rawLevel = Number(readLevel(levels, definition.id));
+    const level = clamp(Number.isFinite(rawLevel) ? Math.floor(rawLevel) : 0, 0, definition.maxLevel);
+    return total + level;
+  }, 0);
+}
+
+window.DepthZeroUpgrades = Object.freeze({
+  UPGRADE_CATEGORIES,
+  ORE_TYPES,
+  UPGRADE_DEFS,
+  createOreBag,
+  sanitizeOreBag,
+  addOreBag,
+  countOreBag,
+  getUpgradeRecipe,
+  canAffordRecipe,
+  spendRecipe,
+  createBaseMetaStats,
+  calculateMetaStats,
+  getUpgradeCost,
+  countPurchasedLevels,
+});
+})();

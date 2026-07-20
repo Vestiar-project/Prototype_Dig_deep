@@ -307,6 +307,320 @@ for (const id of [
   "gadgets_drone_swarm",
   "gadgets_geo_charge",
   "tools_super_pick_echo",
-  "fortune_◊Ov∂âûÀk∫wµÁuΩŸïêÅïŸïπ–µçÖ…êÅç°…ΩµîÅµ’Õ–ÅÕ—Ö‰Å…ïµΩŸïêà§Ï)ÖÕÕï…–πëΩïÕ9Ω—5Ö—ç†°ùÖµïMΩ’…çî∞ÄΩïŸïπ—Õpπ¡’Õ°p°Öç—•Ÿïp§º∞ÄâçΩπÕ’µïêÅïŸïπ—ÃÅµ’Õ–ÅπΩ–Å≠ïï¿ÅÑÅ±ΩçÖ∞ÅÖç—•ŸîÅù±Ω‹ÅÖô—ï»Å—…•ùùï…•πúà§Ï()ÖÕÕï…–πµÖ—ç††(ÄÅùÖµïMΩ’…çî∞(ÄÄΩ5=	%1}UAI}%9QIQ%=9}EUIeqÃ®ıqÃ©lúâup°°ΩŸï»ËÅπΩπïp§ÅÖπêÅp°¡Ω•π—ï»ËÅçΩÖ…Õïp•lúâtº∞(ÄÄâµΩâ•±îÅ¡ï…¨Å¡’…ç°ÖÕ•πúÅµ’Õ–Å…ïçΩùπ•ÈîÅçΩÖ…ÕîÅ—Ω’ç†ÅçÖ¡Öâ•±•—‰à∞(§Ï)ÖÕÕï…–πµÖ—ç†°ùÖµïMΩ’…çî∞ÄΩ5=	%1}UAI}9II=]}]%Q!qÃ®ıqÃ®ÿ–¡mqÕqMt®˝›•πëΩ›pπ•ππï…]•ë—°qÃ®ıqÃ©5=	%1}UAI}9II=]}]%Q º∞Äâ—°îÅπÖ……Ω‹ÅµΩâ•±îÅ±ÖÂΩ’–Åµ’Õ–Å’ÕîÅ—°îÅÕÖµîÅï·¡±•ç•–Å¡’…ç°ÖÕîÅçΩπ—…Ω±ÃÅïŸï∏Å›°ï∏Å¡Ω•π—ï»Åïµ’±Ö—•Ω∏Å•ÃÅ’πÖŸÖ•±Öâ±îà§Ï)ÖÕÕï…–πµÖ—ç†°•πëï·MΩ’…çî∞ÄΩç±ÖÕÃılàùu’¡ù…ÖëîµôΩΩ—ï…}}ëïÕ≠—Ω¿µ°•π—làùtº§Ï)ÖÕÕï…–πµÖ—ç†°•πëï·MΩ’…çî∞ÄΩç±ÖÕÃılàùu’¡ù…ÖëîµôΩΩ—ï…}}µΩâ•±îµ°•π—làùtº§Ï)ÖÕÕï…–πµÖ—ç†°•πëï·MΩ’…çî∞ÄøBˇB˚BÎFBˇBÎB¿ÉFB˚BÔF3BÎB¯ÉBÎB˜B˚BˇBÎB˚B‰É
-ØBkBèBBcBãB≥
-ÏΩ‘∞Äâ—°îÅµΩâ•±îÅ›Ω…≠Õ°Ω¿Åµ’Õ–Åï·¡±Ö•∏Å•—ÃÅï·¡±•ç•–Å¡’…ç°ÖÕîÅÖç—•Ω∏à§Ï)ÖÕÕï…–πµÖ—ç†°Õ—Â±ïÕMΩ’…çî∞ÄΩµÖ‡µ›•ë—†ÈqÃ®ÿ–¡¡·mqÕqMt®˝ô•±—ï»ÈqÃ©πΩπïmqÕqMt®˝›•ë—†ÈqÃ©çÖ±çp†ƒ¿¡Ÿ›mxÌt≠mqÕqMt®˝Ω¡Öç•—‰ÈqÃ®≈mqÕqMt®˝Ÿ•Õ•â•±•—‰ÈqÃ©Ÿ•Õ•â±îº∞Äâ—°îÅÕï±ïç—ïêÅµΩâ•±îÅ¡ï…¨ÅÕ°ïï–Åµ’Õ–ÅïÕçÖ¡îÅ—°îÅô•±—ï…ïêÄÿ…¡‡ÅπΩëîÅÖπêÅ’ÕîÅŸ•ï›¡Ω…–Å›•ë—†à§Ï)ÖÕÕï…–πµÖ—ç†°Õ—Â±ïÕMΩ’…çî∞ÄΩôΩπ–µÕ•ÈîÈqÃ©ç±Öµ¡p†ƒ≈¡‡±qÃ®ÕŸ‹±qÃ®ƒÕ¡·p•mqÕqMt®˝ôΩπ–µ›ï•ù°–ÈqÃ®–¿¿º∞ÄâµΩâ•±îÅ¡ï…¨ÅëïÕç…•¡—•ΩπÃÅµ’Õ–Å…ïµÖ•∏Å±Ö…ùï»ÅÖπêÅπΩ…µÖ∞µ›ï•ù°–à§Ï)ÖÕÕï…–πµÖ—ç†°Õ—Â±ïÕMΩ’…çî∞ÄΩπï·–µâ…ïÖ≠—°…Ω’ù°}}µÖ·mqÕqMt®˝µ•∏µ°ï•ù°–ÈqÃ®–—¡·mqÕqMt®˝âΩ…ëï»ÈqÃ®…¡‡ÅÕΩ±•êÄçôôî…Ñ¡mqÕqMt®˝âÖç≠ù…Ω’πêÈqÃ©±•πïÖ»µù…Öë•ïπ—p†çôôê‡‹‘±qÃ®çê‰·àÃ’p§º∞Äâ—°îÅµΩâ•±îÅ¡’…ç°ÖÕîÅÖç—•Ω∏Åµ’Õ–Å…ïµÖ•∏ÅÑÅ±Ö…ùîÅ°•ù†µçΩπ—…ÖÕ–ÅQà§Ï)ÖÕÕï…–πµÖ—ç†°Õ—Â±ïÕMΩ’…çî∞ÄΩµïë•ÑÅp°°ΩŸï»ËÅπΩπïp§ÅÖπêÅp°¡Ω•π—ï»ËÅçΩÖ…Õïp•mqÕqMt®˝’¡ù…ÖëîµôΩΩ—ï…}}ëïÕ≠—Ω¿µ°•π—mqÕqMt®˝ë•Õ¡±Ö‰ÈqÃ©πΩπïmqÕqMt®˝’¡ù…ÖëîµôΩΩ—ï…}}µΩâ•±îµ°•π—mqÕqMt®˝ë•Õ¡±Ö‰ÈqÃ©â±Ωç¨º∞ÄâëïÕ≠—Ω¿ÅÖπêÅµΩâ•±îÅ›Ω…≠Õ°Ω¿Å•πÕ—…’ç—•ΩπÃÅµ’Õ–ÅπïŸï»ÅâîÅÕ°Ω›∏ÅÖÃÅΩπîÅµ•·ïêÅçΩπ—…Ω∞ÅÕç°ïµîà§Ï)ÖÕÕï…–πµÖ—ç†°•πëï·MΩ’…çî∞ÄΩ•êılàùuµΩâ•±ï=…ïΩç’ÕQΩùù±ïlàùumqÕqMt®˝Ö…•ÑµçΩπ—…Ω±ÃılàùuµΩâ•±ï=…ïΩç’ÕM°ïï—làùtº∞Äâ—Ω’ç†Å›Ω…≠Õ°Ω¡ÃÅπïïêÅÑÅÕ—Öâ±îÅôΩç’ÃÅçΩπ—…Ω∞ÅΩ’—Õ•ëîÅ—°îÅçÖ¡¡ïêÅ—ΩΩ±âÖ»à§Ï)ÖÕÕï…–πµÖ—ç†°•πëï·MΩ’…çî∞ÄΩ•êılàùuµΩâ•±ï=…ïΩç’Õ°Ω•çïÕlàùtº∞Äâ—°îÅ—Ω’ç†ÅôΩç’ÃÅÕ°ïï–ÅπïïëÃÅï·¡±•ç•–Åë•ÕçΩŸï…ïêµΩ…îÅç°Ω•çïÃà§Ï)ÖÕÕï…–πµÖ—ç†°Õ—Â±ïÕMΩ’…çî∞ÄΩµïë•ÑÅp°°ΩŸï»ËÅπΩπïp§ÅÖπêÅp°¡Ω•π—ï»ËÅçΩÖ…Õïp•mqÕqMt®˝pπ’¡ù…Öëîµ—ΩΩ±âÖ»ÅpπΩ…îµôΩç’Ãµ¡Öπï±qÃ©qÌqÃ©ë•Õ¡±Ö‰ÈqÃ©πΩπïmqÕqMt®˝pπµΩâ•±îµΩ…îµôΩç’ÃÈπΩ—p°pπ°•ëëïπp•mqÕqMt®˝ë•Õ¡±Ö‰ÈqÃ©â±Ωç¨º∞Äâ—Ω’ç†ÅôΩç’ÃÅµ’Õ–Å…ï¡±Öçî∞ÅπΩ–Åë’¡±•çÖ—î∞Å—°îÅëïÕ≠—Ω¿Å—ΩΩ±âÖ»Å¡Öπï∞à§Ï)ÖÕÕï…–πµÖ—ç†°Õ—Â±ïÕMΩ’…çî∞ÄΩpπµΩâ•±îµΩ…îµôΩç’Õ}}—Ωùù±ïqÃ©qÌmqÕqMt®˝µ•∏µ°ï•ù°–ÈqÃ®‘—¡‡º∞Äâ—°îÅµΩâ•±îÅôΩç’ÃÅçΩπ—…Ω∞Åµ’Õ–Å…ïµÖ•∏ÅÖ∏ÅΩâŸ•Ω’ÃÅ—Ω’ç†Å—Ö…ùï–à§Ï)ÖÕÕï…–πµÖ—ç†°Õ—Â±ïÕMΩ’…çî∞ÄΩpπµΩâ•±îµΩ…îµôΩç’Õ}}ç°Ω•çïqÃ©qÌmqÕqMt®˝µ•∏µ°ï•ù°–ÈqÃ®–·¡‡º∞ÄâΩ…îÅç°Ω•çïÃÅ•∏Å—°îÅµΩâ•±îÅÕ°ïï–Åµ’Õ–Å…ïµÖ•∏Å—Ω’ç†ÅÕ•Èïêà§Ï)ÖÕÕï…–πµÖ—ç†°ùÖµïMΩ’…çî∞ÄΩµΩâ•±ï=…ïΩç’Õ%ÕIï±ïŸÖπ—mqÕqMt®˝ÕÖŸïpπ±ïŸï±Õpπ—ΩΩ±Õ}Õ—ïï±}¡•ç¨º∞ÄâÕ—ïï∞µ—•ï»Å¡±ÖÂï…ÃÅπïïêÅÑÅŸ•Õ•â±îÅï·¡±ÖπÖ—•Ω∏ÅΩòÅ—°îÅÖ¡¡…ΩÖç°•πúÅôΩç’ÃÅµïç°Öπ•åà§Ï)ÖÕÕï…–πµÖ—ç†°ùÖµïMΩ’…çî∞ÄΩµΩâ•±ï=…ïΩç’ÕQΩùù±ïp˝pπÖëëŸïπ—1•Õ—ïπï…p°lúâuç±•ç≠lúât±qÃ©Öç—•ŸÖ—ï5Ωâ•±ï=…ïΩç’ÕΩπ—…Ω±p§º∞Äâ—°îÅµΩâ•±îÅôΩç’ÃÅçΩπ—…Ω∞Åµ’Õ–ÅπΩ–ÅâîÅçΩ’¡±ïêÅ—ºÅë•…ïç–Å¡ï…¨Å¡’…ç°ÖÕ•πúà§Ï)ÖÕÕï…–πµÖ—ç†°•πëï·MΩ’…çî∞ÄΩ•êılàùu…ïÕ’µïI’πlàùumx˘t®˚BBÉB{BSB{BoB[BcBãB∞Ω‘∞Äâ—Ω’ç†µΩπ±‰Å¡±ÖÂï…ÃÅπïïêÅÖ∏Åï·¡±•ç•–Å›Ö‰ÅΩ’–ÅΩòÅÑÅŸ•Õ•â•±•—‰Å¡Ö’Õîà§Ï)ÖÕÕï…–πµÖ—ç†°Õ—Â±ïÕMΩ’…çî∞ÄΩpπ¡Ö’ÕîµΩŸï…±ÖÂ}}…ïÕ’µïqÃ©qÌmqÕqMt®˝µ•∏µ°ï•ù°–ÈqÃ®‘…¡‡º∞Äâ—°îÅµΩâ•±îÅ…ïÕ’µîÅÖç—•Ω∏Åµ’Õ–ÅâîÅÑÅ±Ö…ùîÅ—Ω’ç†Å—Ö…ùï–à§Ï)ÖÕÕï…–πµÖ—ç†°Õ—Â±ïÕMΩ’…çî∞ÄΩµïë•ÑÅp°°ΩŸï»ËÅπΩπïp§ÅÖπêÅp°¡Ω•π—ï»ËÅçΩÖ…Õïp•mqÕqMt®˝pπ¡Ö’ÕîµΩŸï…±ÖÂ}}ëïÕ≠—Ω¿µçΩ¡ÂqÃ©qÌqÃ©ë•Õ¡±Ö‰ÈqÃ©πΩπïmqÕqMt®˝pπ¡Ö’ÕîµΩŸï…±ÖÂ}}…ïÕ’µïqÃ©qÌmqÕqMt®˝ë•Õ¡±Ö‰ÈqÃ©•π±•πîµô±ï‡º∞ÄâµΩâ•±îÅ¡Ö’ÕîÅçΩ¡‰Åµ’Õ–ÅπΩ–Å•πÕ—…’ç–Å—°îÅ¡±ÖÂï»Å—ºÅ¡…ïÕÃÅÕåà§Ï)ÖÕÕï…–πµÖ—ç†°ùÖµïMΩ’…çî∞ÄΩ…ïÕ’µïI’πp˝pπÖëëŸïπ—1•Õ—ïπï…p°lúâuç±•ç≠lúât±qÃ©p°p•qÃ®Ù˘qÃ©—Ωùù±ïAÖ’Õïp°ôÖ±Õïp•p§º∞Äâ—°îÅ…ïÕ’µîÅâ’——Ω∏Åµ’Õ–Åï·¡±•ç•—±‰Åç±ïÖ»Å¡Ö’ÕîÅ›•—°Ω’–ÅÖ’—ºµ…ïÕ’µ•πúÅΩ∏ÅŸ•Õ•â•±•—‰Å…ï—’…∏à§Ï)ÖÕÕï…–πµÖ—ç†°•πëï·MΩ’…çî∞ÄΩÕ—Â±ïÕpπçÕÕp˝ÿıëïï¿µÕ°Öô–¥ÿº§Ï)ÖÕÕï…–πµÖ—ç†°•πëï·MΩ’…çî∞ÄΩ©ÕpΩ’¡ù…ÖëïÕpπ©Õp˝ÿıëïï¿µÕ°Öô–¥ÿº§Ï)ÖÕÕï…–πµÖ—ç†°•πëï·MΩ’…çî∞ÄΩ©ÕpΩ›Ω…±ëpπ©Õp˝ÿıëïï¿µÕ°Öô–¥ÿº§Ï)ÖÕÕï…–πµÖ—ç†°•πëï·MΩ’…çî∞ÄΩ©ÕpΩµ’Õ•çpπ©Õp˝ÿıëïï¿µÕ°Öô–¥ÿº§Ï)ÖÕÕï…–πµÖ—ç†°•πëï·MΩ’…çî∞ÄΩ©ÕpΩùÖµïpπ©Õp˝ÿıëïï¿µÕ°Öô–¥ÿº§Ï)ÖÕÕï…–πΩ¨†(ÄÅ•πëï·MΩ’…çîπ•πëï·=ò†ù©ÃΩµ’Õ•åπ©Ã˝ÿıëïï¿µÕ°Öô–¥ÿú§ÄÅ•πëï·MΩ’…çîπ•πëï·=ò†ù©ÃΩùÖµîπ©Ã˝ÿıëïï¿µÕ°Öô–¥ÿú§∞(ÄÄâ—°îÅÕΩ’πë—…Öç¨ÅÕ•πù±ï—Ω∏Åµ’Õ–Å±ΩÖêÅâïôΩ…îÅ—°îÅùÖµîÅÖ’ë•ºÅïπù•πîà∞(§Ï)ÖÕÕï…–πµÖ—ç†°•πëï·MΩ’…çî∞ÄΩ•êılàùuÕΩ’πëQΩùù±ïlàùumqÕqMt®˝Ö…•Ñµ¡…ïÕÕïêılàùu—…’ïlàùtº§Ï)ÖÕÕï…–πµÖ—ç†°•πëï·MΩ’…çî∞ÄøBB{BoBøBÉBwBCBºÉB[BcBoB@Ω‘∞Äâ—°îÅΩ…•ù•πÖ∞Å—…Öç¨ÅπïïëÃÅÑÅŸ•Õ•â±îÅ¡±ÖÂï»µôÖç•πúÅ—•—±îà§Ï)ÖÕÕï…–πµÖ—ç†°ùÖµïMΩ’…çî∞ÄΩ›•πëΩ›pπï¡—°iï…Ω5’Õ•åº§Ï)ÖÕÕï…–πµÖ—ç†°ùÖµïMΩ’…çî∞ÄΩµ’Õ•çp˝pπÕï—πÖâ±ïëp˝p∏º§Ï)ÖÕÕï…–πµÖ—ç†°ùÖµïMΩ’…çî∞ÄΩÕΩ’πëQΩùù±ïp˝pπÖëëŸïπ—1•Õ—ïπï…p°lúâuç±•ç≠lúât±qÃ©—Ωùù±ïMΩ’πëA…ïôï…ïπçïp§º§Ï)ÖÕÕï…–πµÖ—ç†°Õ—Â±ïÕMΩ’…çî∞ÄΩpπ’—•±•—‰µπÖŸ}}â’——Ω∏¥µÖ’ë•ΩqÃ©qÏº§Ï)ÖÕÕï…–πµÖ—ç†°Õ—Â±ïÕMΩ’…çî∞ÄΩpπ’—•±•—‰µπÖŸpπ•ÃµÕ’¡¡…ïÕÕïêÅpπ’—•±•—‰µπÖŸ}}â’——Ω∏ÈπΩ—p°pπ’—•±•—‰µπÖŸ}}â’——Ω∏¥µÖ’ë•Ωp§º∞Äâ—°îÅµ’Õ•åÅçΩπ—…Ω∞Åµ’Õ–Å…ïµÖ•∏ÅÖŸÖ•±Öâ±îÅë’…•πúÅÑÅ…’∏à§Ï()çΩπÕ–ÅΩ…ïIïπëï…M—Â±ï	±Ωç¨ÄÙÅùÖµïMΩ’…çîπµÖ—ç††ΩçΩπÕ–Å=I}I9I}MQe1LÄÙÅ=â©ïç—pπô…ïïÈïp°qÏ°mqÕqMt®¸•qπqıp§Ïº§Ï)ÖÕÕï…–πΩ¨°Ω…ïIïπëï…M—Â±ï	±Ωç¨∞Äâ—°îÅïπŸ•…Ωπµïπ–Å…ïπëï…ï»Åµ’Õ–Å≠ïï¿ÅÖ∏Åï·¡±•ç•–ÅΩ…îµµÖ—ï…•Ö∞Å—Öâ±îà§Ï)ôΩ»Ä°çΩπÕ–ÅΩ…îÅΩòÅ=I}QeAL§ÅÏ(ÄÅÖÕÕï…–πµÖ—ç††(ÄÄÄÅΩ…ïIïπëï…M—Â±ï	±Ωç≠l≈t∞(ÄÄÄÅπï‹ÅIïù·¿°ÅqqàëÌΩ…îπ•ëÙÈqqÃ©=â©ïç—qpπô…ïïÈïqp°qqÌmyıt©µÖ—ï…•Ö∞ÈÄ§∞(ÄÄÄÅÄëÌΩ…îπ•ëÙÅπïïëÃÅÑÅÕ•±°Ω’ï——îΩµÖ—ï…•Ö∞Å¡…Ωô•±îÅ•πÕ—ïÖêÅΩòÅçΩ±Ω’»µΩπ±‰Å…ïπëï…•πùÄ∞(ÄÄ§Ï)Ù)çΩπÕ–ÅΩ…ïIïπëï…ï»ÄÙÅùÖµïMΩ’…çîπµÖ—ç††Ωô’πç—•Ω∏Åë…Ö›=…ï%πQ•±ïp°mqÕqMt®˝qπqıqπqπô’πç—•Ω∏Åë…Ö›…Öç≠Ãº§Ï)ÖÕÕï…–πΩ¨°Ω…ïIïπëï…ï»∞Äâ—°îÅΩ…îÅ…ïπëï…ï»Åµ’Õ–Å…ïµÖ•∏ÅÖŸÖ•±Öâ±îÅ—ºÅ—°îÅçÖπŸÖÃÅ¡ÖÕÃà§Ï)ÖÕÕï…–πµÖ—ç†°Ω…ïIïπëï…ï…l¡t∞ÄΩ=I}I9I}MQe1MqmΩ…ïpπ•ëqtº∞ÄâΩ…îÅµÖ—ï…•Ö∞Å¡…Ωô•±ïÃÅµ’Õ–Åë…•ŸîÅ—°îÅ±•ŸîÅ…ïπëï…ï»à§Ï)ÖÕÕï…–πµÖ—ç†°Ω…ïIïπëï…ï…l¡t∞ÄΩ°ÖÕ5Ö—ç°•πù=…ïp°—‡Ä¥Äƒ∞Å—‰∞ÅΩ…ïpπ•ëp§º∞ÄâŸï•πÃÅµ’Õ–Å≠ïï¿Å—°ï•»Å±ïô–µïëùîÅçΩππïç—•Ω∏à§Ï)ÖÕÕï…–πµÖ—ç†°Ω…ïIïπëï…ï…l¡t∞ÄΩ°ÖÕ5Ö—ç°•πù=…ïp°—‡Åp¨Äƒ∞Å—‰∞ÅΩ…ïpπ•ëp§º∞ÄâŸï•πÃÅµ’Õ–Å≠ïï¿Å—°ï•»Å…•ù°–µïëùîÅçΩππïç—•Ω∏à§Ï)ÖÕÕï…–πµÖ—ç†°Ω…ïIïπëï…ï…l¡t∞ÄΩçΩπÕ–Åù±Ω›Q•ï»ÄÙÅç±Öµ¡p°p°Ω…ïpπ—•ï»ÅqÒqÄ¡p§Ä¥Ä»º∞ÄâÈï…ºµâÖÕïêÅP–¨ÅΩ…îÅÕ°Ω’±êÅ…ïçï•ŸîÅùïΩ±Ωù•çÖ∞Åù±Ω‹à§Ï)ÖÕÕï…–πµÖ—ç†°Ω…ïIïπëï…ï…l¡t∞ÄΩù±ΩâÖ±Ωµ¡ΩÕ•—ï=¡ï…Ö—•Ω∏ÄÙÄù±•ù°—ï»úº∞Äâ°•ù†µ—•ï»Åù±Ω‹Åµ’Õ–Å…ïµÖ•∏ÅÑÅ±ΩçÖ∞ÅÖëë•—•ŸîÅ¡ÖÕÃà§Ï)ÖÕÕï…–πëΩïÕ9Ω—5Ö—ç†°Ω…ïIïπëï…ï…l¡t∞ÄΩô•±±Iïç—p†¿∞Ä¿∞Ä†¸È›•ë—°ÒÕ—Ö—ïpπŸ•ï›¡Ω…–§º∞ÄâΩ…îÅù±Ω‹Åµ’Õ–ÅπïŸï»ÅâïçΩµîÅÑÅô’±∞µÕç…ïï∏Å›ÖÕ†à§Ï()çΩπÕ–Å—ï……Ö•πIïπëï…ï»ÄÙÅùÖµïMΩ’…çîπµÖ—ç††Ωô’πç—•Ω∏Å—ï……Ö•πï¡—°Öç—Ω…p°mqÕqMt®˝qπqıqπqπô’πç—•Ω∏Å°ÖÕ5Ö—ç°•πù=…îº§Ï)ÖÕÕï…–πΩ¨°—ï……Ö•πIïπëï…ï»∞Äâëï¡—†Å±ÖπëµÖ…≠ÃÅµ’Õ–ÅÕ—Ö‰Åù…Ω’¡ïêÅ•∏Å—°îÅ—ï……Ö•∏Å…ïπëï»Å¡ÖÕÃà§Ï)ôΩ»Ä°çΩπÕ–ÅµÖ…≠ï»ÅΩòÅlâ…ΩΩ—Mïïêà∞ÄâôΩÕÕ•±Mïïêà∞ÄâÕ’¡¡Ω…—Mïïêà∞ÄâçÖâ±ïMïïêà∞Äâç…ÂÕ—Ö±Mïïêât§ÅÏ(ÄÅÖÕÕï…–πµÖ—ç†°—ï……Ö•πIïπëï…ï…l¡t∞Åπï‹ÅIïù·¿°ÅqqàëÌµÖ…≠ï…ıqqâÄ§∞ÅÄëÌµÖ…≠ï…ÙÅ±ÖπëµÖ…¨Åµ’Õ–Å…ïµÖ•∏Åëï—ï…µ•π•Õ—•çÄ§Ï)Ù)ÖÕÕï…–πµÖ—ç†°—ï……Ö•πIïπëï…ï…l¡t∞ÄΩ=}=5%}=1=IMpπëÖµ¿º∞Äâ›ï–ÅÕ—…Ö—ÑÅπïïêÅÑÅë•Õ—•πç–ÅµÖ—ï…•Ö∞Åç’îà§Ï)ÖÕÕï…–πëΩïÕ9Ω—5Ö—ç†°—ï……Ö•πIïπëï…ï…l¡t∞ÄΩ5Ö—°pπ…ÖπëΩ¥º∞Äâ—ï……Ö•∏Å±ÖπëµÖ…≠ÃÅµ’Õ–ÅπΩ–ÅÕ°•µµï»ÅΩ»ÅµΩŸîÅâï—›ïï∏Åô…ÖµïÃà§Ï()çΩπÕ–Å…Ω’—ïÖ±•â…Ö—•Ωπ]Ω…±êÄÙÅπï‹Å5•πï]Ω…±ê°=I}QeAL∞Äâ…Ω’—îµçÖ±•â…Ö—•Ω∏µ¡…Ωâîà§Ï)±ï–ÅôΩç’ÕïëIΩ’—ïQ•±îÄÙÅπ’±∞Ï)±ï–ÅΩ…ë•πÖ…ÂIΩ’—ïQ•±îÄÙÅπ’±∞Ï)ôΩ»Ä°±ï–Å—‰ÄÙÄƒÏÅ—‰ÄÅ]=I1}=9%π!%!PÄ¥ÄƒÄòòÄ†ÖôΩç’ÕïëIΩ’—ïQ•±îÅÒÄÖΩ…ë•πÖ…ÂIΩ’—ïQ•±î§ÏÅ—‰Ä¨ÙÄƒ§ÅÏ(ÄÅôΩ»Ä°±ï–Å—‡ÄÙÄƒÏÅ—‡ÄÅ]=I1}=9%π]%Q Ä¥ÄƒÄòòÄ†ÖôΩç’ÕïëIΩ’—ïQ•±îÅÒÄÖΩ…ë•πÖ…ÂIΩ’—ïQ•±î§ÏÅ—‡Ä¨ÙÄƒ§ÅÏ(ÄÄÄÅçΩπÕ–Å—•±îÄÙÅ…Ω’—ïÖ±•â…Ö—•Ωπ]Ω…±êπùï—Q•±î°—‡∞Å—‰§Ï(ÄÄÄÅ•òÄ†Ö—•±îÅÒÅ—•±îπ≠•πêÄÙÙÙÄâÖ•»àÅÒÅ—•±îπ≠•πêÄÙÙÙÄââïë…Ωç¨à§ÅçΩπ—•π’îÏ(ÄÄÄÅ•òÄ°—•±îπΩ…ï%êÄòòÄÖôΩç’ÕïëIΩ’—ïQ•±î§ÅôΩç’ÕïëIΩ’—ïQ•±îÄÙÅÏÅ—‡∞Å—‰∞Å—•±îÅÙÏ(ÄÄÄÅ•òÄ†Ö—•±îπΩ…ï%êÄòòÄÖΩ…ë•πÖ…ÂIΩ’—ïQ•±î§ÅΩ…ë•πÖ…ÂIΩ’—ïQ•±îÄÙÅÏÅ—‡∞Å—‰∞Å—•±îÅÙÏ(ÄÅÙ)Ù)ÖÕÕï…–πΩ¨°ôΩç’ÕïëIΩ’—ïQ•±îÄòòÅΩ…ë•πÖ…ÂIΩ’—ïQ•±î§Ï)çΩπÕ–ÅâÖÕïIΩ’—ï=¡—•ΩπÃÄÙÅÏ(ÄÅµΩŸïM¡ïïêËÄƒ¿¿∞(ÄÅë•ùAΩ›ï…Aï…MïçΩπêËÄƒ¿∞(ÄÅ°Ö…ëπïÕÕ5’±—•¡±•ï»ËÄƒ∞(ÄÅôΩç’Õïë=…ï%êËÅôΩç’ÕïëIΩ’—ïQ•±îπ—•±îπΩ…ï%ê∞(ÄÅôΩç’Õïë=…ï•ù5’±—•¡±•ï»ËÄƒ∞)ÙÏ)çΩπÕ–ÅçÖ±•â…Ö—ïëIΩ’—ï=¡—•ΩπÃÄÙÅÏÄ∏∏πâÖÕïIΩ’—ï=¡—•ΩπÃ∞ÅôΩç’Õïë=…ï•ù5’±—•¡±•ï»ËÄ»ÅÙÏ)çΩπÕ–Å…Ω’—ïM—ï¡…Ω¥ÄÙÄ°¡Ω•π–§ÄÙ¯Ä°ÏÅ—‡ËÅ¡Ω•π–π—‡Ä¥Äƒ∞Å—‰ËÅ¡Ω•π–π—‰ÅÙ§Ï)ÖÕÕï…–πΩ¨†(ÄÅ…Ω’—ïÖ±•â…Ö—•Ωπ]Ω…±êπ}…Ω’—ïM—ï¡ΩÕ–°…Ω’—ïM—ï¡…Ω¥°ôΩç’ÕïëIΩ’—ïQ•±î§∞ÅôΩç’ÕïëIΩ’—ïQ•±î∞ÅçÖ±•â…Ö—ïëIΩ’—ï=¡—•ΩπÃ§(ÄÄÄÄÅ…Ω’—ïÖ±•â…Ö—•Ωπ]Ω…±êπ}…Ω’—ïM—ï¡ΩÕ–°…Ω’—ïM—ï¡…Ω¥°ôΩç’ÕïëIΩ’—ïQ•±î§∞ÅôΩç’ÕïëIΩ’—ïQ•±î∞ÅâÖÕïIΩ’—ï=¡—•ΩπÃ§∞(ÄÄâôΩç’ÕïêÅçÖ±•â…Ö—•Ω∏Åµ’Õ–Å…ïë’çîÅΩπ±‰Å—°îÅôΩç’ÕïêÅΩ…îÅÕ—ï¿ÅçΩÕ–à∞(§Ï)ÖÕÕï…–πï≈’Ö∞†(ÄÅ…Ω’—ïÖ±•â…Ö—•Ωπ]Ω…±êπ}…Ω’—ïM—ï¡ΩÕ–°…Ω’—ïM—ï¡…Ω¥°Ω…ë•πÖ…ÂIΩ’—ïQ•±î§∞ÅΩ…ë•πÖ…ÂIΩ’—ïQ•±î∞ÅçÖ±•â…Ö—ïëIΩ’—ï=¡—•ΩπÃ§∞(ÄÅ…Ω’—ïÖ±•â…Ö—•Ωπ]Ω…±êπ}…Ω’—ïM—ï¡ΩÕ–°…Ω’—ïM—ï¡…Ω¥°Ω…ë•πÖ…ÂIΩ’—ïQ•±î§∞ÅΩ…ë•πÖ…ÂIΩ’—ïQ•±î∞ÅâÖÕïIΩ’—ï=¡—•ΩπÃ§∞(ÄÄâôΩç’ÕïêÅçÖ±•â…Ö—•Ω∏Åµ’Õ–ÅπΩ–ÅÕΩô—ï∏ÅΩ…ë•πÖ…‰Å…Ω’—îÅ—•±ïÃà∞(§Ï()±ï–Åç°ïç≠ïëIΩ’—ïÃÄÙÄ¿Ï)±ï–Åç°ïç≠ïëYï•πÃÄÙÄ¿Ï)ôΩ»Ä°±ï–ÅÕïïêÄÙÄƒÏÅÕïïêÄÙÄ‘¿ÏÅÕïïêÄ¨ÙÄƒ§ÅÏ(ÄÅçΩπÕ–Å›Ω…±êÄÙÅπï‹Å5•πï]Ω…±ê°=I}QeAL∞ÅÅÕ—…ïÕÃ¥ëÌÕïïëıÄ§Ï(ÄÅçΩπÕ–Å±•ô–ÄÙÅ›Ω…±êπùï—1•ô—M—Ö…–†ƒ»¿∞Ä¿∏Ã‘∞Äƒ»¿∞ÅÏÅ’π±Ωç≠ïëQ•ï…Ö¿ËÄ‰ÅÙ§Ï(ÄÅÖÕÕï…–πΩ¨°±•ô–ÄòòÅ9’µâï»π•Õ•π•—î°±•ô–π‡§ÄòòÅ9’µâï»π•Õ•π•—î°±•ô–π‰§§Ï(ÄÅÖÕÕï…–πΩ¨°±•ô–πëï¡—°Q•±ïÃÄÙÄ–»Ä¨Ä≈î¥‰§Ï(ÄÅÖÕÕï…–πΩ¨°›Ω…±êπùï—Q•±î°±•ô–π—‡∞Å±•ô–π—‰§¸π≠•πêÄÙÙÙÄâÖ•»à∞Äâ±•ô–Å±Öπë•πúÅµ’Õ–ÅâîÅΩ¡ï∏à§Ï(ÄÅÖÕÕï…–πΩ¨°±•ô–π—Ö…ùï–ÄòòÅ›Ω…±êπùï—Q•±î°±•ô–π—Ö…ùï–π—‡∞Å±•ô–π—Ö…ùï–π—‰§¸πΩ…ï%ê∞Äâ±•ô–ÅπïïëÃÅÑÅù’Ö…Öπ—ïïêÅΩ…îÅ—Ö…ùï–à§Ï((ÄÅçΩπÕ–ÅâïôΩ…ï!¿ÄÙÅ›Ω…±êπùï—Q•±î°±•ô–π—Ö…ùï–π—‡∞Å±•ô–π—Ö…ùï–π—‰§π°¿Ï(ÄÅçΩπÕ–Å…Ω’—îÄÙÅ›Ω…±êπô•πë1ïÖÕ—IïÕ•Õ—ÖπçïM—ï¿°±•ô–∞Å±•ô–π—Ö…ùï–∞ÅÏ(ÄÄÄÅµΩŸïM¡ïïêËÄƒ¿¿∞(ÄÄÄÅë•ùAΩ›ï…Aï…MïçΩπêËÄ‡∞(ÄÄÄÅµÖ·ï—Ω’…Q•±ïÃËÄ‰∞(ÄÅÙ§Ï(ÄÅÖÕÕï…–πΩ¨°…Ω’—îÄòòÅ…Ω’—îπ›ÖÂ¡Ω•π–ÄòòÅ…Ω’—îπ…Ω’—îπ±ïπù—†Ä¯ÙÄƒ§Ï(ÄÅÖÕÕï…–πï≈’Ö∞°›Ω…±êπùï—Q•±î°±•ô–π—Ö…ùï–π—‡∞Å±•ô–π—Ö…ùï–π—‰§π°¿∞ÅâïôΩ…ï!¿∞Äâ…Ω’—îÅÕïÖ…ç†Åµ’Õ–ÅâîÅ…ïÖêµΩπ±‰à§Ï(ÄÅç°ïç≠ïëIΩ’—ïÃÄ¨ÙÄƒÏ((ÄÅ±ï–ÅΩ…ïQ•±ïÃÄÙÄ¿Ï(ÄÅ±ï–Åô•…Õ—=…ïΩΩ…ë•πÖ—îÄÙÅπ’±∞Ï(ÄÅçΩπÕ–ÅŸï•πÃÄÙÅπï‹Å5Ö¿†§Ï(ÄÅôΩ»Ä°±ï–Å—‰ÄÙÄ¿ÏÅ—‰ÄÅ]=I1}=9%π!%!PÏÅ—‰Ä¨ÙÄƒ§ÅÏ(ÄÄÄÅôΩ»Ä°±ï–Å—‡ÄÙÄ¿ÏÅ—‡ÄÅ]=I1}=9%π]%Q ÏÅ—‡Ä¨ÙÄƒ§ÅÏ(ÄÄÄÄÄÅçΩπÕ–Å—•±îÄÙÅ›Ω…±êπùï—Q•±î°—‡∞Å—‰§Ï(ÄÄÄÄÄÅ•òÄ†Ö—•±î¸πΩ…ï%ê§ÅçΩπ—•π’îÏ(ÄÄÄÄÄÅΩ…ïQ•±ïÃÄ¨ÙÄƒÏ(ÄÄÄÄÄÅ•òÄ†Öô•…Õ—=…ïΩΩ…ë•πÖ—î§Åô•…Õ—=…ïΩΩ…ë•πÖ—îÄÙÅÏÅ—‡∞Å—‰ÅÙÏ(ÄÄÄÄÄÅÖÕÕï…–πΩ¨°—•±îπŸï•π%ê∞ÅÅΩ…îÅ—•±îÄëÌ—·ÙËëÌ—ÂÙÅµ’Õ–Å≠ïï¿ÅÑÅŸï•∏Å•ëÄ§Ï(ÄÄÄÄÄÅçΩπÕ–ÅŸï•∏ÄÙÅŸï•πÃπùï–°—•±îπŸï•π%ê§ÅÒÅÏÅΩ…ï%êËÅ—•±îπΩ…ï%ê∞Åçï±±ÃËÅπï‹ÅMï–†§ÅÙÏ(ÄÄÄÄÄÅÖÕÕï…–πï≈’Ö∞†(ÄÄÄÄÄÄÄÅŸï•∏πΩ…ï%ê∞(ÄÄÄÄÄÄÄÅ—•±îπΩ…ï%ê∞(ÄÄÄÄÄÄÄÅÅŸï•∏ÄëÌ—•±îπŸï•π%ëÙÅµ’Õ–ÅπΩ–ÅçΩπ—Ö•∏ÅçΩπô±•ç—•πúÅΩ…îÅ—Â¡ïÕÄ∞(ÄÄÄÄÄÄ§Ï(ÄÄÄÄÄÅçΩπÕ–ÅçΩΩ…ë•πÖ—îÄÙÅÄëÌ—·ÙËëÌ—ÂıÄÏ(ÄÄÄÄÄÅÖÕÕï…–πΩ¨†ÖŸï•∏πçï±±Ãπ°ÖÃ°çΩΩ…ë•πÖ—î§∞ÅÅŸï•∏ÄëÌ—•±îπŸï•π%ëÙÅ…ï¡ïÖ—ÃÅçï±∞ÄëÌçΩΩ…ë•πÖ—ïıÄ§Ï(ÄÄÄÄÄÅŸï•∏πçï±±ÃπÖëê°çΩΩ…ë•πÖ—î§Ï(ÄÄÄÄÄÅŸï•πÃπÕï–°—•±îπŸï•π%ê∞ÅŸï•∏§Ï(ÄÄÄÅÙ(ÄÅÙ(ÄÅÖÕÕï…–πΩ¨°Ω…ïQ•±ïÃÄ¯Ä¿§Ï(ÄÅôΩ»Ä°çΩπÕ–ÅŸï•∏ÅΩòÅŸï•πÃπŸÖ±’ïÃ†§§ÅÏ(ÄÄÄÅÖÕÕï…–πΩ¨°Ÿï•∏πçï±±ÃπÕ•ÈîÄ¯Ä¿∞ÄâïŸï…‰Åùïπï…Ö—ïêÅŸï•∏Åµ’Õ–ÅΩ›∏ÅÖ–Å±ïÖÕ–ÅΩπîÅ’π•≈’îÅçï±∞à§Ï(ÄÄÄÅç°ïç≠ïëYï•πÃÄ¨ÙÄƒÏ(ÄÅÙ((ÄÅ±ï–Å•πëï·ïë=…ïQ•±ïÃÄÙÄ¿Ï(ÄÅ±ï–Å¡…ïŸ•Ω’Õ%πëï‡ÄÙÄ¥ƒÏ(ÄÅ›Ω…±êπôΩ…Öç°=…ïQ•±ï%π	Ω’πëÃ†¿∞Ä¿∞Å]=I1}=9%π]%Q Ä¥Äƒ∞Å]=I1}=9%π!%!PÄ¥Äƒ∞Ä°}—•±î∞Å—‡∞Å—‰§ÄÙ¯ÅÏ(ÄÄÄÅçΩπÕ–Å•πëï‡ÄÙÅ—‰Ä®Å]=I1}=9%π]%Q Ä¨Å—‡Ï(ÄÄÄÅÖÕÕï…–πΩ¨°•πëï‡Ä¯Å¡…ïŸ•Ω’Õ%πëï‡∞ÄâΩ…îÅ•πëï‡Åµ’Õ–Å¡…ïÕï…ŸîÅ…Ω‹µµÖ©Ω»Å—•îµâ…ïÖ≠•πúÅΩ…ëï»à§Ï(ÄÄÄÅ¡…ïŸ•Ω’Õ%πëï‡ÄÙÅ•πëï‡Ï(ÄÄÄÅ•πëï·ïë=…ïQ•±ïÃÄ¨ÙÄƒÏ(ÄÅÙ§Ï(ÄÅÖÕÕï…–πï≈’Ö∞°•πëï·ïë=…ïQ•±ïÃ∞ÅΩ…ïQ•±ïÃ∞ÄâΩ…îÅ•πëï‡Åµ’Õ–Åïπ’µï…Ö—îÅïŸï…‰Å±•ŸîÅΩ…îÅ—•±îÅï·Öç—±‰ÅΩπçîà§Ï(ÄÅÖÕÕï…–πΩ¨°ô•…Õ—=…ïΩΩ…ë•πÖ—î§Ï(ÄÅ›Ω…±êπâ…ïÖ≠Q•±î°ô•…Õ—=…ïΩΩ…ë•πÖ—îπ—‡∞Åô•…Õ—=…ïΩΩ…ë•πÖ—îπ—‰§Ï(ÄÅ±ï–Å•πëï·ïëô—ï…	…ïÖ¨ÄÙÄ¿Ï(ÄÅ›Ω…±êπôΩ…Öç°=…ïQ•±ï%π	Ω’πëÃ†¿∞Ä¿∞Å]=I1}=9%π]%Q Ä¥Äƒ∞Å]=I1}=9%π!%!PÄ¥Äƒ∞Ä†§ÄÙ¯ÅÏ(ÄÄÄÅ•πëï·ïëô—ï…	…ïÖ¨Ä¨ÙÄƒÏ(ÄÅÙ§Ï(ÄÅÖÕÕï…–πï≈’Ö∞°•πëï·ïëô—ï…	…ïÖ¨∞ÅΩ…ïQ•±ïÃÄ¥Äƒ∞Äââ…Ω≠ï∏ÅΩ…îÅµ’Õ–Å±ïÖŸîÅ—°îÅ±•ŸîÅ•πëï‡Å•µµïë•Ö—ï±‰à§Ï)Ù((ººÅΩ…çîÅ—°îÅ…ÖπëΩ¥Å›Ö±¨Å—ºÅÕ—Ö‰ÅΩ∏Å•—ÃÅΩ…•ù•∏∏ÅQ°îÅëï—ï…µ•π•Õ—•åÅôÖ±±âÖç¨Åµ’Õ–(ººÅÕ—•±∞Å¡±ÖçîÅ—°îÅ…ï≈’ïÕ—ïêÅπ’µâï»ÅΩòÅ’π•≈’îÅçï±±Ã∞ÅÖπêÅ}Ö¡¡±Â=…îÅµ’Õ–ÅπïŸï»Åâî(ººÅçÖ±±ïêÅ—›•çîÅôΩ»Å—°îÅÕÖµîÅçï±∞Åµï…ï±‰Å—ºÅ•πô±Ö—îÅ—°îÅ…ï—’…πïêÅçΩ’π–∏)çΩπÕ–Åë’¡±•çÖ—ï]Ω…±êÄÙÅπï‹Å5•πï]Ω…±ê°=I}QeAL∞Äâë’¡±•çÖ—îµ›Ö±¨µ¡…Ωâîà§Ï)çΩπÕ–Å…•ç°ïÕ—ïô•π•—•Ω∏ÄÙÅë’¡±•çÖ—ï]Ω…±êπ}Ω…ïïô•π•—•ΩπÃπ…ïë’çî†°…•ç°ïÕ–∞Åëïô•π•—•Ω∏§ÄÙ¯Ä†(ÄÄÖ…•ç°ïÕ–ÅÒÅëïô•π•—•Ω∏π…Öπ¨Ä¯Å…•ç°ïÕ–π…Öπ¨Ä¸Åëïô•π•—•Ω∏ÄËÅ…•ç°ïÕ–(§∞Åπ’±∞§Ï)çΩπÕ–Å…ï≈’ïÕ—ïëM•ÈîÄÙÄ‹Ï)±ï–Å¡…Ωâï=…•ù•∏ÄÙÅπ’±∞Ï)ôΩ»Ä°±ï–Å—‰ÄÙÄ»ÏÅ—‰ÄÅ]=I1}=9%π!%!PÄ¥Å]=I1}=9%π	I=-}I=]LÄ¥Ä»ÄòòÄÖ¡…Ωâï=…•ù•∏ÏÅ—‰Ä¨ÙÄƒ§ÅÏ(ÄÅôΩ»Ä°±ï–Å—‡ÄÙÄ»ÏÅ—‡ÄÅ]=I1}=9%π]%Q Ä¥Ä»ÄòòÄÖ¡…Ωâï=…•ù•∏ÏÅ—‡Ä¨ÙÄƒ§ÅÏ(ÄÄÄÅçΩπÕ–Å—•±îÄÙÅë’¡±•çÖ—ï]Ω…±êπùï—Q•±î°—‡∞Å—‰§Ï(ÄÄÄÅ•òÄ†Ö—•±îÅÒÅ—•±îπ≠•πêÄÙÙÙÄâÖ•»àÅÒÅ—•±îπ≠•πêÄÙÙÙÄââïë…Ωç¨à§ÅçΩπ—•π’îÏ(ÄÄÄÅ•òÄ†Öë’¡±•çÖ—ï]Ω…±êπ}çÖπ=…ï¡¡ïÖ…–°—‡∞Å—‰∞Å…•ç°ïÕ—ïô•π•—•Ω∏§§ÅçΩπ—•π’îÏ(ÄÄÄÅ±ï–ÅπïÖ…âÂMΩ±•êÄÙÄ¿Ï(ÄÄÄÅôΩ»Ä°±ï–ÅΩôôÕï—dÄÙÄ¥ÃÏÅΩôôÕï—dÄÙÄÃÏÅΩôôÕï—dÄ¨ÙÄƒ§ÅÏ(ÄÄÄÄÄÅôΩ»Ä°±ï–ÅΩôôÕï—`ÄÙÄ¥ÃÏÅΩôôÕï—`ÄÙÄÃÏÅΩôôÕï—`Ä¨ÙÄƒ§ÅÏ(ÄÄÄÄÄÄÄÅ•òÄ°5Ö—†πÖâÃ°ΩôôÕï—`§Ä¨Å5Ö—†πÖâÃ°ΩôôÕï—d§Ä¯ÄÃ§ÅçΩπ—•π’îÏ(ÄÄÄÄÄÄÄÅçΩπÕ–ÅπïÖ…â‰ÄÙÅë’¡±•çÖ—ï]Ω…±êπùï—Q•±î°—‡Ä¨ÅΩôôÕï—`∞Å—‰Ä¨ÅΩôôÕï—d§Ï(ÄÄÄÄÄÄÄÅ•òÄ†(ÄÄÄÄÄÄÄÄÄÅπïÖ…â‰(ÄÄÄÄÄÄÄÄÄÄòòÅπïÖ…â‰π≠•πêÄÑÙÙÄâÖ•»à(ÄÄÄÄÄÄÄÄÄÄòòÅπïÖ…â‰π≠•πêÄÑÙÙÄââïë…Ωç¨à(ÄÄÄÄÄÄÄÄÄÄòòÅë’¡±•çÖ—ï]Ω…±êπ}çÖπ=…ï¡¡ïÖ…–°—‡Ä¨ÅΩôôÕï—`∞Å—‰Ä¨ÅΩôôÕï—d∞Å…•ç°ïÕ—ïô•π•—•Ω∏§(ÄÄÄÄÄÄÄÄ§ÅπïÖ…âÂMΩ±•êÄ¨ÙÄƒÏ(ÄÄÄÄÄÅÙ(ÄÄÄÅÙ(ÄÄÄÅ•òÄ°πïÖ…âÂMΩ±•êÄ¯ÙÅ…ï≈’ïÕ—ïëM•Èî§Å¡…Ωâï=…•ù•∏ÄÙÅÏÅ—‡∞Å—‰ÅÙÏ(ÄÅÙ)Ù)ÖÕÕï…–πΩ¨°¡…Ωâï=…•ù•∏∞Äâë’¡±•çÖ—îµ›Ö±¨Å¡…ΩâîÅπïïëÃÅÑÅÕ’ôô•ç•ïπ—±‰ÅÕΩ±•êÅΩ…•ù•∏à§Ï()çΩπÕ–Åï·¡ïç—ïëYï•π%êÄÙÅÄëÌ…•ç°ïÕ—ïô•π•—•Ω∏π•ëÙËëÌë’¡±•çÖ—ï]Ω…±êπ}πï·—Yï•π%ëıÄÏ)çΩπÕ–ÅΩ…•ù•πÖ±9ï·–ÄÙÅë’¡±•çÖ—ï]Ω…±êπ}…πúππï·–Ï)çΩπÕ–ÅΩ…•ù•πÖ±¡¡±Â=…îÄÙÅë’¡±•çÖ—ï]Ω…±êπ}Ö¡¡±Â=…îÏ)±ï–Å¡…Ωâï¡¡±ÂÖ±±ÃÄÙÄ¿Ï)ë’¡±•çÖ—ï]Ω…±êπ}…πúππï·–ÄÙÄ†§ÄÙ¯Ä¿Ï)ë’¡±•çÖ—ï]Ω…±êπ}Ö¡¡±Â=…îÄÙÅô’πç—•Ω∏ÅÖ¡¡±Â=…ïA…Ωâî†∏∏πÖ…ùÃ§ÅÏ(ÄÅ•òÄ°Ö…ùÕlÕtÄÙÙÙÅï·¡ïç—ïëYï•π%ê§Å¡…Ωâï¡¡±ÂÖ±±ÃÄ¨ÙÄƒÏ(ÄÅ…ï—’…∏ÅΩ…•ù•πÖ±¡¡±Â=…îπÖ¡¡±‰°—°•Ã∞ÅÖ…ùÃ§Ï)ÙÏ)çΩπÕ–Å’π•≈’ïA±ÖçïêÄÙÅë’¡±•çÖ—ï]Ω…±êπ}¡±ÖçïYï•∏†(ÄÅ¡…Ωâï=…•ù•∏π—‡∞(ÄÅ¡…Ωâï=…•ù•∏π—‰∞(ÄÅ…•ç°ïÕ—ïô•π•—•Ω∏∞(ÄÅ…ï≈’ïÕ—ïëM•Èî∞(§Ï)ë’¡±•çÖ—ï]Ω…±êπ}…πúππï·–ÄÙÅΩ…•ù•πÖ±9ï·–Ï)ë’¡±•çÖ—ï]Ω…±êπ}Ö¡¡±Â=…îÄÙÅΩ…•ù•πÖ±¡¡±Â=…îÏ()±ï–ÅÖç—’Ö±A…Ωâïï±±ÃÄÙÄ¿Ï)ôΩ»Ä°±ï–Å—‰ÄÙÄ¿ÏÅ—‰ÄÅ]=I1}=9%π!%!PÏÅ—‰Ä¨ÙÄƒ§ÅÏ(ÄÅôΩ»Ä°±ï–Å—‡ÄÙÄ¿ÏÅ—‡ÄÅ]=I1}=9%π]%Q ÏÅ—‡Ä¨ÙÄƒ§ÅÏ(ÄÄÄÅ•òÄ°ë’¡±•çÖ—ï]Ω…±êπùï—Q•±î°—‡∞Å—‰§¸πŸï•π%êÄÙÙÙÅï·¡ïç—ïëYï•π%ê§ÅÖç—’Ö±A…Ωâïï±±ÃÄ¨ÙÄƒÏ(ÄÅÙ)Ù)ÖÕÕï…–πï≈’Ö∞°’π•≈’ïA±Öçïê∞Å…ï≈’ïÕ—ïëM•Èî∞ÄâôÖ±±âÖç¨Åµ’Õ–ÅçΩµ¡±ï—îÅÑÅÕ—Ö±±ïêÅ…ÖπëΩ¥µ›Ö±¨ÅŸï•∏à§Ï)ÖÕÕï…–πï≈’Ö∞°Öç—’Ö±A…Ωâïï±±Ã∞Å’π•≈’ïA±Öçïê∞Äâ…ï¡Ω…—ïêÅŸï•∏ÅÕ•ÈîÅµ’Õ–Åï≈’Ö∞Å•—ÃÅ’π•≈’îÅ›Ω…±êÅçï±±Ãà§Ï)ÖÕÕï…–πï≈’Ö∞°¡…Ωâï¡¡±ÂÖ±±Ã∞Å’π•≈’ïA±Öçïê∞Äâë’¡±•çÖ—îÅŸ•Õ•—ÃÅµ’Õ–ÅπΩ–Å…ïÖ¡¡±‰ÅΩ»Å…ïçΩ’π–Å—°îÅÕÖµîÅçï±∞à§Ï()çΩπÕ–Åëï—ï…µ•π•Õ—•çÄÙÅπï‹Å5•πï]Ω…±ê°=I}QeAL∞Äâëï—ï…µ•π•Õ¥µ¡…Ωâîà§Ï)çΩπÕ–Åëï—ï…µ•π•Õ—•çÄÙÅπï‹Å5•πï]Ω…±ê°=I}QeAL∞Äâëï—ï…µ•π•Õ¥µ¡…Ωâîà§Ï)ÖÕÕï…–πëïï¡≈’Ö∞°ëï—ï…µ•π•Õ—•çπÕ’…ôÖçî∞Åëï—ï…µ•π•Õ—•çπÕ’…ôÖçî∞ÄâÕÖµîÅÕïïêÅµ’Õ–Å…ï¡…Ωë’çîÅ—°îÅÕ’…ôÖçîà§Ï)ôΩ»Ä°±ï–Å—‰ÄÙÄ¿ÏÅ—‰ÄÅ]=I1}=9%π!%!PÏÅ—‰Ä¨ÙÄƒ§ÅÏ(ÄÅôΩ»Ä°±ï–Å—‡ÄÙÄ¿ÏÅ—‡ÄÅ]=I1}=9%π]%Q ÏÅ—‡Ä¨ÙÄƒ§ÅÏ(ÄÄÄÅÖÕÕï…–πëïï¡≈’Ö∞†(ÄÄÄÄÄÅëï—ï…µ•π•Õ—•çπùï—Q•±î°—‡∞Å—‰§∞(ÄÄÄÄÄÅëï—ï…µ•π•Õ—•çπùï—Q•±î°—‡∞Å—‰§∞(ÄÄÄÄÄÅÅÕÖµîÅÕïïêÅµ’Õ–Å…ï¡…Ωë’çîÅ—•±îÄëÌ—·ÙËëÌ—ÂıÄ∞(ÄÄÄÄ§Ï(ÄÅÙ)Ù()çΩπÕΩ±îπ±Ωú°)M=8πÕ—…•πù•ô‰°Ï(ÄÅΩ¨ËÅ—…’î∞(ÄÅπΩëïÃËÅUAI}Lπ±ïπù—†∞(ÄÅ±ïŸï±ÃËÅUAI}Lπ…ïë’çî†°Õ’¥∞Åëïô•π•—•Ω∏§ÄÙ¯ÅÕ’¥Ä¨Åëïô•π•—•Ω∏πµÖ·1ïŸï∞∞Ä¿§∞(ÄÅÕïïëÃËÄ‘¿∞(ÄÅç°ïç≠ïëIΩ’—ïÃ∞(ÄÅç°ïç≠ïëYï•πÃ∞(ÄÅë’¡±•çÖ—ï]Ö±≠ï±±ÃËÅÖç—’Ö±A…Ωâïï±±Ã∞)Ù§§Ï(
+  "fortune_triple_seam",
+]) {
+  const definition = UPGRADE_DEFS.find((upgrade) => upgrade.id === id);
+  for (let level = 0; level < definition.maxLevel; level += 1) {
+    const recipe = getUpgradeRecipe(definition, level);
+    assert.ok(
+      !recipe.copper && !recipe.coal && !recipe.iron && !recipe.amber,
+      `${id} level ${level + 1} must use phase-appropriate ore instead of draining opening resources`,
+    );
+  }
+}
+
+const timerNodes = UPGRADE_DEFS.filter((definition) => definition.category === "time");
+assert.deepEqual(
+  timerNodes.map((definition) => definition.id),
+  ["time_extra_breath", "time_clockwork_heart", "time_capsule", "time_thirty_second_oath"],
+  "timer progression must stay condensed into exactly four meaningful nodes",
+);
+assert.equal(timerNodes.reduce((sum, definition) => sum + definition.maxLevel, 0), 23);
+
+const removedDuplicateIds = [
+  "sense_ore_scent",
+  "sense_wide_sweep",
+  "dig_long_handle",
+  "dig_relentless_rhythm",
+  "power_weighted_head",
+  "tools_laser_lens",
+  "fortune_ore_appraisal",
+  "time_wound_spring",
+  "time_sand_reserve",
+  "time_stolen_second",
+  "time_overtime_protocol",
+  "time_frozen_moment",
+  "time_aftershock_clock",
+  "time_last_second",
+  "time_chrono_shard",
+  "time_elastic_second",
+  "time_deep_shift",
+  "time_keeper",
+  "time_discovery_bonus",
+];
+for (const id of removedDuplicateIds) {
+  assert.ok(!ids.has(id), `${id} must not return to the exported tree`);
+}
+
+const playerFacingSource = ["index.html", path.join("js", "game.js")]
+  .map((file) => fs.readFileSync(path.join(root, file), "utf8"))
+  .join("\n");
+const gameSource = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
+const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const stylesSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
+assert.doesNotMatch(
+  playerFacingSource,
+  /–°—Ç–∞–∂ —ç–∫—Å–ø–µ–¥–∏—Ü–∏–∏/i,
+  "expedition tenure must not remain in player-facing UI or campaign logic",
+);
+const spaceGuard = gameSource.match(/if\s*\(event\.code\s*===\s*["']Space["']\)\s*\{([\s\S]*?)\n\s*\}/);
+assert.ok(spaceGuard, "Space must be explicitly neutralized even when a button owns focus");
+assert.match(spaceGuard[1], /event\.preventDefault\(\)/);
+assert.match(spaceGuard[1], /return/);
+assert.doesNotMatch(spaceGuard[1], /(?:triggerSensePulse|requestRunStart|startRun)/, "Space must not trigger any game action");
+assert.doesNotMatch(playerFacingSource, /(?:–ü—Ä–æ–±–µ–ª|<kbd>\s*Space\s*<\/kbd>)/iu, "Space must not be taught or shown");
+assert.doesNotMatch(indexSource, /id=["']sectorScreen["']/i, "the removed sector picker must not return");
+assert.doesNotMatch(playerFacingSource, /(?:–≤—ã–±–µ—Ä–∏ —Å–µ–∫—Ç–æ—Ä|—Å—Ä–∞–≤–Ω–µ–Ω–∏–µ —Å–µ–∫—Ç–æ—Ä–æ–≤|—Å–∏–º—É–ª—è—Ü–∏–π –Ω–∞ —Å–µ–∫—Ç–æ—Ä)/iu, "random geology must not be presented as a sector choice");
+assert.match(indexSource, /id=["']microEventTitle["']/, "active events need one readable top-line label");
+assert.match(indexSource, /id=["']microEventTimer["']/, "active events need a numeric top-line countdown");
+assert.doesNotMatch(indexSource, /microEvent(?:Icon|Text|Progress)/, "the event line must not grow back into an icon, copy card, or progress bar");
+assert.doesNotMatch(stylesSource, /micro-event-banner__(?:icon|copy|meter)/, "removed event-card chrome must stay removed");
+assert.doesNotMatch(gameSource, /events\.push\(active\)/, "consumed events must not keep a local active glow after triggering");
+
+assert.match(
+  gameSource,
+  /MOBILE_UPGRADE_INTERACTION_QUERY\s*=\s*['"]\(hover: none\) and \(pointer: coarse\)['"]/,
+  "mobile perk purchasing must recognize coarse touch capability",
+);
+assert.match(gameSource, /MOBILE_UPGRADE_NARROW_WIDTH\s*=\s*640[\s\S]*?window\.innerWidth\s*<=\s*MOBILE_UPGRADE_NARROW_WIDTH/, "the narrow mobile layout must use the same explicit purchase controls even when pointer emulation is unavailable");
+assert.match(indexSource, /class=["']upgrade-footer__desktop-hint["']/);
+assert.match(indexSource, /class=["']upgrade-footer__mobile-hint["']/);
+assert.match(indexSource, /–ø–æ–∫—É–ø–∫–∞ —Ç–æ–ª—å–∫–æ –∫–Ω–æ–ø–∫–æ–π ¬´–ö–£–ü–ò–¢–¨¬ª/u, "the mobile workshop must explain its explicit purchase action");
+assert.match(stylesSource, /max-width:\s*640px[\s\S]*?filter:\s*none[\s\S]*?width:\s*calc\(100vw[^;]+[\s\S]*?opacity:\s*1[\s\S]*?visibility:\s*visible/, "the selected mobile perk sheet must escape the filtered 62px node and use viewport width");
+assert.match(stylesSource, /font-size:\s*clamp\(11px,\s*3vw,\s*13px\)[\s\S]*?font-weight:\s*400/, "mobile perk descriptions must remain larger and normal-weight");
+assert.match(stylesSource, /next-breakthrough__max[\s\S]*?min-height:\s*44px[\s\S]*?border:\s*2px solid #ffe2a0[\s\S]*?background:\s*linear-gradient\(#ffd875,\s*#d98b35\)/, "the mobile purchase action must remain a large high-contrast CTA");
+assert.match(stylesSource, /@media \(hover: none\) and \(pointer: coarse\)[\s\S]*?upgrade-footer__desktop-hint[\s\S]*?display:\s*none[\s\S]*?upgrade-footer__mobile-hint[\s\S]*?display:\s*block/, "desktop and mobile workshop instructions must never be shown as one mixed control scheme");
+assert.match(indexSource, /id=["']mobileOreFocusToggle["'][\s\S]*?aria-controls=["']mobileOreFocusSheet["']/, "touch workshops need a stable focus control outside the capped toolbar");
+assert.match(indexSource, /id=["']mobileOreFocusChoices["']/, "the touch focus sheet needs explicit discovered-ore choices");
+assert.match(stylesSource, /@media \(hover: none\) and \(pointer: coarse\)[\s\S]*?\.upgrade-toolbar \.ore-focus-panel\s*\{\s*display:\s*none[\s\S]*?\.mobile-ore-focus:not\(\.hidden\)[\s\S]*?display:\s*block/, "touch focus must replace, not duplicate, the desktop toolbar panel");
+assert.match(stylesSource, /\.mobile-ore-focus__toggle\s*\{[\s\S]*?min-height:\s*54px/, "the mobile focus control must remain an obvious touch target");
+assert.match(stylesSource, /\.mobile-ore-focus__choice\s*\{[\s\S]*?min-height:\s*48px/, "ore choices in the mobile sheet must remain touch sized");
+assert.match(gameSource, /mobileOreFocusIsRelevant[\s\S]*?save\.levels\.tools_steel_pick/, "steel-tier players need a visible explanation of the approaching focus mechanic");
+assert.match(gameSource, /mobileOreFocusToggle\?\.addEventListener\(['"]click['"],\s*activateMobileOreFocusControl\)/, "the mobile focus control must not be coupled to direct perk purchasing");
+assert.match(indexSource, /id=["']resumeRun["'][^>]*>–ü–†–û–î–û–õ–ñ–ò–¢–¨</u, "touch-only players need an explicit way out of a visibility pause");
+assert.match(stylesSource, /\.pause-overlay__resume\s*\{[\s\S]*?min-height:\s*52px/, "the mobile resume action must be a large touch target");
+assert.match(stylesSource, /@media \(hover: none\) and \(pointer: coarse\)[\s\S]*?\.pause-overlay__desktop-copy\s*\{\s*display:\s*none[\s\S]*?\.pause-overlay__resume\s*\{[\s\S]*?display:\s*inline-flex/, "mobile pause copy must not instruct the player to press Esc");
+assert.match(gameSource, /resumeRun\?\.addEventListener\(['"]click['"],\s*\(\)\s*=>\s*togglePause\(false\)\)/, "the resume button must explicitly clear pause without auto-resuming on visibility return");
+assert.match(indexSource, /styles\.css\?v=deep-shaft-6/);
+assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-6/);
+assert.match(indexSource, /js\/world\.js\?v=deep-shaft-6/);
+assert.match(indexSource, /js\/music\.js\?v=deep-shaft-6/);
+assert.match(indexSource, /js\/game\.js\?v=deep-shaft-6/);
+assert.ok(
+  indexSource.indexOf('js/music.js?v=deep-shaft-6') < indexSource.indexOf('js/game.js?v=deep-shaft-6'),
+  "the soundtrack singleton must load before the game audio engine",
+);
+assert.match(indexSource, /id=["']soundToggle["'][\s\S]*?aria-pressed=["']true["']/);
+assert.match(indexSource, /–ü–û–õ–Ø–†–ù–ê–Ø –ñ–ò–õ–ê/u, "the original track needs a visible player-facing title");
+assert.match(gameSource, /window\.DepthZeroMusic/);
+assert.match(gameSource, /music\?\.setEnabled\?\./);
+assert.match(gameSource, /soundToggle\?\.addEventListener\(['"]click['"],\s*toggleSoundPreference\)/);
+assert.match(stylesSource, /\.utility-nav__button--audio\s*\{/);
+assert.match(stylesSource, /\.utility-nav\.is-suppressed \.utility-nav__button:not\(\.utility-nav__button--audio\)/, "the music control must remain available during a run");
+
+const oreRenderStyleBlock = gameSource.match(/const ORE_RENDER_STYLES = Object\.freeze\(\{([\s\S]*?)\n\}\);/);
+assert.ok(oreRenderStyleBlock, "the environment renderer must keep an explicit ore-material table");
+for (const ore of ORE_TYPES) {
+  assert.match(
+    oreRenderStyleBlock[1],
+    new RegExp(`\\b${ore.id}:\\s*Object\\.freeze\\(\\{[^}]*material:`),
+    `${ore.id} needs a silhouette/material profile instead of colour-only rendering`,
+  );
+}
+const oreRenderer = gameSource.match(/function drawOreInTile\([\s\S]*?\n\}\n\nfunction drawCracks/);
+assert.ok(oreRenderer, "the ore renderer must remain available to the canvas pass");
+assert.match(oreRenderer[0], /ORE_RENDER_STYLES\[ore\.id\]/, "ore material profiles must drive the live renderer");
+assert.match(oreRenderer[0], /hasMatchingOre\(tx - 1, ty, ore\.id\)/, "veins must keep their left-edge connection");
+assert.match(oreRenderer[0], /hasMatchingOre\(tx \+ 1, ty, ore\.id\)/, "veins must keep their right-edge connection");
+assert.match(oreRenderer[0], /const glowTier = clamp\(\(ore\.tier \|\| 0\) - 2/, "zero-based T4+ ore should receive geological glow");
+assert.match(oreRenderer[0], /globalCompositeOperation = 'lighter'/, "high-tier glow must remain a local additive pass");
+assert.doesNotMatch(oreRenderer[0], /fillRect\(0, 0, (?:width|state\.viewport)/, "ore glow must never become a full-screen wash");
+
+const terrainRenderer = gameSource.match(/function terrainDepthFactor\([\s\S]*?\n\}\n\nfunction hasMatchingOre/);
+assert.ok(terrainRenderer, "depth landmarks must stay grouped in the terrain render pass");
+for (const marker of ["rootSeed", "fossilSeed", "supportSeed", "cableSeed", "crystalSeed"]) {
+  assert.match(terrainRenderer[0], new RegExp(`\\b${marker}\\b`), `${marker} landmark must remain deterministic`);
+}
+assert.match(terrainRenderer[0], /GEO_COMIC_COLORS\.damp/, "wet strata need a distinct material cue");
+assert.doesNotMatch(terrainRenderer[0], /Math\.random/, "terrain landmarks must not shimmer or move between frames");
+
+const routeCalibrationWorld = new MineWorld(ORE_TYPES, "route-calibration-probe");
+let focusedRouteTile = null;
+let ordinaryRouteTile = null;
+for (let ty = 1; ty < WORLD_CONFIG.HEIGHT - 1 && (!focusedRouteTile || !ordinaryRouteTile); ty += 1) {
+  for (let tx = 1; tx < WORLD_CONFIG.WIDTH - 1 && (!focusedRouteTile || !ordinaryRouteTile); tx += 1) {
+    const tile = routeCalibrationWorld.getTile(tx, ty);
+    if (!tile || tile.kind === "air" || tile.kind === "bedrock") continue;
+    if (tile.oreId && !focusedRouteTile) focusedRouteTile = { tx, ty, tile };
+    if (!tile.oreId && !ordinaryRouteTile) ordinaryRouteTile = { tx, ty, tile };
+  }
+}
+assert.ok(focusedRouteTile && ordinaryRouteTile);
+const baseRouteOptions = {
+  moveSpeed: 100,
+  digPowerPerSecond: 10,
+  hardnessMultiplier: 1,
+  focusedOreId: focusedRouteTile.tile.oreId,
+  focusedOreDigMultiplier: 1,
+};
+const calibratedRouteOptions = { ...baseRouteOptions, focusedOreDigMultiplier: 2 };
+const routeStepFrom = (point) => ({ tx: point.tx - 1, ty: point.ty });
+assert.ok(
+  routeCalibrationWorld._routeStepCost(routeStepFrom(focusedRouteTile), focusedRouteTile, calibratedRouteOptions)
+    < routeCalibrationWorld._routeStepCost(routeStepFrom(focusedRouteTile), focusedRouteTile, baseRouteOptions),
+  "focused calibration must reduce only the focused ore step cost",
+);
+assert.equal(
+  routeCalibrationWorld._routeStepCost(routeStepFrom(ordinaryRouteTile), ordinaryRouteTile, calibratedRouteOptions),
+  routeCalibrationWorld._routeStepCost(routeStepFrom(ordinaryRouteTile), ordinaryRouteTile, baseRouteOptions),
+  "focused calibration must not soften ordinary route tiles",
+);
+
+let checkedRoutes = 0;
+let checkedVeins = 0;
+for (let seed = 1; seed <= 50; seed += 1) {
+  const world = new MineWorld(ORE_TYPES, `stress-${seed}`);
+  const lift = world.getLiftStart(120, 0.35, 120, { unlockedTierCap: 9 });
+  assert.ok(lift && Number.isFinite(lift.x) && Number.isFinite(lift.y));
+  assert.ok(lift.depthTiles <= 42 + 1e-9);
+  assert.ok(world.getTile(lift.tx, lift.ty)?.kind === "air", "lift landing must be open");
+  assert.ok(lift.target && world.getTile(lift.target.tx, lift.target.ty)?.oreId, "lift needs a guaranteed ore target");
+
+  const beforeHp = world.getTile(lift.target.tx, lift.target.ty).hp;
+  const route = world.findLeastResistanceStep(lift, lift.target, {
+    moveSpeed: 100,
+    digPowerPerSecond: 8,
+    maxDetourTiles: 9,
+  });
+  assert.ok(route && route.waypoint && route.route.length >= 1);
+  assert.equal(world.getTile(lift.target.tx, lift.target.ty).hp, beforeHp, "route search must be read-only");
+  checkedRoutes += 1;
+
+  let oreTiles = 0;
+  let firstOreCoordinate = null;
+  const veins = new Map();
+  for (let ty = 0; ty < WORLD_CONFIG.HEIGHT; ty += 1) {
+    for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+      const tile = world.getTile(tx, ty);
+      if (!tile?.oreId) continue;
+      oreTiles += 1;
+      if (!firstOreCoordinate) firstOreCoordinate = { tx, ty };
+      assert.ok(tile.veinId, `ore tile ${tx}:${ty} must keep a vein id`);
+      const vein = veins.get(tile.veinId) || { oreId: tile.oreId, cells: new Set() };
+      assert.equal(
+        vein.oreId,
+        tile.oreId,
+        `vein ${tile.veinId} must not contain conflicting ore types`,
+      );
+      const coordinate = `${tx}:${ty}`;
+      assert.ok(!vein.cells.has(coordinate), `vein ${tile.veinId} repeats cell ${coordinate}`);
+      vein.cells.add(coordinate);
+      veins.set(tile.veinId, vein);
+    }
+  }
+  assert.ok(oreTiles > 0);
+  for (const vein of veins.values()) {
+    assert.ok(vein.cells.size > 0, "every generated vein must own at least one unique cell");
+    checkedVeins += 1;
+  }
+
+  let indexedOreTiles = 0;
+  let previousIndex = -1;
+  world.forEachOreTileInBounds(0, 0, WORLD_CONFIG.WIDTH - 1, WORLD_CONFIG.HEIGHT - 1, (_tile, tx, ty) => {
+    const index = ty * WORLD_CONFIG.WIDTH + tx;
+    assert.ok(index > previousIndex, "ore index must preserve row-major tie-breaking order");
+    previousIndex = index;
+    indexedOreTiles += 1;
+  });
+  assert.equal(indexedOreTiles, oreTiles, "ore index must enumerate every live ore tile exactly once");
+  assert.ok(firstOreCoordinate);
+  world.breakTile(firstOreCoordinate.tx, firstOreCoordinate.ty);
+  let indexedAfterBreak = 0;
+  world.forEachOreTileInBounds(0, 0, WORLD_CONFIG.WIDTH - 1, WORLD_CONFIG.HEIGHT - 1, () => {
+    indexedAfterBreak += 1;
+  });
+  assert.equal(indexedAfterBreak, oreTiles - 1, "broken ore must leave the live index immediately");
+}
+
+// Force the random walk to stay on its origin. The deterministic fallback must
+// still place the requested number of unique cells, and _applyOre must never be
+// called twice for the same cell merely to inflate the returned count.
+const duplicateWorld = new MineWorld(ORE_TYPES, "duplicate-walk-probe");
+const richestDefinition = duplicateWorld._oreDefinitions.reduce((richest, definition) => (
+  !richest || definition.rank > richest.rank ? definition : richest
+), null);
+const requestedSize = 7;
+let probeOrigin = null;
+for (let ty = 2; ty < WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 2 && !probeOrigin; ty += 1) {
+  for (let tx = 2; tx < WORLD_CONFIG.WIDTH - 2 && !probeOrigin; tx += 1) {
+    const tile = duplicateWorld.getTile(tx, ty);
+    if (!tile || tile.kind === "air" || tile.kind === "bedrock") continue;
+    if (!duplicateWorld._canOreAppearAt(tx, ty, richestDefinition)) continue;
+    let nearbySolid = 0;
+    for (let offsetY = -3; offsetY <= 3; offsetY += 1) {
+      for (let offsetX = -3; offsetX <= 3; offsetX += 1) {
+        if (Math.abs(offsetX) + Math.abs(offsetY) > 3) continue;
+        const nearby = duplicateWorld.getTile(tx + offsetX, ty + offsetY);
+        if (
+          nearby
+          && nearby.kind !== "air"
+          && nearby.kind !== "bedrock"
+          && duplicateWorld._canOreAppearAt(tx + offsetX, ty + offsetY, richestDefinition)
+        ) nearbySolid += 1;
+      }
+    }
+    if (nearbySolid >= requestedSize) probeOrigin = { tx, ty };
+  }
+}
+assert.ok(probeOrigin, "duplicate-walk probe needs a sufficiently solid origin");
+
+const expectedVeinId = `${richestDefinition.id}:${duplicateWorld._nextVeinId}`;
+const originalNext = duplicateWorld._rng.next;
+const originalApplyOre = duplicateWorld._applyOre;
+let probeApplyCalls = 0;
+duplicateWorld._rng.next = () => 0;
+duplicateWorld._applyOre = function applyOreProbe(...args) {
+  if (args[3] === expectedVeinId) probeApplyCalls += 1;
+  return originalApplyOre.apply(this, args);
+};
+const uniquePlaced = duplicateWorld._placeVein(
+  probeOrigin.tx,
+  probeOrigin.ty,
+  richestDefinition,
+  requestedSize,
+);
+duplicateWorld._rng.next = originalNext;
+duplicateWorld._applyOre = originalApplyOre;
+
+let actualProbeCells = 0;
+for (let ty = 0; ty < WORLD_CONFIG.HEIGHT; ty += 1) {
+  for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+    if (duplicateWorld.getTile(tx, ty)?.veinId === expectedVeinId) actualProbeCells += 1;
+  }
+}
+assert.equal(uniquePlaced, requestedSize, "fallback must complete a stalled random-walk vein");
+assert.equal(actualProbeCells, uniquePlaced, "reported vein size must equal its unique world cells");
+assert.equal(probeApplyCalls, uniquePlaced, "duplicate visits must not reapply or recount the same cell");
+
+const deterministicA = new MineWorld(ORE_TYPES, "determinism-probe");
+const deterministicB = new MineWorld(ORE_TYPES, "determinism-probe");
+assert.deepEqual(deterministicA.surface, deterministicB.surface, "same seed must reproduce the surface");
+for (let ty = 0; ty < WORLD_CONFIG.HEIGHT; ty += 1) {
+  for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+    assert.deepEqual(
+      deterministicA.getTile(tx, ty),
+      deterministicB.getTile(tx, ty),
+      `same seed must reproduce tile ${tx}:${ty}`,
+    );
+  }
+}
+
+console.log(JSON.stringify({
+  ok: true,
+  nodes: UPGRADE_DEFS.length,
+  levels: UPGRADE_DEFS.reduce((sum, definition) => sum + definition.maxLevel, 0),
+  seeds: 50,
+  checkedRoutes,
+  checkedVeins,
+  duplicateWalkCells: actualProbeCells,
+}));
