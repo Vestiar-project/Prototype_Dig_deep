@@ -9,7 +9,7 @@
     />
     <meta name="theme-color" content="#071b26" />
     <title>ГЛУБИНА: НУЛЬ</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=geocomic-mobile-1" />
   </head>
   <body>
     <a class="skip-link" href="#gameCanvas">К игровому полю</a>
@@ -439,7 +439,8 @@
           </div>
 
           <footer class="upgrade-footer">
-            <p><span class="mouse-key" aria-hidden="true">↖</span> наведите для описания <span>•</span> нажмите для установки <span>•</span> Shift + клик — купить максимум <span>•</span> прокручивайте дерево</p>
+            <p class="upgrade-footer__desktop-hint"><span class="mouse-key" aria-hidden="true">↖</span> наведите для описания <span>•</span> клик — купить уровень <span>•</span> Shift + клик — купить максимум <span>•</span> прокручивайте дерево</p>
+            <p class="upgrade-footer__mobile-hint">Тап по узлу — описание <span>•</span> покупка только кнопкой «КУПИТЬ» <span>•</span> перетаскивайте дерево</p>
             <button id="wipeSave" class="danger-link" type="button">СБРОСИТЬ ПРОГРЕСС</button>
           </footer>
         </div>
@@ -676,6 +677,6 @@
     </noscript>
     <script defer src="js/upgrades.js"></script>
     <script defer src="js/world.js"></script>
-    <script defer src="js/game.js"></script>
+    <script defer src="js/game.js?v=geocomic-mobile-1"></script>
   </body>
 </html>
