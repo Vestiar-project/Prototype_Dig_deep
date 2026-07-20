@@ -41,6 +41,7 @@ class StubElement {
     this.offsetWidth = 1100;
     this.scrollLeft = 0;
     this.scrollTop = 0;
+    this.listeners = new Map();
   }
   append(...children) {
     for (const child of children) {
@@ -52,7 +53,15 @@ class StubElement {
     this.children = [];
     this.append(...children);
   }
-  addEventListener() {}
+  addEventListener(type, listener) {
+    if (!this.listeners.has(type)) this.listeners.set(type, []);
+    this.listeners.get(type).push(listener);
+  }
+  click() {
+    for (const listener of this.listeners.get("click") || []) {
+      listener({ type: "click", currentTarget: this, target: this });
+    }
+  }
   setAttribute(name, value) { this.attributes.set(name, String(value)); }
   getAttribute(name) { return this.attributes.get(name) ?? null; }
   querySelector() { return null; }
@@ -101,6 +110,13 @@ global.window = global;
 global.innerWidth = 1280;
 global.innerHeight = 720;
 global.devicePixelRatio = 1;
+let mobileUpgradeInteraction = false;
+global.matchMedia = (query) => ({
+  matches: query === '(hover: none) and (pointer: coarse)' ? mobileUpgradeInteraction : false,
+  media: query,
+  addEventListener() {},
+  removeEventListener() {},
+});
 global.addEventListener = () => {};
 global.requestAnimationFrame = () => 0;
 global.cancelAnimationFrame = () => {};
@@ -142,6 +158,135 @@ assert.equal(
   "plain scalar first ranks must not be mislabeled as breakthroughs",
 );
 
+function findSolidTerrainPair(targetApi) {
+  const { WIDTH, HEIGHT } = global.DepthZeroWorld.WORLD_CONFIG;
+  for (let ty = 1; ty < HEIGHT - 1; ty += 1) {
+    for (let tx = 1; tx < WIDTH - 1; tx += 1) {
+      const tile = targetApi.debugGetTile(tx, ty);
+      const right = targetApi.debugGetTile(tx + 1, ty);
+      if (tile?.kind !== "air" && right?.kind !== "air") return { tx, ty };
+    }
+  }
+  return null;
+}
+
+// Static terrain may use small offscreen canvases in a browser, but the
+// headless DOM intentionally has no canvas.getContext. That path must render
+// directly, report the bypass and never grow the bounded LRU.
+const initialTerrainCache = api.getTerrainBaseCacheStats();
+assert.equal(Object.isFrozen(initialTerrainCache), true, "cache diagnostics must be a read-only snapshot");
+assert.deepEqual(initialTerrainCache, {
+  entries: 0,
+  hits: 0,
+  misses: 0,
+  bypasses: 0,
+  limit: 1800,
+});
+const terrainPair = findSolidTerrainPair(api);
+assert.ok(terrainPair, "terrain cache smoke test needs adjacent solid tiles");
+assert.equal(api.debugRenderTerrainBaseTile(terrainPair.tx, terrainPair.ty), true);
+assert.deepEqual(api.getTerrainBaseCacheStats(), {
+  entries: 0,
+  hits: 0,
+  misses: 1,
+  bypasses: 1,
+  limit: 1800,
+}, "missing offscreen context must use the direct-render fallback");
+
+// Swap in a minimal working offscreen context to exercise hits, open-mask
+// variants and eviction without changing the production renderer.
+const originalCreateElement = document.createElement;
+document.createElement = (tagName) => {
+  const element = new StubElement(tagName);
+  if (String(tagName).toLowerCase() === "canvas") element.getContext = () => context;
+  return element;
+};
+try {
+  api.startRun({ seed: "terrain-cache-smoke", sectorId: "stable_strata" });
+  assert.deepEqual(api.getTerrainBaseCacheStats(), {
+    entries: 0,
+    hits: 0,
+    misses: 0,
+    bypasses: 0,
+    limit: 1800,
+  }, "newWorld must clear cache entries and counters");
+  const cachedPair = findSolidTerrainPair(api);
+  assert.ok(cachedPair);
+  assert.equal(api.debugRenderTerrainBaseTile(cachedPair.tx, cachedPair.ty), true);
+  assert.equal(api.debugRenderTerrainBaseTile(cachedPair.tx, cachedPair.ty), true);
+  let cacheStats = api.getTerrainBaseCacheStats();
+  assert.equal(cacheStats.entries, 1);
+  assert.equal(cacheStats.misses, 1);
+  assert.equal(cacheStats.hits, 1);
+  assert.equal(cacheStats.bypasses, 0);
+
+  api.debugPatchTile(cachedPair.tx + 1, cachedPair.ty, {
+    kind: "air",
+    oreId: null,
+    veinId: null,
+    hp: 0,
+    maxHp: 0,
+  });
+  assert.equal(api.debugRenderTerrainBaseTile(cachedPair.tx, cachedPair.ty), true);
+  cacheStats = api.getTerrainBaseCacheStats();
+  assert.equal(cacheStats.entries, 2, "a changed exposed-neighbor mask must create a fresh base tile variant");
+  assert.equal(cacheStats.misses, 2);
+
+  const { WIDTH, HEIGHT } = global.DepthZeroWorld.WORLD_CONFIG;
+  let rendered = 0;
+  for (let ty = 0; ty < HEIGHT && rendered < cacheStats.limit + 12; ty += 1) {
+    for (let tx = 0; tx < WIDTH && rendered < cacheStats.limit + 12; tx += 1) {
+      if (api.debugGetTile(tx, ty)?.kind === "air") continue;
+      api.debugRenderTerrainBaseTile(tx, ty);
+      rendered += 1;
+    }
+  }
+  cacheStats = api.getTerrainBaseCacheStats();
+  assert.ok(rendered > cacheStats.limit, "smoke world must contain enough solid cells to exercise eviction");
+  assert.equal(cacheStats.entries, cacheStats.limit, "terrain LRU must stay at its hard entry limit");
+} finally {
+  document.createElement = originalCreateElement;
+}
+api.startRun({ seed: "terrain-cache-reset", sectorId: "stable_strata" });
+assert.deepEqual(api.getTerrainBaseCacheStats(), {
+  entries: 0,
+  hits: 0,
+  misses: 0,
+  bypasses: 0,
+  limit: 1800,
+}, "starting another world must release all cached canvases");
+
+// The field guide stays open for a new player, then becomes a small explicit
+// disclosure after the first shifts. The button must always restore it.
+api.debugResetProgress();
+api.startRun({ seed: "guide-first-run" });
+const fieldGuide = elementFor("#fieldGuide");
+const guideToggle = elementFor("#guideToggle");
+const guideBody = elementFor("#guideBody");
+assert.equal(fieldGuide.classList.contains("is-collapsed"), false, "the first shift should keep the compact guide open");
+assert.equal(guideToggle.getAttribute("aria-expanded"), "true");
+guideToggle.click();
+assert.equal(fieldGuide.classList.contains("is-collapsed"), true, "the guide disclosure must collapse on request");
+assert.equal(guideBody.getAttribute("aria-hidden"), "true");
+guideToggle.click();
+assert.equal(fieldGuide.classList.contains("is-collapsed"), false, "the guide disclosure must reopen on request");
+api.debugResetProgress();
+elementFor("#replayTutorial").click();
+elementFor("#tutorialNext").click();
+elementFor("#tutorialNext").click();
+elementFor("#tutorialNext").click();
+api.startRun({ seed: "guide-trained-player" });
+assert.equal(fieldGuide.classList.contains("is-collapsed"), true, "completed onboarding should also compact the field guide");
+api.debugResetProgress();
+api.setCompletedRuns(2);
+api.startRun({ seed: "guide-returning-player" });
+assert.equal(fieldGuide.classList.contains("is-collapsed"), true, "returning players should start with an unobtrusive guide button");
+assert.equal(guideToggle.getAttribute("aria-expanded"), "false");
+assert.equal(guideToggle.title, "Открыть памятку");
+guideToggle.click();
+assert.equal(fieldGuide.classList.contains("is-collapsed"), false, "auto-collapse must not prevent explicit reopening");
+api.debugResetProgress();
+
 function grantWorkshopBudget(targetApi, amount = 1_000_000) {
   for (const ore of global.DepthZeroUpgrades.ORE_TYPES) targetApi.grantOre(ore.id, amount);
 }
@@ -153,6 +298,63 @@ function maxWorkshopUpgrade(targetApi, upgradeId) {
     entry = targetApi.getUpgradeCatalog().find((upgrade) => upgrade.id === upgradeId);
   }
 }
+
+function dispatchUpgradeNodeClick(upgradeId, { shiftKey = false } = {}) {
+  const node = { dataset: { upgradeId, buyUpgrade: upgradeId } };
+  const target = {
+    closest(selector) {
+      if (selector === '[data-buy-upgrade]' || selector === '[data-upgrade-id]') return node;
+      return null;
+    },
+  };
+  const listeners = elementFor('#upgradeGrid').listeners.get('click') || [];
+  assert.equal(listeners.length, 1, 'the upgrade map should install one delegated click handler');
+  listeners[0]({ target, shiftKey });
+}
+
+// Pointer-capability routing deliberately keeps the established desktop
+// shortcut while making a coarse no-hover tap select-only. The explicit
+// mobile button buys one rank, so reading a node can never spend ore.
+api.debugResetProgress();
+grantWorkshopBudget(api);
+api.openUpgrades();
+mobileUpgradeInteraction = false;
+dispatchUpgradeNodeClick('core_first_descent');
+assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'core_first_descent').level, 1, 'desktop node click must keep its direct-purchase behavior');
+api.startRun({ seed: 'desktop-shift-purchase' });
+api.stepRun(8);
+grantWorkshopBudget(api);
+api.openUpgrades();
+dispatchUpgradeNodeClick('time_extra_breath', { shiftKey: true });
+const desktopShiftPurchase = api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'time_extra_breath');
+assert.equal(desktopShiftPurchase.level, desktopShiftPurchase.maxLevel, 'desktop Shift + click must keep buying every affordable rank');
+
+api.debugResetProgress();
+grantWorkshopBudget(api);
+mobileUpgradeInteraction = true;
+api.openUpgrades();
+dispatchUpgradeNodeClick('core_first_descent');
+assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'core_first_descent').level, 0, 'mobile node tap must only select and reveal its description');
+assert.equal(elementFor('#buyMaxSelectedUpgrade').textContent, 'КУПИТЬ', 'mobile must expose an explicit single-rank purchase button');
+assert.equal(elementFor('#buyMaxSelectedUpgrade').dataset.purchaseMode, 'single');
+elementFor('#buyMaxSelectedUpgrade').click();
+assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'core_first_descent').level, 1, 'the explicit mobile purchase button must install the selected node');
+
+api.startRun({ seed: 'mobile-purchase-button' });
+api.stepRun(8);
+grantWorkshopBudget(api);
+api.openUpgrades();
+dispatchUpgradeNodeClick('time_extra_breath');
+elementFor('#buyMaxSelectedUpgrade').click();
+assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'time_extra_breath').level, 1, 'mobile purchase button must buy one rank rather than every affordable rank');
+
+mobileUpgradeInteraction = false;
+api.debugResetProgress();
+grantWorkshopBudget(api);
+api.openUpgrades();
+assert.equal(elementFor('#buyMaxSelectedUpgrade').textContent, 'КУПИТЬ MAX', 'desktop must retain its existing max-purchase button');
+assert.equal(elementFor('#buyMaxSelectedUpgrade').dataset.purchaseMode, 'max');
+api.debugResetProgress();
 
 // Completing an unpinned node must advance the persistent workshop guide;
 // otherwise "Next breakthrough" gets stuck on the finished root forever.
@@ -1650,6 +1852,7 @@ console.log(JSON.stringify({
     "echo-no-triple-sample",
     "triangular-fix",
     "triangle-aoe-snapshot",
+    "bounded-terrain-base-cache",
     "random-geology-without-sector-choice",
     "short-global-micro-events",
     "resonant-ping",
@@ -1677,5 +1880,6 @@ console.log(JSON.stringify({
     "persistent-workshop-session-gate",
     "workshop-first-rank-cap",
     "absolute-60-second-cap",
+    "field-guide-auto-collapse",
   ],
 }));
