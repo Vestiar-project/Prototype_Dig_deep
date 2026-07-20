@@ -248,6 +248,45 @@ assert.doesNotMatch(indexSource, /microEvent(?:Icon|Text|Progress)/, "the event 
 assert.doesNotMatch(stylesSource, /micro-event-banner__(?:icon|copy|meter)/, "removed event-card chrome must stay removed");
 assert.doesNotMatch(gameSource, /events\.push\(active\)/, "consumed events must not keep a local active glow after triggering");
 
+assert.match(
+  gameSource,
+  /MOBILE_UPGRADE_INTERACTION_QUERY\s*=\s*['"]\(hover: none\) and \(pointer: coarse\)['"]/,
+  "mobile perk purchasing must be routed by touch capability rather than mixed into desktop width breakpoints",
+);
+assert.match(indexSource, /class=["']upgrade-footer__desktop-hint["']/);
+assert.match(indexSource, /class=["']upgrade-footer__mobile-hint["']/);
+assert.match(indexSource, /покупка только кнопкой «КУПИТЬ»/u, "the mobile workshop must explain its explicit purchase action");
+assert.match(stylesSource, /max-width:\s*640px[\s\S]*?font-size:\s*clamp\(10px,\s*2\.8vw,\s*12px\)[\s\S]*?font-weight:\s*400/, "mobile perk descriptions must remain wide, larger, and normal-weight");
+assert.match(stylesSource, /@media \(hover: none\) and \(pointer: coarse\)[\s\S]*?upgrade-footer__desktop-hint[\s\S]*?display:\s*none[\s\S]*?upgrade-footer__mobile-hint[\s\S]*?display:\s*block/, "desktop and mobile workshop instructions must never be shown as one mixed control scheme");
+assert.match(indexSource, /styles\.css\?v=geocomic-mobile-1/);
+assert.match(indexSource, /js\/game\.js\?v=geocomic-mobile-1/);
+
+const oreRenderStyleBlock = gameSource.match(/const ORE_RENDER_STYLES = Object\.freeze\(\{([\s\S]*?)\n\}\);/);
+assert.ok(oreRenderStyleBlock, "the environment renderer must keep an explicit ore-material table");
+for (const ore of ORE_TYPES) {
+  assert.match(
+    oreRenderStyleBlock[1],
+    new RegExp(`\\b${ore.id}:\\s*Object\\.freeze\\(\\{[^}]*material:`),
+    `${ore.id} needs a silhouette/material profile instead of colour-only rendering`,
+  );
+}
+const oreRenderer = gameSource.match(/function drawOreInTile\([\s\S]*?\n\}\n\nfunction drawCracks/);
+assert.ok(oreRenderer, "the ore renderer must remain available to the canvas pass");
+assert.match(oreRenderer[0], /ORE_RENDER_STYLES\[ore\.id\]/, "ore material profiles must drive the live renderer");
+assert.match(oreRenderer[0], /hasMatchingOre\(tx - 1, ty, ore\.id\)/, "veins must keep their left-edge connection");
+assert.match(oreRenderer[0], /hasMatchingOre\(tx \+ 1, ty, ore\.id\)/, "veins must keep their right-edge connection");
+assert.match(oreRenderer[0], /const glowTier = clamp\(\(ore\.tier \|\| 0\) - 2/, "zero-based T4+ ore should receive geological glow");
+assert.match(oreRenderer[0], /globalCompositeOperation = 'lighter'/, "high-tier glow must remain a local additive pass");
+assert.doesNotMatch(oreRenderer[0], /fillRect\(0, 0, (?:width|state\.viewport)/, "ore glow must never become a full-screen wash");
+
+const terrainRenderer = gameSource.match(/function terrainDepthFactor\([\s\S]*?\n\}\n\nfunction hasMatchingOre/);
+assert.ok(terrainRenderer, "depth landmarks must stay grouped in the terrain render pass");
+for (const marker of ["rootSeed", "fossilSeed", "supportSeed", "cableSeed", "crystalSeed"]) {
+  assert.match(terrainRenderer[0], new RegExp(`\\b${marker}\\b`), `${marker} landmark must remain deterministic`);
+}
+assert.match(terrainRenderer[0], /GEO_COMIC_COLORS\.damp/, "wet strata need a distinct material cue");
+assert.doesNotMatch(terrainRenderer[0], /Math\.random/, "terrain landmarks must not shimmer or move between frames");
+
 const routeCalibrationWorld = new MineWorld(ORE_TYPES, "route-calibration-probe");
 let focusedRouteTile = null;
 let ordinaryRouteTile = null;
