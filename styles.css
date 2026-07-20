@@ -4071,18 +4071,29 @@ button.upgrade-node { font: inherit; }
 /* On touch screens the perk details act as a readable bottom sheet instead of
    retaining the narrow desktop tooltip width. */
 @media (max-width: 640px), (max-width: 900px) and (pointer: coarse) {
+  /* A filtered/transformed node becomes the containing block for its fixed
+     tooltip. Reset both properties so the mobile sheet is sized by viewport,
+     never by the 62 px icon button. */
+  .upgrade-node:hover,
+  .upgrade-node:focus-visible,
+  .upgrade-node.is-selected {
+    filter: none;
+    transform: none;
+  }
+
   .upgrade-node__tooltip,
   .upgrade-node__tooltip.is-left,
   .upgrade-node[data-tooltip-side="left"] .upgrade-node__tooltip {
+    box-sizing: border-box;
     position: fixed;
     top: auto;
     right: max(8px, env(safe-area-inset-right));
     bottom: max(42px, calc(var(--safe-bottom) + 34px));
     left: max(8px, env(safe-area-inset-left));
-    width: auto;
-    max-width: 640px;
-    max-height: min(52dvh, 360px);
-    margin-inline: auto;
+    width: calc(100vw - max(8px, env(safe-area-inset-left)) - max(8px, env(safe-area-inset-right)));
+    max-width: none;
+    max-height: min(52dvh, 360px, calc(100dvh - 210px));
+    margin-inline: 0;
     gap: 9px;
     padding: 14px 16px;
     overflow-y: auto;
@@ -4099,14 +4110,92 @@ button.upgrade-node { font: inherit; }
   .upgrade-node[data-tooltip-side="left"].is-selected .upgrade-node__tooltip {
     right: max(8px, env(safe-area-inset-right));
     left: max(8px, env(safe-area-inset-left));
+    opacity: 1;
+    visibility: visible;
     transform: translateY(0);
   }
 
   .upgrade-node__tooltip-description,
   .tooltip__description {
-    font-size: clamp(10px, 2.8vw, 12px);
+    font-size: clamp(11px, 3vw, 13px);
     font-weight: 400;
     line-height: 1.55;
+  }
+
+  .upgrade-node__tooltip-title,
+  .tooltip__title { font-size: clamp(12px, 3.3vw, 14px); }
+
+  .upgrade-node__tooltip-requirements,
+  .tooltip__requirements { font-size: 9px; }
+
+  .upgrade-node__tooltip-hint,
+  .tooltip__hint { font-size: 8px; }
+
+  .next-breakthrough {
+    min-height: 58px;
+    grid-template-columns: 28px minmax(0, 1fr) clamp(146px, 45vw, 190px);
+    gap: 6px;
+    padding: 5px;
+  }
+
+  .next-breakthrough__actions {
+    width: 100%;
+    grid-template-columns: minmax(88px, 1.7fr) minmax(52px, 0.85fr);
+    align-items: center;
+    gap: 5px;
+  }
+
+  .next-breakthrough__max {
+    min-width: 0;
+    min-height: 44px;
+    padding: 7px 8px;
+    border: 2px solid #ffe2a0;
+    color: #172622;
+    background: linear-gradient(#ffd875, #d98b35);
+    box-shadow:
+      inset 0 2px 0 rgba(255, 247, 195, 0.55),
+      0 4px 0 #793f27,
+      0 0 14px rgba(239, 181, 76, 0.3);
+    font-size: clamp(9px, 2.8vw, 11px);
+    font-weight: 900;
+    letter-spacing: 0.08em;
+  }
+
+  .next-breakthrough.is-ready .next-breakthrough__max:not(:disabled) {
+    border-color: #fff0b2;
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 220, 0.7),
+      0 4px 0 #793f27,
+      0 0 0 2px rgba(255, 211, 103, 0.18),
+      0 0 20px rgba(255, 198, 78, 0.55);
+  }
+
+  .next-breakthrough__max:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 220, 0.55), 0 2px 0 #793f27;
+  }
+
+  .next-breakthrough__max:focus-visible {
+    outline: 3px solid #fff4bd;
+    outline-offset: 2px;
+  }
+
+  .next-breakthrough__max:disabled {
+    opacity: 1;
+    border-color: #6f6040;
+    color: #a99b73;
+    background: #182a2b;
+    box-shadow: inset 0 1px 0 rgba(255, 220, 140, 0.08);
+  }
+
+  .next-breakthrough__pin {
+    min-width: 0;
+    min-height: 44px;
+    padding: 4px;
+    border-color: #395e5b;
+    color: #789791;
+    background: #09242a;
+    font-size: 6px;
   }
 }
 
