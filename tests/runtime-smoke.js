@@ -127,6 +127,7 @@ global.localStorage = {
   removeItem: (key) => localData.delete(key),
   clear: () => localData.clear(),
 };
+const documentListeners = new Map();
 global.document = {
   hidden: false,
   activeElement: null,
@@ -135,8 +136,15 @@ global.document = {
   createElement: (tagName) => new StubElement(tagName),
   createElementNS: (_namespace, tagName) => new StubElement(tagName),
   createDocumentFragment: () => new StubElement("fragment"),
-  addEventListener() {},
+  addEventListener(type, listener) {
+    if (!documentListeners.has(type)) documentListeners.set(type, []);
+    documentListeners.get(type).push(listener);
+  },
 };
+
+function dispatchDocumentEvent(type) {
+  for (const listener of documentListeners.get(type) || []) listener({ type, target: document });
+}
 
 const root = path.resolve(__dirname, "..");
 require(path.join(root, "js", "upgrades.js"));
@@ -356,6 +364,71 @@ assert.equal(elementFor('#buyMaxSelectedUpgrade').textContent, 'КУПИТЬ MAX
 assert.equal(elementFor('#buyMaxSelectedUpgrade').dataset.purchaseMode, 'max');
 api.debugResetProgress();
 
+// Ore focus needs a stable touch control outside the scroll-capped toolbar.
+// Owning the pneumatic pick makes the mechanic relevant, but must not bypass
+// its sense/sample requirements or silently purchase the focus node.
+mobileUpgradeInteraction = true;
+api.setUpgradeLevel('tools_pneumatic_pick', 1);
+api.openUpgrades();
+const mobileOreFocus = elementFor('#mobileOreFocus');
+const mobileOreFocusToggle = elementFor('#mobileOreFocusToggle');
+const mobileOreFocusBackdrop = elementFor('#mobileOreFocusBackdrop');
+assert.equal(mobileOreFocus.classList.contains('hidden'), false, 'pneumatic-tier mobile players must see the focus status control');
+assert.equal(mobileOreFocus.dataset.state, 'locked');
+assert.match(elementFor('#mobileOreFocusHint').textContent, /Глубинный резонанс/);
+assert.match(elementFor('#mobileOreFocusHint').textContent, /образец/i, 'the locked state must name the still-missing ore discovery');
+mobileOreFocusToggle.click();
+assert.equal(mobileOreFocusBackdrop.classList.contains('hidden'), true, 'a locked focus control must explain/locate the node, not open an empty picker');
+assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'sense_ore_focus').level, 0, 'the mobile focus status must never purchase the perk itself');
+
+api.setUpgradeLevel('sense_ore_focus', 1);
+api.grantOre('copper', 1);
+assert.equal(mobileOreFocus.dataset.state, 'unlocked');
+assert.equal(elementFor('#mobileOreFocusValue').textContent, 'ОБЫЧНЫЙ ПОИСК');
+mobileOreFocusToggle.click();
+assert.equal(mobileOreFocusBackdrop.classList.contains('hidden'), false, 'an unlocked mobile focus button must open the ore picker');
+assert.equal(mobileOreFocusToggle.getAttribute('aria-expanded'), 'true');
+const focusChoiceListeners = elementFor('#mobileOreFocusChoices').listeners.get('click') || [];
+assert.equal(focusChoiceListeners.length, 1, 'the mobile ore picker must install one delegated choice handler');
+const copperFocusTarget = {
+  dataset: { focusOre: 'copper' },
+  closest(selector) { return selector === '[data-focus-ore]' ? this : null; },
+};
+focusChoiceListeners[0]({ target: copperFocusTarget });
+assert.equal(api.getSnapshot().focusedOreId, 'copper', 'tapping a discovered ore must update the active focus');
+assert.equal(mobileOreFocusBackdrop.classList.contains('hidden'), true, 'choosing a mobile focus must close the sheet');
+assert.equal(mobileOreFocusToggle.getAttribute('aria-expanded'), 'false');
+
+mobileUpgradeInteraction = false;
+api.setFocusedOre(null);
+assert.equal(mobileOreFocus.classList.contains('hidden'), true, 'the separate touch focus control must stay out of the desktop layout');
+assert.equal(elementFor('#oreFocusPanel').classList.contains('hidden'), false, 'the existing desktop focus panel must remain available');
+api.debugResetProgress();
+
+// Returning to a background-paused run on a phone cannot rely on an Esc key.
+// The explicit resume action must preserve the paused timer and never resume
+// merely because the page became visible again.
+mobileUpgradeInteraction = true;
+api.startRun({ seed: 'mobile-visibility-pause' });
+api.stepRun(0.35);
+const prePauseTime = api.getSnapshot().timeLeft;
+document.hidden = true;
+dispatchDocumentEvent('visibilitychange');
+assert.equal(api.getSnapshot().paused, true, 'backgrounding an active run must still protect it with a pause');
+assert.equal(elementFor('#pauseOverlay').classList.contains('hidden'), false);
+const pausedTime = api.getSnapshot().timeLeft;
+assert.equal(pausedTime, prePauseTime, 'entering the visibility pause must not consume run time');
+document.hidden = false;
+dispatchDocumentEvent('visibilitychange');
+assert.equal(api.getSnapshot().paused, true, 'returning to the tab must wait for an explicit mobile resume');
+elementFor('#resumeRun').click();
+assert.equal(api.getSnapshot().paused, false, 'the mobile ПРОДОЛЖИТЬ button must resume the run');
+assert.equal(elementFor('#pauseOverlay').classList.contains('hidden'), true);
+assert.equal(api.getSnapshot().timeLeft, pausedTime, 'resuming must not deduct the time spent in the background');
+api.finishRun();
+mobileUpgradeInteraction = false;
+api.debugResetProgress();
+
 // Completing an unpinned node must advance the persistent workshop guide;
 // otherwise "Next breakthrough" gets stuck on the finished root forever.
 api.debugResetProgress();
@@ -405,7 +478,7 @@ assert.equal(cappedCatalogEntry.pendingReason, "capacity", "catalog diagnostics 
 assert.equal(cappedCatalogEntry.firstRankSlotsRemaining, 0);
 assert.equal(api.buyUpgrade(cappedCandidate.id), false, "the direct purchase path must enforce the four-node cap");
 const cappedWorkshopSave = JSON.parse(localData.get("depth-zero-save-v1"));
-assert.equal(cappedWorkshopSave.version, 10, "workshop capacity state requires save schema v10");
+assert.equal(cappedWorkshopSave.version, 13, "workshop breakthrough sessions require save schema v13");
 assert.equal(cappedWorkshopSave.workshopInstallRun, 1);
 assert.equal(cappedWorkshopSave.workshopInstalledIds.length, 4, "the exact set of first-ranked nodes must persist");
 assert.match(elementFor("#upgradeMapStatus").textContent, /4\/4/, "the workshop tracker should explain the exhausted capacity");
@@ -511,13 +584,179 @@ function clearTile(tx, ty) {
   });
 }
 
+// Ore Focus remains an in-run decision: opening its picker quietly owns the
+// pause, freezes the shift, and selecting a discovered ore resumes the run.
+api.debugResetProgress();
+api.setUpgradeLevel("sense_ore_focus", 1);
+api.grantOre("copper", 1);
+api.startRun({ seed: "runtime-run-focus-picker", sectorId: "stable_strata" });
+const runFocusHud = elementFor("#focusHud");
+const runFocusBackdrop = elementFor("#runOreFocusBackdrop");
+assert.equal(runFocusHud.classList.contains("hidden"), false, "an unlocked focus must be switchable during a shift");
+const runFocusTimeBeforeOpen = api.getSnapshot().timeLeft;
+runFocusHud.click();
+assert.equal(api.getSnapshot().paused, true, "the in-run focus picker must pause its own active shift");
+assert.equal(runFocusBackdrop.classList.contains("hidden"), false);
+assert.equal(elementFor("#pauseOverlay").classList.contains("hidden"), true, "the focus pause must not show the normal pause overlay");
+assert.equal(runFocusHud.getAttribute("aria-expanded"), "true");
+api.stepRun(0.25);
+assert.equal(api.getSnapshot().timeLeft, runFocusTimeBeforeOpen, "the quiet focus pause must freeze the run timer");
+const runFocusChoiceListeners = elementFor("#runOreFocusChoices").listeners.get("click") || [];
+assert.equal(runFocusChoiceListeners.length, 1, "the in-run focus picker must install one delegated choice handler");
+const runCopperFocusTarget = {
+  dataset: { focusOre: "copper" },
+  closest(selector) { return selector === "[data-focus-ore]" ? this : null; },
+};
+runFocusChoiceListeners[0]({ target: runCopperFocusTarget });
+assert.equal(api.getSnapshot().focusedOreId, "copper", "an in-run choice must immediately change ore priority");
+assert.equal(api.getSnapshot().paused, false, "choosing an ore must release the pause owned by the picker");
+assert.equal(runFocusBackdrop.classList.contains("hidden"), true);
+assert.equal(runFocusHud.getAttribute("aria-expanded"), "false");
+assert.equal(api.getSnapshot().timeLeft, runFocusTimeBeforeOpen, "closing the picker must not charge its paused wall time");
+api.finishRun();
+
+// Discovery is permanent visual knowledge, independent of the live sense
+// radius. A locked target is also readable immediately even before discovery.
+api.debugResetProgress();
+api.setAllUpgrades(false);
+api.setFocusedOre(null);
+api.startRun({ seed: "runtime-ore-visual-memory", sectorId: "stable_strata" });
+api.debugSetPlayerTile(40, 20);
+placeOre(62, 20, "copper", "remembered-visual", 100);
+const rememberedOreVisual = api.debugGetOreVisualState(62, 20);
+assert.equal(rememberedOreVisual.sensed, false, "the remembered ore fixture must be outside current sense");
+assert.equal(rememberedOreVisual.visible, true, "a discovered ore must never become grey/hidden outside current sense");
+api.debugPatchTile(66, 20, {
+  kind: "stone",
+  oreId: "copper",
+  veinId: "locked-undiscovered-visual",
+  hp: 100,
+  maxHp: 100,
+  discovered: false,
+  cracked: 0,
+});
+assert.ok(api.debugSetTargetTile(66, 20));
+const lockedOreVisual = api.debugGetOreVisualState(66, 20);
+assert.equal(lockedOreVisual.sensed, false, "the locked fixture must remain beyond the natural sense radius");
+assert.equal(lockedOreVisual.isLockedTarget, true);
+assert.equal(lockedOreVisual.visible, true, "a target lock must reveal an otherwise undiscovered ore");
+api.finishRun();
+
+// Clearing every solid candidate in the original 18-tile search must make the
+// fallback scan expand, drive the update loop, and reacquire after that outer
+// target disappears. Exercise both contact mining and the laser movement path.
+function assertExpandedExplorationContinues(tool) {
+  api.debugResetProgress();
+  api.setAllUpgrades(false);
+  if (tool === "laser") api.setUpgradeLevel("tools_laser_emitter", 1);
+  api.setFocusedOre(null);
+  api.startRun({ seed: `runtime-expanded-exploration-${tool}`, sectorId: "stable_strata" });
+  api.debugScheduleGlobalEvent();
+  const explorationCenter = { tx: 60, ty: 40 };
+  api.debugSetPlayerTile(explorationCenter.tx, explorationCenter.ty);
+  for (let ty = explorationCenter.ty - 6; ty <= explorationCenter.ty + 18; ty += 1) {
+    for (let tx = explorationCenter.tx - 18; tx <= explorationCenter.tx + 18; tx += 1) {
+      const tileDistance = Math.hypot(tx - explorationCenter.tx, ty - explorationCenter.ty);
+      const tile = api.debugGetTile(tx, ty);
+      if (tileDistance <= 18 && tile?.kind !== "air" && tile?.kind !== "bedrock") clearTile(tx, ty);
+    }
+  }
+  placeRock(explorationCenter.tx, explorationCenter.ty + 24, 100);
+  const expandedTarget = api.debugFindExplorationTarget();
+  assert.ok(expandedTarget, `${tool}: an emptied local pocket must still produce an exploration target`);
+  assert.ok(
+    expandedTarget.explorationRadius >= 30,
+    `${tool}: the exploration scan must expand beyond 18 tiles (${JSON.stringify(expandedTarget)})`,
+  );
+
+  const playerBefore = api.getSnapshot().player;
+  api.stepRun(0.8);
+  let explorationSnapshot = api.getSnapshot();
+  assert.equal(explorationSnapshot.target?.kind, "exploration", `${tool}: the update loop must install the expanded target`);
+  assert.ok(
+    Math.hypot(
+      explorationSnapshot.player.x - playerBefore.x,
+      explorationSnapshot.player.y - playerBefore.y,
+    ) > 1,
+    `${tool}: the miner must move toward work outside the emptied pocket`,
+  );
+
+  const firstTarget = { tx: explorationSnapshot.target.tx, ty: explorationSnapshot.target.ty };
+  clearTile(firstTarget.tx, firstTarget.ty);
+  api.stepRun(0.1);
+  explorationSnapshot = api.getSnapshot();
+  assert.ok(explorationSnapshot.target, `${tool}: clearing the outer target must immediately acquire more work`);
+  assert.notDeepEqual(
+    [explorationSnapshot.target.tx, explorationSnapshot.target.ty],
+    [firstTarget.tx, firstTarget.ty],
+    `${tool}: the cleared exploration target must not remain locked`,
+  );
+  api.finishRun();
+}
+
+assertExpandedExplorationContinues("pick");
+assertExpandedExplorationContinues("laser");
+
+// Solar Drill is an actual delayed attack, not only a normalized stat. Its
+// fifth shot must queue the burst; advancing time with attacks suppressed must
+// apply the held beam/final blast and damage the perpendicular neighboring tile.
+api.debugResetProgress();
+api.setAllUpgrades(false);
+api.setUpgradeLevel("tools_laser_emitter", 1);
+api.setUpgradeLevel("tools_solar_drill", 1);
+api.setFocusedOre(null);
+api.startRun({ seed: "runtime-solar-drill-burst", sectorId: "stable_strata" });
+api.debugScheduleGlobalEvent();
+api.debugSetPlayerTile(40, 20);
+for (let ty = 18; ty <= 22; ty += 1) {
+  for (let tx = 39; tx <= 45; tx += 1) clearTile(tx, ty);
+}
+placeOre(44, 20, "star_core", "solar-burst-target", 1_000);
+placeRock(44, 21, 1);
+assert.ok(api.debugSetTargetTile(44, 20));
+const solarBurstsBefore = api.getSnapshot().metrics.solarDrillBursts;
+for (let shot = 0; shot < 4; shot += 1) assert.ok(api.attackNow());
+assert.equal(api.getSnapshot().metrics.solarDrillBursts, solarBurstsBefore, "Solar Drill must wait for shot five");
+assert.ok(api.attackNow());
+let solarSnapshot = api.getSnapshot();
+assert.equal(solarSnapshot.metrics.solarDrillBursts, solarBurstsBefore + 1, "the fifth laser shot must queue Solar Drill");
+assert.equal(api.debugGetTile(44, 21).hp, 1, "the perpendicular fixture must not be hit by the direct laser");
+const solarTargetAfterShot = api.debugGetTile(44, 20).hp;
+api.debugSetAttackCooldown(100);
+api.stepRun(0.8);
+solarSnapshot = api.getSnapshot();
+assert.ok(api.debugGetTile(44, 20).hp < solarTargetAfterShot, "the delayed Solar Drill beam must damage its target");
+assert.equal(api.debugGetTile(44, 21).kind, "air", "the Solar Drill final burst must damage its local area");
+assert.ok((solarSnapshot.metrics.sourceBreaks.solar || 0) > 0, "Solar Drill breaks must be attributed to the solar source");
+api.finishRun();
+
+// Runtime depth records are expressed in authored metres: twenty vertical
+// tiles from the surface origin must advance the record by about 100 metres.
+api.debugResetProgress();
+api.setAllUpgrades(false);
+api.startRun({ seed: "runtime-depth-metres", sectorId: "stable_strata" });
+const depthStartPlayer = api.getSnapshot().player;
+const depthTileSize = global.DepthZeroWorld.WORLD_CONFIG.TILE_SIZE;
+const depthStartTile = {
+  tx: Math.floor(depthStartPlayer.x / depthTileSize),
+  ty: Math.floor(depthStartPlayer.y / depthTileSize),
+};
+api.debugSetPlayerTile(depthStartTile.tx, depthStartTile.ty + 20);
+api.stepRun(0.001);
+assert.ok(
+  Math.abs(api.getSnapshot().deepest - 100) < 1,
+  `twenty depth tiles must equal 100 metres, got ${api.getSnapshot().deepest}`,
+);
+api.finishRun();
+api.debugResetProgress();
+
 api.setAllUpgrades(true);
 const fullStats = api.getStats();
 assert.equal(fullStats.runDuration, 45, "direct timer upgrades must stop at 45 seconds");
 assert.equal(fullStats.bonusRunDurationCap, 60, "bonus runtime cap must be 60 seconds");
 assert.equal(fullStats.backupTargetSlots, 1);
 assert.equal(fullStats.oreFocusEscalationBonus, 0.75);
-assert.equal(fullStats.mineLiftRecordDepthRatio, 0.35);
+assert.equal(fullStats.mineLiftRecordDepthRatio, 0.45);
 assert.equal(fullStats.discoveryTimeBonus, 0.48);
 assert.equal(fullStats.directionalBombConeTiles, 3);
 assert.equal(fullStats.laserRicochetCount, 2);
@@ -530,6 +769,28 @@ assert.equal(fullStats.triangularFixRangeBonus, 0.2);
 assert.equal(fullStats.laserSuperPickEchoEvery, 4);
 assert.equal(fullStats.laserSuperPickEchoRadiusTiles, 1.4);
 assert.equal(fullStats.laserSuperPickEchoPower, 0.85);
+
+api.startRun({ seed: "runtime-depth-contract", sectorId: "stable_strata" });
+const contractPlayer = api.getSnapshot().player;
+const contractTileSize = global.DepthZeroWorld.WORLD_CONFIG.TILE_SIZE;
+const contractOriginTile = {
+  tx: Math.floor(contractPlayer.x / contractTileSize),
+  ty: Math.floor(contractPlayer.y / contractTileSize),
+};
+assert.equal(api.debugDepthAtTile(contractOriginTile.tx, contractOriginTile.ty + 20), 100);
+assert.equal(
+  api.debugDepthContractStacksAtTile(contractOriginTile.tx, contractOriginTile.ty + 20),
+  1,
+  "the depth contract must award its first stack at 100 authored metres",
+);
+assert.equal(
+  api.debugDepthContractStacksAtTile(contractOriginTile.tx, contractOriginTile.ty + 160),
+  8,
+  "the deep shaft must make all eight 100-metre contract stacks reachable",
+);
+api.finishRun();
+api.debugResetProgress();
+api.setAllUpgrades(true);
 
 // Every redesigned perk must survive the upgrades -> runtime normalization
 // boundary. Keep this exhaustive: a missing field silently turns an installed
@@ -573,9 +834,9 @@ const expectedRuntimePerkStats = {
   chronoOverflowSpeedBonus: 0.25,
   chronoOverflowProcEvery: 5,
   magneticFieldEnabled: true,
-  magneticFieldDuration: 2.7,
-  magneticFieldRadiusTiles: 3,
-  magneticFieldTargetingBonus: 0.48,
+  magneticFieldDuration: 4.8,
+  magneticFieldRadiusTiles: 6,
+  magneticFieldTargetingBonus: 0.72,
   demolitionComboEnabled: true,
   demolitionComboMarkDuration: 3,
   demolitionComboFinishPower: 0.75,
@@ -761,6 +1022,73 @@ assert.ok(
 );
 api.finishRun();
 
+// A neighbouring wall may overlap only the miner body's padded contact ray.
+// It must not steal a clean, point-blank strike from the ore directly ahead.
+api.setAllUpgrades(false);
+api.setFocusedOre(null);
+api.startRun({ seed: "runtime-point-blank-pressed-ore", sectorId: "stable_strata" });
+api.debugScheduleGlobalEvent();
+for (let ty = 17; ty <= 23; ty += 1) {
+  for (let tx = 37; tx <= 44; tx += 1) clearTile(tx, ty);
+}
+const pressedOreTileSize = global.DepthZeroWorld.WORLD_CONFIG.TILE_SIZE;
+const pressedOrePower = api.getStats().pickPower;
+const pressedOreCases = [
+  { name: "right", target: [41, 20], wall: [40, 19], player: [40.5, 20.5 - 8 / pressedOreTileSize] },
+  { name: "left", target: [39, 20], wall: [40, 21], player: [40.5, 20.5 + 8 / pressedOreTileSize] },
+  { name: "down", target: [40, 21], wall: [41, 20], player: [40.5 + 8 / pressedOreTileSize, 20.5] },
+  { name: "up", target: [40, 19], wall: [39, 20], player: [40.5 - 8 / pressedOreTileSize, 20.5] },
+];
+for (const pressedCase of pressedOreCases) {
+  for (let ty = 18; ty <= 22; ty += 1) {
+    for (let tx = 38; tx <= 42; tx += 1) clearTile(tx, ty);
+  }
+  placeOre(...pressedCase.target, "copper", `pressed-ore-${pressedCase.name}`, 100);
+  placeRock(...pressedCase.wall, 100);
+  api.debugSetPlayerPosition(
+    pressedCase.player[0] * pressedOreTileSize,
+    pressedCase.player[1] * pressedOreTileSize,
+  );
+  assert.ok(api.debugSetTargetTile(...pressedCase.target));
+  const pressedOreBefore = api.debugGetTile(...pressedCase.target).hp;
+  const grazingWallBefore = api.debugGetTile(...pressedCase.wall).hp;
+  assert.equal(api.attackNow(), true);
+  assert.ok(
+    Math.abs(pressedOreBefore - api.debugGetTile(...pressedCase.target).hp - pressedOrePower) < 1e-9,
+    `${pressedCase.name}: point-blank ore must receive the full pick hit while the miner brushes a side wall`,
+  );
+  assert.equal(
+    api.debugGetTile(...pressedCase.wall).hp,
+    grazingWallBefore,
+    `${pressedCase.name}: a padded-only side contact must not steal the adjacent ore strike`,
+  );
+}
+api.finishRun();
+
+// Equal candidates must not make the miner reverse direction every targeting
+// tick. A live incumbent stays locked until it is gone; then the twin is used.
+api.setAllUpgrades(false);
+api.setFocusedOre(null);
+api.startRun({ seed: "runtime-equal-target-lock", sectorId: "stable_strata" });
+api.debugScheduleGlobalEvent();
+api.debugSetPlayerTile(40, 20);
+for (let ty = 16; ty <= 24; ty += 1) {
+  for (let tx = 35; tx <= 45; tx += 1) clearTile(tx, ty);
+}
+placeOre(39, 20, "copper", "equal-left", 1_000_000);
+placeOre(41, 20, "copper", "equal-right", 1_000_000);
+assert.ok(api.debugSetTargetTile(41, 20));
+const equalTargetSwitches = api.getSnapshot().metrics.targetSwitches;
+api.stepRun(0.13);
+snapshot = api.getSnapshot();
+assert.deepEqual([snapshot.target?.tx, snapshot.target?.ty], [41, 20]);
+assert.equal(snapshot.metrics.targetSwitches, equalTargetSwitches, "an equal row-major rival must not steal the live target");
+assert.ok(api.debugBreakTileWithSource(41, 20, "debug"));
+api.stepRun(0.13);
+snapshot = api.getSnapshot();
+assert.deepEqual([snapshot.target?.tx, snapshot.target?.ty], [39, 20], "the remaining twin must be acquired after the incumbent breaks");
+api.finishRun();
+
 api.setAllUpgrades(false);
 api.setUpgradeLevel("sense_ore_focus", 1);
 api.setUpgradeLevel("power_sample_calibration", 4);
@@ -912,10 +1240,16 @@ api.setAllUpgrades(true);
 api.setFocusedOre("star_core");
 api.startRun({ seed: "runtime-beacon-range", sectorId: "stable_strata" });
 api.debugSetPlayerTile(20, 20);
-placeOre(150, 20, "star_core", "distant-live-beacon", 1000);
-assert.ok(api.debugSetTargetTile(150, 20));
+for (let ty = 0; ty < global.DepthZeroWorld.WORLD_CONFIG.HEIGHT; ty += 1) {
+  for (let tx = 0; tx < global.DepthZeroWorld.WORLD_CONFIG.WIDTH; tx += 1) {
+    if (api.debugGetTile(tx, ty)?.oreId) clearTile(tx, ty);
+  }
+}
+const distantBeaconTx = global.DepthZeroWorld.WORLD_CONFIG.WIDTH - 10;
+placeOre(distantBeaconTx, 20, "star_core", "distant-live-beacon", 1000);
+assert.ok(api.debugSetTargetTile(distantBeaconTx, 20));
 assert.equal(api.debugValidateCrewBeacon(), true);
-placeOre(21, 20, "star_core", "nearby-fallback", 2000);
+placeOre(21, 20, "star_core", "nearby-fallback", 2_000_000_000);
 const rangeFallbackBefore = api.debugGetTile(21, 20).hp;
 assert.ok(api.debugForceChain());
 const rangeFallbackAfterChain = api.debugGetTile(21, 20).hp;
@@ -936,7 +1270,7 @@ assert.match(api.getSnapshot().sector.id, /^random_strata-/, "normal shifts must
 api.startRun({ seed: "deaf-knock-semantics", sectorId: "ore_ridge" });
 snapshot = api.getSnapshot();
 assert.equal(snapshot.sector.id, "ore_ridge");
-assert.equal(api.debugGetMicroEvents().length, 5);
+assert.equal(api.debugGetMicroEvents().length, 1, "only the ancient container remains a physical field event");
 
 // Deaf Knock counts ordinary rock destroyed by any normal proc-capable source.
 // Ore between those breaks does not erase progress, while recursive/no-proc
@@ -1133,13 +1467,15 @@ api.finishRun();
 // assertion for its compact top-line timer and concrete gameplay result.
 api.setAllUpgrades(false);
 api.startRun({ seed: "micro-event-semantics", sectorId: "stable_strata" });
+api.debugScheduleGlobalEvent();
 let events = api.debugGetMicroEvents();
-assert.equal(events.length, 5);
-const fragile = events.find((event) => event.type === "fragile_cavity");
+assert.equal(events.length, 1, "only the chest may exist as a physical field event");
 const priorityChest = events.find((event) => event.type === "ancient_container");
-assert.ok(fragile);
 assert.ok(priorityChest);
-const chestApproachDirection = priorityChest.tx < 120 ? 1 : -1;
+const scheduledGlobal = api.debugGetGlobalMicroEvent(0);
+assert.ok(scheduledGlobal?.global && scheduledGlobal.scheduled);
+assert.equal(Object.hasOwn(scheduledGlobal, "tx"), false, "global bonuses must have no field coordinates");
+const chestApproachDirection = priorityChest.tx < global.DepthZeroWorld.WORLD_CONFIG.WIDTH / 2 ? 1 : -1;
 const chestApproachTx = priorityChest.tx + chestApproachDirection * 2;
 api.debugSetPlayerTile(chestApproachTx, priorityChest.ty);
 placeOre(chestApproachTx + chestApproachDirection, priorityChest.ty, "copper", "chest-priority-decoy", 1_000_000);
@@ -1147,13 +1483,17 @@ api.stepRun(0.01);
 snapshot = api.getSnapshot();
 assert.equal(snapshot.target?.kind, "micro_event", "a chest entering the scanner must override ordinary ore targets");
 assert.deepEqual([snapshot.target.tx, snapshot.target.ty], [priorityChest.tx, priorityChest.ty]);
-api.debugSetPlayerTile(fragile.tx, fragile.ty);
+assert.equal(api.debugTriggerMicroEvent("fragile_cavity"), true);
 api.stepRun(0.2);
 snapshot = api.getSnapshot();
-assert.equal(snapshot.metrics.microEvents.fragile_cavity, 1, "entering the bright event contour must trigger it naturally");
+assert.equal(snapshot.metrics.microEvents.fragile_cavity, 1, "the scheduled condition must trigger without a field marker");
 assert.equal(snapshot.activeMicroEvent.type, "fragile_cavity");
 assert.match(elementFor("#microEventTitle").textContent, /МЯГКАЯ ПОРОДА/);
-assert.equal(elementFor("#microEventTimer").textContent, "5,0 С");
+assert.match(
+  elementFor("#microEventTimer").textContent,
+  /^4,[78]/,
+  "the five-second bonus timer must reflect the 0.2 seconds already simulated",
+);
 assert.ok(!elementFor("#microEventBanner").classList.contains("hidden"));
 assert.ok(!elementFor("#microEventBanner").classList.contains("is-triggered"));
 assert.ok(!elementFor("#microEventBanner").classList.contains("is-preview"));
@@ -1178,7 +1518,7 @@ assert.ok(snapshot.eventMoveBoostRemaining > 4.9, "the underground flow must gra
 assert.match(elementFor("#microEventTitle").textContent, /СКОРОСТЬ ДВИЖЕНИЯ \+35%/);
 assert.equal(elementFor("#microEventTimer").textContent, "5,0 С");
 assert.equal(snapshot.metrics.eventCount, 5);
-assert.equal(api.debugGetMicroEvents().length, 0, "all five events must remain one-shot");
+assert.equal(api.debugGetMicroEvents().length, 0, "the collected chest must remain one-shot");
 api.stepRun(1.05);
 assert.match(elementFor("#microEventTimer").textContent, /^4,[0-9] С$/, "the top-line timer must visibly count down with the active effect");
 api.stepRun(4.05);
@@ -1194,6 +1534,7 @@ assert.ok(elementFor("#microEventBanner").classList.contains("hidden"), "event n
 // A short chest notice may temporarily cover a global-effect timer, but the
 // still-active effect must return instead of disappearing for its final seconds.
 api.startRun({ seed: "runtime-stacked-event-indicator", sectorId: "stable_strata" });
+api.debugScheduleGlobalEvent();
 assert.equal(api.debugTriggerMicroEvent("gas_pocket"), true);
 api.stepRun(1);
 assert.equal(api.debugTriggerMicroEvent("ancient_container"), true);
@@ -1201,6 +1542,20 @@ api.stepRun(2.25);
 snapshot = api.getSnapshot();
 assert.ok(snapshot.eventDigBoostRemaining > 1.7);
 assert.match(elementFor("#microEventTitle").textContent, /УСКОРЕНИЕ КОПКИ/);
+assert.ok(!elementFor("#microEventBanner").classList.contains("hidden"));
+api.finishRun();
+
+// Short global conditions start on their own and never become objects that
+// the miner must walk toward. The chest stays the sole physical event.
+api.startRun({ seed: "runtime-scheduled-global-event", sectorId: "stable_strata" });
+assert.equal(api.debugGetMicroEvents().length, 1);
+api.debugScheduleGlobalEvent(0.05);
+api.stepRun(0.06);
+snapshot = api.getSnapshot();
+assert.equal(snapshot.metrics.eventCount, 1);
+assert.equal(snapshot.activeMicroEvent?.global, true);
+assert.equal(Object.hasOwn(snapshot.activeMicroEvent, "tx"), false);
+assert.equal(api.debugGetMicroEvents().length, 1, "a global condition must not consume or duplicate the chest");
 assert.ok(!elementFor("#microEventBanner").classList.contains("hidden"));
 api.finishRun();
 
@@ -1836,6 +2191,7 @@ console.log(JSON.stringify({
     "indexed-target-search",
     "least-resistance-route",
     "point-blank-pick-contact",
+    "pressed-ore-full-contact",
     "focused-calibration",
     "aggregate-laser-calibration",
     "independent-ricochet-power",
@@ -1858,6 +2214,8 @@ console.log(JSON.stringify({
     "resonant-ping",
     "vein-memory-through-rock",
     "stress-map-outside-sense",
+    "expanded-exploration-reacquisition",
+    "solar-drill-delayed-burst",
     "target-aware-density-pierce",
     "side-chip",
     "chrono-overdrive",

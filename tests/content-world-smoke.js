@@ -45,6 +45,22 @@ for (const definition of UPGRADE_DEFS) {
 
 const fullLevels = Object.fromEntries(UPGRADE_DEFS.map((definition) => [definition.id, definition.maxLevel]));
 const fullStats = calculateMetaStats(fullLevels);
+const baseStats = calculateMetaStats({});
+assert.equal(baseStats.digReach, 38, "the starter pick must remain a close-contact tool");
+assert.equal(baseStats.laserRange, 210, "the first laser must immediately outrange every pick tier");
+const reachLevelIds = ["dig_arm_swing", "dig_reach_training", "dig_excavator_stance", "dig_master_reach"];
+const fullReachLevels = Object.fromEntries(reachLevelIds.map((id) => [
+  id,
+  UPGRADE_DEFS.find((definition) => definition.id === id).maxLevel,
+]));
+assert.equal(calculateMetaStats(fullReachLevels).digReach, 64, "starter-tier reach upgrades must cap near two tiles");
+assert.equal(
+  calculateMetaStats({ ...fullReachLevels, tools_pneumatic_pick: 1 }).digReach,
+  88,
+  "the pneumatic pick must stay below four tiles even with every reach rank",
+);
+assert.ok(fullStats.digReach > 100 && fullStats.digReach <= 112, "late pick reach must stay well below laser range");
+assert.equal(fullStats.laserRange, 420, "the completed laser branch may reach fifteen tiles");
 assert.equal(fullStats.runDuration, 45);
 assert.equal(fullStats.bonusRunDurationCap, 60);
 assert.equal(fullStats.echoPingCooldown, 3, "resonance ping must affect real search cadence");
@@ -65,19 +81,30 @@ assert.equal(fullStats.rareOreAdditiveChance, 0.18);
 assert.equal(fullStats.goldenOreAdditiveChance, 0.075);
 assert.equal(fullStats.doubleDropChance, 0.18, "double yield must contribute exactly one independent roll");
 assert.equal(fullStats.extraYieldChance, 0.2, "double yield must not also leak into the generic extra-yield roll");
-assert.equal(fullStats.magneticFieldRadiusTiles, 3);
+assert.equal(fullStats.magneticFieldRadiusTiles, 6);
+assert.equal(fullStats.magneticFieldDuration, 4.8);
+assert.ok(Math.abs(fullStats.magneticFieldTargetingBonus - 0.72) < 1e-9);
 assert.equal(fullStats.fortunePityThreshold, 5);
 assert.equal(fullStats.motherlodeTriggerBreaks, 20);
 assert.equal(fullStats.demolitionComboEnabled, true);
 assert.equal(fullStats.solarDrillProcEvery, 5);
 const oreFocus = UPGRADE_DEFS.find((definition) => definition.id === "sense_ore_focus");
-assert.equal(oreFocus?.requiresOreDiscovery, "amethyst", "ore focus must wait for a post-T5 sample");
+assert.equal(oreFocus?.requiresOreDiscovery, "silver", "ore focus must unlock after the first T5 sample");
+assert.deepEqual(oreFocus?.recipeOverride, { silver: 3, amber: 6 });
 const priorityTuning = UPGRADE_DEFS.find((definition) => definition.id === "sense_priority_tuning");
 assert.ok(priorityTuning?.requires.includes("sense_ore_focus"), "deposit appraisal must never unlock before ore focus");
+assert.ok(
+  priorityTuning?.requires.some((requirement) => (
+    typeof requirement === "object"
+    && requirement.id === "sense_deep_resonance"
+    && requirement.level === 2
+  )),
+  "deposit appraisal should fill midgame only after the second deep-resonance rank",
+);
 assert.deepEqual(
   [0, 1, 2, 3].map((level) => getUpgradeRecipe(priorityTuning, level)),
   [
-    { amethyst: 4, gold: 4, silver: 6 },
+    { silver: 5, amber: 8 },
     { amethyst: 1, gold: 1, silver: 2 },
     { prism_crystal: 1, amethyst: 1, gold: 2 },
     { prism_crystal: 8, amethyst: 10, gold: 12 },
@@ -124,6 +151,21 @@ assert.deepEqual(
   "seismic memory should retain its calibrated early mixed recipe",
 );
 assert.deepEqual(
+  getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "time_clockwork_heart"), 3),
+  { iron: 3, coal: 4 },
+  "the first time-refund milestone must not wait on a random amber pocket",
+);
+assert.deepEqual(
+  getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "power_momentum"), 0),
+  { silver: 3 },
+  "the approach-strike mechanic should use the newly reached depth tier instead of another amber bottleneck",
+);
+assert.deepEqual(
+  getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "dig_wall_bite"), 0),
+  { iron: 8, coal: 6 },
+  "area mining must not wait for a random amber pocket once its path is open",
+);
+assert.deepEqual(
   getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "sense_frequency_swing"), 0),
   { prism_crystal: 1, amethyst: 1, gold: 4 },
   "frequency swing should become affordable in the workshop before its observed focus-followup limit",
@@ -141,13 +183,13 @@ assert.deepEqual(
 );
 const mineLift = UPGRADE_DEFS.find((definition) => definition.id === "dig_mine_lift");
 assert.ok(
-  mineLift?.requires.some((requirement) => typeof requirement === "object" && requirement.id === "time_clockwork_heart" && requirement.level === 6),
-  "the lift should wait for the established midgame timer package",
+  mineLift?.requires.some((requirement) => typeof requirement === "object" && requirement.id === "time_clockwork_heart" && requirement.level === 1),
+  "the first lift rank should arrive with the pneumatic/T5 package",
 );
 assert.deepEqual(
   getUpgradeRecipe(mineLift, 0),
-  { star_core: 1, amethyst: 1, gold: 1, silver: 1 },
-  "the lift's first rank should use one deep-route sample without becoming a late stockpile gate",
+  { silver: 3, amber: 5 },
+  "the first lift rank must shorten repeated descent before the endgame",
 );
 const superPick = UPGRADE_DEFS.find((definition) => definition.id === "tools_super_pick");
 assert.ok(superPick?.requires.includes("power_diamond_tip"), "the super pick must keep its thematic diamond-tip gate");
@@ -164,8 +206,8 @@ assert.deepEqual(
 );
 assert.deepEqual(
   getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "tools_pneumatic_pick"), 0),
-  { coal: 18, iron: 9, silver: 4 },
-  "midgame tools should restore coal as a relevant material",
+  { silver: 4, amber: 9 },
+  "the pneumatic gate must stop competing for scarce opening iron",
 );
 const starterSense = UPGRADE_DEFS.find((definition) => definition.id === "sense_instinct_spark");
 assert.deepEqual(
@@ -186,9 +228,29 @@ assert.deepEqual(
 );
 assert.deepEqual(
   getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "tools_super_pick_echo"), 0),
-  { void_ore: 40, prism_crystal: 40, iron: 60 },
+  { void_ore: 40, prism_crystal: 40, silver: 15 },
   "the echo should not lose a full shift behind cheaper cleanup ranks before the solar drill",
 );
+
+for (const id of [
+  "power_corebreaker",
+  "power_one_hit_legend",
+  "power_sample_calibration",
+  "gadgets_shock_capsule",
+  "gadgets_drone_swarm",
+  "gadgets_geo_charge",
+  "tools_super_pick_echo",
+  "fortune_triple_seam",
+]) {
+  const definition = UPGRADE_DEFS.find((upgrade) => upgrade.id === id);
+  for (let level = 0; level < definition.maxLevel; level += 1) {
+    const recipe = getUpgradeRecipe(definition, level);
+    assert.ok(
+      !recipe.copper && !recipe.coal && !recipe.iron && !recipe.amber,
+      `${id} level ${level + 1} must use phase-appropriate ore instead of draining opening resources`,
+    );
+  }
+}
 
 const timerNodes = UPGRADE_DEFS.filter((definition) => definition.category === "time");
 assert.deepEqual(
@@ -260,8 +322,21 @@ assert.match(stylesSource, /max-width:\s*640px[\s\S]*?filter:\s*none[\s\S]*?widt
 assert.match(stylesSource, /font-size:\s*clamp\(11px,\s*3vw,\s*13px\)[\s\S]*?font-weight:\s*400/, "mobile perk descriptions must remain larger and normal-weight");
 assert.match(stylesSource, /next-breakthrough__max[\s\S]*?min-height:\s*44px[\s\S]*?border:\s*2px solid #ffe2a0[\s\S]*?background:\s*linear-gradient\(#ffd875,\s*#d98b35\)/, "the mobile purchase action must remain a large high-contrast CTA");
 assert.match(stylesSource, /@media \(hover: none\) and \(pointer: coarse\)[\s\S]*?upgrade-footer__desktop-hint[\s\S]*?display:\s*none[\s\S]*?upgrade-footer__mobile-hint[\s\S]*?display:\s*block/, "desktop and mobile workshop instructions must never be shown as one mixed control scheme");
-assert.match(indexSource, /styles\.css\?v=geocomic-mobile-2/);
-assert.match(indexSource, /js\/game\.js\?v=geocomic-mobile-2/);
+assert.match(indexSource, /id=["']mobileOreFocusToggle["'][\s\S]*?aria-controls=["']mobileOreFocusSheet["']/, "touch workshops need a stable focus control outside the capped toolbar");
+assert.match(indexSource, /id=["']mobileOreFocusChoices["']/, "the touch focus sheet needs explicit discovered-ore choices");
+assert.match(stylesSource, /@media \(hover: none\) and \(pointer: coarse\)[\s\S]*?\.upgrade-toolbar \.ore-focus-panel\s*\{\s*display:\s*none[\s\S]*?\.mobile-ore-focus:not\(\.hidden\)[\s\S]*?display:\s*block/, "touch focus must replace, not duplicate, the desktop toolbar panel");
+assert.match(stylesSource, /\.mobile-ore-focus__toggle\s*\{[\s\S]*?min-height:\s*54px/, "the mobile focus control must remain an obvious touch target");
+assert.match(stylesSource, /\.mobile-ore-focus__choice\s*\{[\s\S]*?min-height:\s*48px/, "ore choices in the mobile sheet must remain touch sized");
+assert.match(gameSource, /mobileOreFocusIsRelevant[\s\S]*?save\.levels\.tools_steel_pick/, "steel-tier players need a visible explanation of the approaching focus mechanic");
+assert.match(gameSource, /mobileOreFocusToggle\?\.addEventListener\(['"]click['"],\s*activateMobileOreFocusControl\)/, "the mobile focus control must not be coupled to direct perk purchasing");
+assert.match(indexSource, /id=["']resumeRun["'][^>]*>ПРОДОЛЖИТЬ</u, "touch-only players need an explicit way out of a visibility pause");
+assert.match(stylesSource, /\.pause-overlay__resume\s*\{[\s\S]*?min-height:\s*52px/, "the mobile resume action must be a large touch target");
+assert.match(stylesSource, /@media \(hover: none\) and \(pointer: coarse\)[\s\S]*?\.pause-overlay__desktop-copy\s*\{\s*display:\s*none[\s\S]*?\.pause-overlay__resume\s*\{[\s\S]*?display:\s*inline-flex/, "mobile pause copy must not instruct the player to press Esc");
+assert.match(gameSource, /resumeRun\?\.addEventListener\(['"]click['"],\s*\(\)\s*=>\s*togglePause\(false\)\)/, "the resume button must explicitly clear pause without auto-resuming on visibility return");
+assert.match(indexSource, /styles\.css\?v=deep-shaft-4/);
+assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-4/);
+assert.match(indexSource, /js\/world\.js\?v=deep-shaft-4/);
+assert.match(indexSource, /js\/game\.js\?v=deep-shaft-4/);
 
 const oreRenderStyleBlock = gameSource.match(/const ORE_RENDER_STYLES = Object\.freeze\(\{([\s\S]*?)\n\}\);/);
 assert.ok(oreRenderStyleBlock, "the environment renderer must keep an explicit ore-material table");
@@ -400,12 +475,18 @@ for (let ty = 2; ty < WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 2 && !pr
   for (let tx = 2; tx < WORLD_CONFIG.WIDTH - 2 && !probeOrigin; tx += 1) {
     const tile = duplicateWorld.getTile(tx, ty);
     if (!tile || tile.kind === "air" || tile.kind === "bedrock") continue;
+    if (!duplicateWorld._canOreAppearAt(tx, ty, richestDefinition)) continue;
     let nearbySolid = 0;
     for (let offsetY = -3; offsetY <= 3; offsetY += 1) {
       for (let offsetX = -3; offsetX <= 3; offsetX += 1) {
         if (Math.abs(offsetX) + Math.abs(offsetY) > 3) continue;
         const nearby = duplicateWorld.getTile(tx + offsetX, ty + offsetY);
-        if (nearby && nearby.kind !== "air" && nearby.kind !== "bedrock") nearbySolid += 1;
+        if (
+          nearby
+          && nearby.kind !== "air"
+          && nearby.kind !== "bedrock"
+          && duplicateWorld._canOreAppearAt(tx + offsetX, ty + offsetY, richestDefinition)
+        ) nearbySolid += 1;
       }
     }
     if (nearbySolid >= requestedSize) probeOrigin = { tx, ty };

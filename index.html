@@ -9,7 +9,7 @@
     />
     <meta name="theme-color" content="#071b26" />
     <title>ГЛУБИНА: НУЛЬ</title>
-    <link rel="stylesheet" href="styles.css?v=geocomic-mobile-2" />
+    <link rel="stylesheet" href="styles.css?v=deep-shaft-4" />
   </head>
   <body>
     <a class="skip-link" href="#gameCanvas">К игровому полю</a>
@@ -76,11 +76,20 @@
           </div>
         </div>
 
-        <div id="focusHud" class="focus-hud hidden" title="Рудный фокус игнорирует остальные жилы">
+        <button
+          id="focusHud"
+          class="focus-hud hidden"
+          type="button"
+          title="Выбрать руду для фокуса"
+          aria-haspopup="dialog"
+          aria-controls="runOreFocusDialog"
+          aria-expanded="false"
+        >
           <span aria-hidden="true">⌾</span>
           <small>ФОКУС</small>
           <strong id="focusHudName">—</strong>
-        </div>
+          <em>СМЕНИТЬ</em>
+        </button>
 
         <div class="hud-cluster hud-cluster--right">
           <div class="hud-chip" title="Текущий инструмент">
@@ -100,6 +109,27 @@
           </div>
         </div>
       </section>
+
+      <div id="runOreFocusBackdrop" class="run-ore-focus__backdrop hidden">
+        <section
+          id="runOreFocusDialog"
+          class="run-ore-focus panel-frame"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="runOreFocusTitle"
+          aria-describedby="runOreFocusDescription"
+        >
+          <header class="run-ore-focus__header">
+            <span>
+              <small>НАСТРОЙКА ЧУТЬЯ · СМЕНА НА ПАУЗЕ</small>
+              <strong id="runOreFocusTitle">ВЫБЕРИТЕ РУДУ</strong>
+            </span>
+            <button id="closeRunOreFocus" class="run-ore-focus__close" type="button" aria-label="Закрыть выбор руды">×</button>
+          </header>
+          <p id="runOreFocusDescription">Фокус можно менять прямо в забеге. Выбранная руда ищется дальше, остальные жилы временно игнорируются.</p>
+          <div id="runOreFocusChoices" class="run-ore-focus__choices" role="group" aria-label="Выберите приоритетную руду"></div>
+        </section>
+      </div>
 
       <aside
         id="tutorialCoach"
@@ -372,6 +402,46 @@
             <button id="closeUpgrades" class="icon-btn" type="button" aria-label="Закрыть мастерскую">
               <span aria-hidden="true">×</span>
             </button>
+
+            <section id="mobileOreFocus" class="mobile-ore-focus hidden" aria-label="Рудный фокус">
+              <button
+                id="mobileOreFocusToggle"
+                class="mobile-ore-focus__toggle"
+                type="button"
+                aria-expanded="false"
+                aria-haspopup="dialog"
+                aria-controls="mobileOreFocusSheet"
+              >
+                <span class="mobile-ore-focus__glyph" aria-hidden="true">⌾</span>
+                <span class="mobile-ore-focus__copy">
+                  <small>РУДНЫЙ ФОКУС</small>
+                  <strong id="mobileOreFocusValue">ЗАКРЫТ</strong>
+                  <span id="mobileOreFocusHint">Продолжайте открывать дерево модулей</span>
+                </span>
+                <span class="mobile-ore-focus__arrow" aria-hidden="true">›</span>
+              </button>
+
+              <div id="mobileOreFocusBackdrop" class="mobile-ore-focus__backdrop hidden">
+                <div
+                  id="mobileOreFocusSheet"
+                  class="mobile-ore-focus__sheet panel-frame"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="mobileOreFocusTitle"
+                  aria-describedby="mobileOreFocusDescription"
+                >
+                  <header class="mobile-ore-focus__sheet-header">
+                    <span>
+                      <small>НАСТРОЙКА ЧУТЬЯ</small>
+                      <strong id="mobileOreFocusTitle">ВЫБЕРИТЕ РУДУ</strong>
+                    </span>
+                    <button id="closeMobileOreFocus" class="mobile-ore-focus__close" type="button" aria-label="Закрыть выбор руды">×</button>
+                  </header>
+                  <p id="mobileOreFocusDescription">Выбранная руда ищется в расширенной зоне, остальные жилы временно игнорируются.</p>
+                  <div id="mobileOreFocusChoices" class="mobile-ore-focus__choices" role="group" aria-label="Выберите приоритетную руду"></div>
+                </div>
+              </div>
+            </section>
           </header>
 
           <div class="upgrade-toolbar">
@@ -572,7 +642,7 @@
             </article>
             <article class="journal-card is-unknown" role="listitem" aria-label="Неизвестная порода пятого яруса">
               <span class="journal-card__tier">T5</span><span class="journal-card__sample" aria-hidden="true"><i></i></span>
-              <div><small>ОБРАЗЕЦ НЕ НАЙДЕН</small><h3>НЕИЗВЕСТНО</h3><p>Достигните глубины 430 м и добудьте первый фрагмент.</p></div>
+              <div><small>ОБРАЗЕЦ НЕ НАЙДЕН</small><h3>НЕИЗВЕСТНО</h3><p>Достигните глубины 280 м и добудьте первый фрагмент.</p></div>
               <span class="journal-card__lock"><span aria-hidden="true">◆</span> СИЛУЭТ</span>
             </article>
             <article class="journal-card is-unknown is-deep" role="listitem" aria-label="Неизвестная глубокая порода">
@@ -667,7 +737,9 @@
         <div>
           <span class="pause-bars" aria-hidden="true"><i></i><i></i></span>
           <strong>ПАУЗА</strong>
-          <small>Нажмите <kbd>Esc</kbd>, чтобы продолжить</small>
+          <small class="pause-overlay__desktop-copy">Нажмите <kbd>Esc</kbd>, чтобы продолжить</small>
+          <small class="pause-overlay__mobile-copy">Таймер остановлен. Продолжите, когда будете готовы.</small>
+          <button id="resumeRun" class="pause-overlay__resume" type="button">ПРОДОЛЖИТЬ</button>
         </div>
       </div>
     </main>
@@ -675,8 +747,8 @@
     <noscript>
       <div class="noscript-message">Включите JavaScript, чтобы спуститься в шахту.</div>
     </noscript>
-    <script defer src="js/upgrades.js"></script>
-    <script defer src="js/world.js"></script>
-    <script defer src="js/game.js?v=geocomic-mobile-2"></script>
+    <script defer src="js/upgrades.js?v=deep-shaft-4"></script>
+    <script defer src="js/world.js?v=deep-shaft-4"></script>
+    <script defer src="js/game.js?v=deep-shaft-4"></script>
   </body>
 </html>

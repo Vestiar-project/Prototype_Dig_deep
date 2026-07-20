@@ -3,14 +3,26 @@
 
 const WORLD_CONFIG = Object.freeze({
   TILE_SIZE: 28,
-  WIDTH: 240,
-  HEIGHT: 90,
+  WIDTH: 120,
+  HEIGHT: 180,
+  METERS_PER_TILE: 5,
   SURFACE_BASE: 9,
   SURFACE_VARIANCE: 4,
-  SPAWN_TX: 36,
+  SPAWN_TX: 60,
   BEDROCK_ROWS: 2,
   CAVE_COUNT: 44,
 });
+
+const REFERENCE_WORLD_WIDTH = 240;
+const REFERENCE_WORLD_HEIGHT = 90;
+// Strict T5+ depth gates trim a few edge cells from veins that touch a tier
+// boundary. Scale the authored budget by total field area: 120x180 deliberately
+// keeps the old 240x90 tile count, while changing its shape from wide to deep.
+const DEPTH_GATED_VEIN_COMPENSATION = 1.05;
+const WORLD_DENSITY_SCALE = (
+  WORLD_CONFIG.WIDTH * WORLD_CONFIG.HEIGHT
+  / (REFERENCE_WORLD_WIDTH * REFERENCE_WORLD_HEIGHT)
+) * DEPTH_GATED_VEIN_COMPENSATION;
 
 const DEFAULT_SEED = "deep-shift";
 const UINT32_RANGE = 0x100000000;
@@ -143,6 +155,13 @@ const UNDERGROUND_EVENT_TYPES = Object.freeze([
   }),
 ]);
 
+const GLOBAL_EVENT_TYPES = Object.freeze(
+  UNDERGROUND_EVENT_TYPES.filter((definition) => definition.effect !== "chest"),
+);
+const FIELD_EVENT_TYPES = Object.freeze(
+  UNDERGROUND_EVENT_TYPES.filter((definition) => definition.effect === "chest"),
+);
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -196,6 +215,7 @@ function createTile(kind, maxHp, discovered = false) {
     kind,
     hp: maxHp,
     maxHp,
+    terrainMaxHp: maxHp,
     oreId: null,
     veinId: null,
     discovered,
@@ -504,6 +524,7 @@ class MineWorld {
       .filter((definition) => (
         definition.minProgress <= progress + 0.025
         && definition.maxProgress + 0.025 >= progress
+        && this._canOreAppearAt(tx, ty, definition)
       ))
       .sort((left, right) => left.rank - right.rank)
       .map((definition) => definition.id);
@@ -525,6 +546,34 @@ class MineWorld {
       .filter((event) => settings.includeConsumed === true || !event.consumed)
       .filter((event) => !allowedTypes || allowedTypes.has(event.type))
       .map((event) => this._publicMicroEvent(event));
+  }
+
+  /**
+   * Returns one deterministic, non-spatial shift condition. These short buffs
+   * are announced by the HUD and deliberately have no field coordinates or
+   * marker; the ancient container remains the only physical event target.
+   */
+  getGlobalMicroEvent(index = 0) {
+    if (!GLOBAL_EVENT_TYPES.length) return null;
+    const eventIndex = Math.max(0, Math.floor(asFinite(index, 0)));
+    const hash = hashSeed(`${this.seed}:${this.sectorId}:global-event:${eventIndex}`);
+    const definition = GLOBAL_EVENT_TYPES[hash % GLOBAL_EVENT_TYPES.length];
+    return {
+      id: `global-${definition.id}-${eventIndex}-${hash.toString(36)}`,
+      type: definition.id,
+      typeId: definition.id,
+      effect: definition.effect,
+      durationSeconds: definition.durationSeconds,
+      label: definition.label,
+      icon: definition.icon,
+      color: definition.color,
+      description: definition.effectDescription || definition.description,
+      announcement: `${definition.icon} ${definition.label}`,
+      noticeLevel: "high",
+      global: true,
+      scheduled: true,
+      index: eventIndex,
+    };
   }
 
   /**
@@ -681,7 +730,7 @@ class MineWorld {
   }
 
   /**
-   * Read-only shaft-lift selector. Depth values use the same tile-like units as
+   * Read-only shaft-lift selector. Depth values use the same metre units as
    * the game's saved bestDepth. Either call with positional arguments:
    *   getLiftStart(bestDepth, fraction, unlockedDepthCap, options)
    * or one options object containing bestDepth, fraction, unlockedDepthCap and
@@ -762,7 +811,7 @@ class MineWorld {
       source: "shaft-lift",
       isSurfaceSpawn: false,
       depth: selected.depth,
-      depthTiles: selected.depth,
+      depthTiles: selected.depthTiles,
       requestedDepth,
       clampedDepth,
       requiredTier: selected.requiredTier,
@@ -1368,11 +1417,13 @@ class MineWorld {
       const swapIndex = rng.int(0, index);
       [pool[index], pool[swapIndex]] = [pool[swapIndex], pool[index]];
     }
-    const typeCount = clamp(
-      2 + Math.floor(progress * 2.5) + rng.int(0, 1),
-      1,
-      Math.min(5, pool.length),
-    );
+    const typeCount = progress < 0.25
+      ? Math.min(5, pool.length)
+      : clamp(
+        2 + Math.floor(progress * 2.5) + rng.int(0, 1),
+        1,
+        Math.min(5, pool.length),
+      );
     const selected = pool.slice(0, typeCount);
     const highestAvailable = naturallyUnlockedIds[naturallyUnlockedIds.length - 1];
     if (highestAvailable && !selected.includes(highestAvailable)) {
@@ -1397,8 +1448,8 @@ class MineWorld {
     const maximumTy = WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 4;
     const placed = [];
 
-    for (let index = 0; index < UNDERGROUND_EVENT_TYPES.length; index += 1) {
-      const definition = UNDERGROUND_EVENT_TYPES[index];
+    for (let index = 0; index < FIELD_EVENT_TYPES.length; index += 1) {
+      const definition = FIELD_EVENT_TYPES[index];
       let location = null;
 
       for (let attempt = 0; attempt < 240 && !location; attempt += 1) {
@@ -1570,7 +1621,23 @@ class MineWorld {
     const spawnX = this._spawn.tx || WORLD_CONFIG.SPAWN_TX;
     const horizontalSpan = tx < spawnX ? Math.max(1, spawnX) : Math.max(1, WORLD_CONFIG.WIDTH - 1 - spawnX);
     const distanceProgress = clamp(Math.abs(tx - spawnX) / horizontalSpan, 0, 1);
-    return clamp(depthProgress * 0.76 + distanceProgress * 0.34, 0, 1);
+    return clamp(depthProgress * 0.76 + distanceProgress * 0.08, 0, 1);
+  }
+
+  _canOreAppearAt(tx, ty, definition) {
+    const tier = Math.max(0, Math.floor(numericField(
+      definition?.source,
+      ["tier"],
+      Math.round((definition?.rank || 0) * Math.max(0, this._oreDefinitions.length - 1)),
+    )));
+    // T1-T4 can vary through the opening strata. T5+ must cross its authored
+    // vertical depth, regardless of horizontal travel or placement fuzz.
+    if (tier < 4) return true;
+    const requiredDepth = numericField(definition?.source, ["minDepth", "depth"], null);
+    if (!Number.isFinite(requiredDepth) || requiredDepth <= 1) return true;
+    const column = clamp(Math.floor(tx), 0, WORLD_CONFIG.WIDTH - 1);
+    const verticalDepth = Math.max(0, Math.floor(ty) - (this.surface[column] ?? WORLD_CONFIG.SURFACE_BASE));
+    return verticalDepth * WORLD_CONFIG.TILE_SIZE + 0.001 >= requiredDepth;
   }
 
   _setAir(tx, ty, discovered = false) {
@@ -1641,13 +1708,16 @@ class MineWorld {
 
   _prepareLiftStations() {
     this._liftStations = [];
-    const firstTy = this._spawn.ty + 6;
+    // Five metres per tile makes closely spaced stations useful even for the
+    // first 5% lift rank: the first landing is 10 m down and stations repeat
+    // every 10 m instead of jumping in coarse 25 m steps.
+    const firstTy = this._spawn.ty + 2;
     const lastTy = WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 4;
     const starter = this._oreDefinitions.reduce((best, current) => (
       !best || current.rank < best.rank ? current : best
     ), null);
 
-    for (let ty = firstTy; ty <= lastTy; ty += 5) {
+    for (let ty = firstTy; ty <= lastTy; ty += 2) {
       const stationHash = hashSeed(`${this.seed}:lift:${ty}`);
       const offset = stationHash % 17 - 8;
       const tx = clamp(this._spawn.tx + offset, 5, WORLD_CONFIG.WIDTH - 6);
@@ -1660,16 +1730,16 @@ class MineWorld {
       const target = this._ensureLiftTarget(tx, ty, direction, starter);
       if (!target) continue;
 
-      const verticalDepth = Math.max(0, ty - this._spawn.ty);
-      const horizontalDepth = Math.abs(tx - this._spawn.tx) * 0.42;
-      const depth = verticalDepth + horizontalDepth;
+      const depthTiles = Math.max(0, ty - this._spawn.ty);
+      const depth = depthTiles * WORLD_CONFIG.METERS_PER_TILE;
       this._liftStations.push({
         tx,
         ty,
         x: (tx + 0.5) * WORLD_CONFIG.TILE_SIZE,
         y: (ty + 0.5) * WORLD_CONFIG.TILE_SIZE,
         depth,
-        requiredTier: this._requiredTierForStation(tx, ty, depth),
+        depthTiles,
+        requiredTier: this._requiredTierForStation(tx, ty),
         target,
       });
     }
@@ -1711,8 +1781,13 @@ class MineWorld {
     };
   }
 
-  _requiredTierForStation(tx, ty, depth) {
-    const depthPixels = depth * WORLD_CONFIG.TILE_SIZE;
+  _requiredTierForStation(tx, ty) {
+    // Ore gates are authored from each column's local surface. Using distance
+    // from the central spawn here could unlock a lift 20–35 m before the same
+    // tier is actually allowed under a hill or depression.
+    const column = clamp(Math.floor(tx), 0, WORLD_CONFIG.WIDTH - 1);
+    const depthPixels = Math.max(0, ty - (this.surface[column] ?? WORLD_CONFIG.SURFACE_BASE))
+      * WORLD_CONFIG.TILE_SIZE;
     const difficulty = this._difficultyAt(tx, ty);
     let requiredTier = 0;
     for (const definition of this._oreDefinitions) {
@@ -1820,7 +1895,7 @@ class MineWorld {
       multiplier = rarity <= 1 ? 0.35 + rarity : 1 / Math.sqrt(rarity);
     }
 
-    return 54 / (1 + definition.rank * 1.8) * multiplier;
+    return 54 * WORLD_DENSITY_SCALE / (1 + definition.rank * 1.8) * multiplier;
   }
 
   _oreVeinSizeRange(definition) {
@@ -1902,9 +1977,10 @@ class MineWorld {
         const ty = this._rng.int(minY, WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 1);
         const tile = this.getTile(tx, ty);
         if (!tile || tile.kind === "air" || tile.kind === "bedrock") continue;
+        if (!this._canOreAppearAt(tx, ty, definition)) continue;
 
         const progress = this._difficultyAt(tx, ty);
-        if (progress + this._rng.range(-0.04, 0.13) < definition.minProgress) continue;
+        if (progress + this._rng.range(-0.025, 0.045) < definition.minProgress) continue;
         if (progress - this._rng.range(0, 0.08) > definition.maxProgress) continue;
 
         const placed = this._placeVein(tx, ty, definition, this._oreVeinSize(definition));
@@ -1930,6 +2006,7 @@ class MineWorld {
 
       const tile = this.getTile(candidateX, candidateY);
       if (!tile || tile.kind === "air" || tile.kind === "bedrock") return false;
+      if (!this._canOreAppearAt(candidateX, candidateY, definition)) return false;
 
       const index = this._index(candidateX, candidateY);
       const currentRank = this._oreRankByTile[index];
@@ -1998,11 +2075,15 @@ class MineWorld {
     const hardness = numericField(source, ["hardness"], null);
     const absoluteHp = numericField(source, ["hp", "maxHp", "hitPoints"], null);
     const density = numericField(source, ["oreDensity"], null);
+    // Veins may cross. Always derive ore durability from the underlying rock,
+    // never from a previously applied ore multiplier, or an overlap can create
+    // effectively indestructible blocks with exponentially compounded HP.
+    const terrainMaxHp = Math.max(1, Number(tile.terrainMaxHp) || Number(tile.maxHp) || 1);
     let targetHp;
 
     if (Number.isFinite(absoluteHp) && absoluteHp > 0) {
       const sectorHardness = Math.max(0.1, asFinite(this._sector?.modifiers?.hardness, 1));
-      targetHp = Math.max(tile.maxHp, absoluteHp * (1 + progress * 0.4) * sectorHardness);
+      targetHp = Math.max(terrainMaxHp, absoluteHp * (1 + progress * 0.4) * sectorHardness);
     } else {
       const hardnessMultiplier = Number.isFinite(hardness) && hardness > 0
         ? hardness
@@ -2010,7 +2091,7 @@ class MineWorld {
       const densityMultiplier = Number.isFinite(density) && density > 0
         ? clamp(density, 0.4, 4)
         : 1;
-      targetHp = tile.maxHp * hardnessMultiplier * densityMultiplier;
+      targetHp = terrainMaxHp * hardnessMultiplier * densityMultiplier;
     }
 
     const existingVeinId = tile.oreId === definition.id ? tile.veinId : null;
@@ -2057,13 +2138,13 @@ class MineWorld {
     // miner is close enough to smell the coal and then the second copper. The
     // fixed HP caps keep this useful inside the initial six-second shift.
     placeSoftOre(2, copper, 2);
-    placeSoftOre(3, coal, 6);
+    placeSoftOre(3, coal, 4);
     placeSoftOre(4, copper, 3);
 
     const offsets = [
-      [4, 0],
-      [3, 2],
-      [-4, 1],
+      [-2, 4],
+      [2, 5],
+      [0, 7],
     ];
 
     for (const [offsetX, offsetY] of offsets) {
@@ -2129,6 +2210,8 @@ window.DepthZeroWorld = Object.freeze({
   WORLD_CONFIG,
   GEOLOGICAL_SECTORS,
   UNDERGROUND_EVENT_TYPES,
+  GLOBAL_EVENT_TYPES,
+  FIELD_EVENT_TYPES,
   createRandomGeologyProfile,
   getSectorChoices,
   MineWorld,

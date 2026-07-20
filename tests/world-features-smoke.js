@@ -11,12 +11,92 @@ require(path.join(root, "js", "world.js"));
 const { ORE_TYPES } = global.DepthZeroUpgrades;
 const {
   GEOLOGICAL_SECTORS,
+  GLOBAL_EVENT_TYPES,
   UNDERGROUND_EVENT_TYPES,
   MineWorld,
   WORLD_CONFIG,
   createRandomGeologyProfile,
   getSectorChoices,
 } = global.DepthZeroWorld;
+
+const oreById = new Map(ORE_TYPES.map((ore) => [ore.id, ore]));
+
+assert.equal(WORLD_CONFIG.WIDTH, 120, "the mine must use the narrower 120-tile field");
+assert.equal(WORLD_CONFIG.HEIGHT, 180, "the mine must trade lateral sprawl for meaningful depth");
+assert.equal(WORLD_CONFIG.METERS_PER_TILE, 5, "one terrain row must represent five metres");
+assert.equal(WORLD_CONFIG.SPAWN_TX, WORLD_CONFIG.WIDTH / 2, "the surface landing must be centered");
+assert.equal(WORLD_CONFIG.CAVE_COUNT, 44, "cave count must preserve cave density across the taller field");
+
+const depthHardnessWorld = new MineWorld(ORE_TYPES, "depth-hardness-regression", { sectorId: "stable_strata" });
+const terrainHpAtDepth = (depthTiles) => {
+  const values = [];
+  for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+    const ty = depthHardnessWorld.surface[tx] + depthTiles;
+    const tile = depthHardnessWorld.getTile(tx, ty);
+    if (tile && tile.kind !== "air" && tile.kind !== "bedrock") values.push(tile.terrainMaxHp);
+  }
+  values.sort((left, right) => left - right);
+  return values[Math.floor(values.length / 2)];
+};
+const shallowTerrainHp = terrainHpAtDepth(20);
+const deepTerrainHp = terrainHpAtDepth(150);
+assert.ok(shallowTerrainHp > 0 && deepTerrainHp > 0, "both shallow and deep strata must contain mineable terrain");
+assert.ok(
+  deepTerrainHp >= shallowTerrainHp * 3,
+  `deep rock must justify late tools (${shallowTerrainHp} HP near 100 m, ${deepTerrainHp} HP near 750 m)`,
+);
+for (let index = 1; index < ORE_TYPES.length; index += 1) {
+  assert.ok(
+    ORE_TYPES[index].hardness > ORE_TYPES[index - 1].hardness,
+    `ore tier ${index + 1} must be harder than tier ${index}`,
+  );
+}
+
+const overlapWorld = new MineWorld(ORE_TYPES, "overlapping-vein-hp", { sectorId: "stable_strata" });
+let overlapTarget = null;
+for (let ty = WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 4; ty >= 1 && !overlapTarget; ty -= 1) {
+  for (let tx = 1; tx < WORLD_CONFIG.WIDTH - 1; tx += 1) {
+    const tile = overlapWorld.getTile(tx, ty);
+    if (tile && tile.kind !== "air" && tile.kind !== "bedrock") {
+      overlapTarget = { tx, ty, tile };
+      break;
+    }
+  }
+}
+assert.ok(overlapTarget, "the generated mine must expose a solid tile for overlap regression");
+const underlyingRockHp = overlapTarget.tile.terrainMaxHp;
+const starDefinition = overlapWorld._oreDefinitions.find((definition) => definition.id === "star_core");
+const goldDefinition = overlapWorld._oreDefinitions.find((definition) => definition.id === "gold");
+assert.ok(starDefinition && goldDefinition);
+assert.equal(overlapWorld._applyOre(overlapTarget.tx, overlapTarget.ty, starDefinition, "overlap-star"), true);
+assert.equal(
+  overlapWorld.getTile(overlapTarget.tx, overlapTarget.ty).maxHp,
+  Math.round(underlyingRockHp * oreById.get("star_core").hardness),
+  "first ore must derive durability from the underlying terrain",
+);
+assert.equal(overlapWorld._applyOre(overlapTarget.tx, overlapTarget.ty, goldDefinition, "overlap-gold"), true);
+assert.equal(
+  overlapWorld.getTile(overlapTarget.tx, overlapTarget.ty).maxHp,
+  Math.round(underlyingRockHp * oreById.get("gold").hardness),
+  "crossing veins must replace, not compound, ore hardness",
+);
+
+assert.deepEqual(
+  Object.fromEntries(ORE_TYPES.map((ore) => [ore.id, ore.depth])),
+  {
+    copper: 0,
+    coal: 112,
+    iron: 420,
+    amber: 952,
+    silver: 1568,
+    gold: 2128,
+    amethyst: 2688,
+    prism_crystal: 3248,
+    void_ore: 3808,
+    star_core: 4312,
+  },
+  "ore bands must span the full vertical mine instead of bunching near the surface",
+);
 
 function worldMetrics(world) {
   let undergroundAir = 0;
@@ -63,6 +143,59 @@ function tileFingerprint(world) {
   }
   return hash >>> 0;
 }
+
+function assertAuthoredVerticalOreDepth(world, label) {
+  let checked = 0;
+  world.forEachOreTileInBounds(0, 0, WORLD_CONFIG.WIDTH - 1, WORLD_CONFIG.HEIGHT - 1, (tile, tx, ty) => {
+    const ore = oreById.get(tile.oreId);
+    if (!ore || ore.tier < 4) return;
+    const authoredDepth = Number(ore.depth);
+    if (!Number.isFinite(authoredDepth) || authoredDepth <= 1) return;
+    const localSurface = world.surface[tx] ?? WORLD_CONFIG.SURFACE_BASE;
+    const verticalDepth = Math.max(0, ty - localSurface) * WORLD_CONFIG.TILE_SIZE;
+    assert.ok(
+      verticalDepth + 0.001 >= authoredDepth,
+      `${label}: ${ore.id} at ${tx}:${ty} appeared ${verticalDepth}px down, before its ${authoredDepth}px vertical gate`,
+    );
+    checked += 1;
+  });
+  return checked;
+}
+
+// The 120x180 field has the same tile area as the former 240x90 field. Vein
+// budgets scale by width because the generator already distributes them over
+// the available rows; cave count scales by area. Both densities should remain
+// in their established bands without enlarging authored veins.
+const densitySamples = 32;
+let densityOreTiles = 0;
+let densityUndergroundAir = 0;
+let checkedDepthGatedOre = 0;
+for (let index = 0; index < densitySamples; index += 1) {
+  const world = new MineWorld(ORE_TYPES, `density-preservation-${index}`, { sectorId: "stable_strata" });
+  const metrics = worldMetrics(world);
+  densityOreTiles += metrics.oreTiles;
+  densityUndergroundAir += metrics.undergroundAir;
+  checkedDepthGatedOre += assertAuthoredVerticalOreDepth(world, `density seed ${index}`);
+}
+const sampledWorldTiles = densitySamples * WORLD_CONFIG.WIDTH * WORLD_CONFIG.HEIGHT;
+const sampledOreDensity = densityOreTiles / sampledWorldTiles;
+const sampledCaveDensity = densityUndergroundAir / sampledWorldTiles;
+assert.ok(
+  Math.abs(sampledOreDensity - 0.08) <= 0.008,
+  `ore density must stay near the former 8% field density, got ${(sampledOreDensity * 100).toFixed(2)}%`,
+);
+assert.ok(
+  Math.abs(sampledCaveDensity - 0.258) <= 0.022,
+  `cave density must stay near the former 25.8% field density, got ${(sampledCaveDensity * 100).toFixed(2)}%`,
+);
+assert.ok(checkedDepthGatedOre > 0, "the depth-gate audit must inspect generated T5+ ore cells");
+
+const depthProbe = new MineWorld(ORE_TYPES, "full-depth-probe", { sectorId: "stable_strata" });
+const depthSpawn = depthProbe.getSpawn();
+const maximumPlayableDepth = (
+  WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 1 - depthSpawn.ty
+) * WORLD_CONFIG.METERS_PER_TILE;
+assert.ok(maximumPlayableDepth >= 800, `all eight 100 m depth-contract stacks need at least 800 m, got ${maximumPlayableDepth}`);
 
 const legacyProfiles = getSectorChoices("unused-menu-seed");
 assert.equal(legacyProfiles.length, 3, "legacy profiles remain available only for diagnostics");
@@ -113,6 +246,15 @@ const richWorld = new MineWorld(ORE_TYPES, richSeed);
 const richControl = new MineWorld(ORE_TYPES, richSeed, { sectorId: "stable_strata" });
 const ironWorld = new MineWorld(ORE_TYPES, ironSeed);
 const ironControl = new MineWorld(ORE_TYPES, ironSeed, { sectorId: "stable_strata" });
+for (const [label, world] of [
+  ["random profile", randomA],
+  ["cavern profile", cavernWorld],
+  ["compact profile", compactWorld],
+  ["ore-rich profile", richWorld],
+  ["iron-biased profile", ironWorld],
+]) {
+  checkedDepthGatedOre += assertAuthoredVerticalOreDepth(world, label);
+}
 const cavern = worldMetrics(cavernWorld);
 const ridge = worldMetrics(compactWorld);
 assert.ok(cavern.undergroundAir > ridge.undergroundAir, "hidden cave-heavy runs must visibly contain more caves");
@@ -176,12 +318,17 @@ for (const profile of legacyProfiles) {
 }
 
 assert.equal(UNDERGROUND_EVENT_TYPES.length, 5);
+assert.equal(GLOBAL_EVENT_TYPES.length, 4, "four short buffs must remain scheduled non-spatial events");
+assert.deepEqual(
+  new Set(GLOBAL_EVENT_TYPES.map((definition) => definition.id)),
+  new Set(UNDERGROUND_EVENT_TYPES.filter((definition) => definition.effect !== "chest").map((definition) => definition.id)),
+);
 const eventWorld = new MineWorld(ORE_TYPES, "micro-event-probe", { sectorId: "ore_ridge" });
 const eventTwin = new MineWorld(ORE_TYPES, "micro-event-probe", { sectorId: "ore_ridge" });
 const events = eventWorld.getMicroEvents();
-assert.equal(events.length, 5, "all five readable micro-event types must be generated");
-assert.equal(new Set(events.map((event) => event.type)).size, 5);
-assert.deepEqual(events, eventTwin.getMicroEvents(), "micro-events must be deterministic");
+assert.equal(events.length, 1, "the ancient container must be the only physical field event");
+assert.equal(events[0]?.type, "ancient_container");
+assert.deepEqual(events, eventTwin.getMicroEvents(), "physical events must be deterministic");
 
 function assertContainerLoot(world, event) {
   const available = new Set(world.getAvailableOreIdsAt(event.tx, event.ty));
@@ -201,44 +348,67 @@ for (let seed = 1; seed <= 12; seed += 1) {
   for (const sector of legacyProfiles) {
     const stressWorld = new MineWorld(ORE_TYPES, `micro-stress-${seed}`, { sectorId: sector.id });
     const stressEvents = stressWorld.getMicroEvents();
-    assert.equal(stressEvents.length, UNDERGROUND_EVENT_TYPES.length);
-    assert.ok(stressEvents.every((event) => event.depthTiles >= 12));
-    assertContainerLoot(stressWorld, stressEvents.find((event) => event.type === "ancient_container"));
+    assert.equal(stressEvents.length, 1);
+    assert.equal(stressEvents[0].type, "ancient_container");
+    assert.ok(stressEvents[0].depthTiles >= 12);
+    assertContainerLoot(stressWorld, stressEvents[0]);
   }
   const randomStressWorld = new MineWorld(ORE_TYPES, `random-micro-stress-${seed}`);
   const randomStressEvents = randomStressWorld.getMicroEvents();
-  assert.equal(randomStressEvents.length, UNDERGROUND_EVENT_TYPES.length);
-  assert.ok(randomStressEvents.every((event) => event.depthTiles >= 12));
-  assertContainerLoot(randomStressWorld, randomStressEvents.find((event) => event.type === "ancient_container"));
+  assert.equal(randomStressEvents.length, 1);
+  assert.equal(randomStressEvents[0].type, "ancient_container");
+  assert.ok(randomStressEvents[0].depthTiles >= 12);
+  assertContainerLoot(randomStressWorld, randomStressEvents[0]);
 }
 
-for (const event of events) {
-  assert.ok(event.depthTiles >= 12, `${event.type} must start after the early zone`);
-  assert.ok(event.label.length >= 8);
-  assert.ok(event.icon);
-  assert.match(event.color, /^#[0-9a-f]{6}$/i);
-  assert.ok(event.radius >= WORLD_CONFIG.TILE_SIZE);
-  assert.ok(event.radiusTiles >= 1 && event.radiusTiles <= 2, "events must use local markers, not field-wide visuals");
-  assert.ok(event.description.length >= 40);
-  assert.equal(event.noticeLevel, "high");
-  assert.equal(event.visual.pulse, "local");
-  assert.equal(event.visual.color, event.color);
-  assert.ok(event.announcement.includes(event.label));
-  assert.equal(event.triggered, false);
-  assert.equal(event.consumed, false);
-  assert.equal(event.state, "ready");
-  if (event.type === "ancient_container") {
-    assertContainerLoot(eventWorld, event);
-  } else {
-    assert.equal(event.durationSeconds, 5, `${event.type} must be a short five-second global effect`);
-    assert.equal(event.loot, null);
+const chest = events[0];
+assert.ok(chest.depthTiles >= 12, "the physical chest must start after the opening zone");
+assert.ok(chest.label.length >= 8);
+assert.ok(chest.icon);
+assert.match(chest.color, /^#[0-9a-f]{6}$/i);
+assert.ok(chest.radius >= WORLD_CONFIG.TILE_SIZE);
+assert.ok(chest.radiusTiles >= 1 && chest.radiusTiles <= 2);
+assert.ok(chest.description.length >= 40);
+assert.equal(chest.noticeLevel, "high");
+assert.equal(chest.visual.pulse, "local");
+assert.equal(chest.visual.color, chest.color);
+assert.ok(chest.announcement.includes(chest.label));
+assert.equal(chest.triggered, false);
+assert.equal(chest.consumed, false);
+assert.equal(chest.state, "ready");
+assertContainerLoot(eventWorld, chest);
+
+const forbiddenGlobalFields = [
+  "tx", "ty", "x", "y", "depthTiles", "radius", "radiusTiles", "visual", "loot",
+  "triggered", "consumed", "state",
+];
+const scheduledTypes = new Set();
+for (let index = 0; index < 64; index += 1) {
+  const scheduled = eventWorld.getGlobalMicroEvent(index);
+  assert.deepEqual(scheduled, eventTwin.getGlobalMicroEvent(index), "scheduled buffs must be deterministic");
+  assert.ok(scheduled);
+  assert.ok(GLOBAL_EVENT_TYPES.some((definition) => definition.id === scheduled.type));
+  assert.equal(scheduled.durationSeconds, 5);
+  assert.equal(scheduled.global, true);
+  assert.equal(scheduled.scheduled, true);
+  assert.equal(scheduled.index, index);
+  assert.equal(scheduled.noticeLevel, "high");
+  assert.ok(scheduled.announcement.includes(scheduled.label));
+  for (const field of forbiddenGlobalFields) {
+    assert.equal(
+      Object.hasOwn(scheduled, field),
+      false,
+      `scheduled ${scheduled.type} must not expose field-only property ${field}`,
+    );
   }
+  scheduledTypes.add(scheduled.type);
 }
+assert.deepEqual(scheduledTypes, new Set(GLOBAL_EVENT_TYPES.map((definition) => definition.id)));
 
 const fixedLootRng = { int: (minimum) => minimum };
 const eventSpawn = eventWorld.getSpawn();
 const earlyLoot = eventWorld._createContainerLoot(eventSpawn.tx, eventSpawn.ty + 12, fixedLootRng);
-assert.ok(Object.keys(earlyLoot).length >= 2);
+assert.equal(Object.keys(earlyLoot).length, 5, "opening containers must carry a small T1-T5 starter mix");
 assert.ok(Object.keys(earlyLoot).every((oreId) => ORE_TYPES.find((ore) => ore.id === oreId)?.tier <= 4));
 const deepLootTy = WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 8;
 const deepAvailable = eventWorld.getAvailableOreIdsAt(eventSpawn.tx, deepLootTy);
@@ -249,11 +419,10 @@ assert.ok(
   "a deep chest must include the highest ore that naturally exists there",
 );
 
-const first = events[0];
-const tileSearch = eventWorld.getMicroEventsNear(first.tx, first.ty, 0);
-assert.equal(tileSearch[0]?.id, first.id, "tile-space proximity search must find an event at its center");
-const pixelSearch = eventWorld.findUndergroundEvent(first.x, first.y, 0);
-assert.equal(pixelSearch?.id, first.id, "world-space proximity search must find an event at its center");
+const tileSearch = eventWorld.getMicroEventsNear(chest.tx, chest.ty, 0);
+assert.equal(tileSearch[0]?.id, chest.id, "tile-space proximity search must find the chest at its center");
+const pixelSearch = eventWorld.findUndergroundEvent(chest.x, chest.y, 0);
+assert.equal(pixelSearch?.id, chest.id, "world-space proximity search must find the chest at its center");
 assert.equal(pixelSearch?.distance, 0);
 
 // Returned records are defensive copies.
@@ -262,7 +431,7 @@ copiedEvents[0].label = "mutated";
 copiedEvents[0].visual.color = "#000000";
 assert.notEqual(eventWorld.getMicroEvents()[0].label, "mutated");
 assert.notEqual(eventWorld.getMicroEvents()[0].visual.color, "#000000");
-const copiedChest = copiedEvents.find((event) => event.type === "ancient_container");
+const copiedChest = copiedEvents[0];
 const copiedLootId = Object.keys(copiedChest.loot || {})[0];
 if (copiedLootId) copiedChest.loot[copiedLootId] = 999;
 assert.notEqual(
@@ -271,31 +440,32 @@ assert.notEqual(
   "chest loot must also be returned as a defensive copy",
 );
 
-const triggered = eventWorld.triggerMicroEvent(first.id);
-assert.equal(triggered.id, first.id);
+const triggered = eventWorld.triggerMicroEvent(chest.id);
+assert.equal(triggered.id, chest.id);
 assert.equal(triggered.firstTrigger, true);
 assert.equal(triggered.state, "triggered");
-assert.equal(eventWorld.triggerMicroEvent(first.id), null, "trigger must be one-shot");
-const consumed = eventWorld.consumeMicroEvent(first.id);
-assert.equal(consumed.id, first.id);
+assert.equal(eventWorld.triggerMicroEvent(chest.id), null, "trigger must be one-shot");
+const consumed = eventWorld.consumeMicroEvent(chest.id);
+assert.equal(consumed.id, chest.id);
 assert.equal(consumed.wasTriggered, true);
 assert.equal(consumed.firstConsume, true);
 assert.equal(consumed.state, "consumed");
-assert.equal(eventWorld.consumeMicroEvent(first.id), null, "consume must be one-shot");
-assert.ok(!eventWorld.getMicroEvents().some((event) => event.id === first.id));
-assert.ok(eventWorld.getMicroEvents({ includeConsumed: true }).some((event) => event.id === first.id));
+assert.equal(eventWorld.consumeMicroEvent(chest.id), null, "consume must be one-shot");
+assert.ok(!eventWorld.getMicroEvents().some((event) => event.id === chest.id));
+assert.ok(eventWorld.getMicroEvents({ includeConsumed: true }).some((event) => event.id === chest.id));
 
-const second = events[1];
-const directlyConsumed = eventWorld.consumeMicroEvent(second.id);
+eventWorld.reset("micro-event-probe", { sectorId: "ore_ridge" });
+const untouchedChest = eventWorld.getMicroEvents()[0];
+const directlyConsumed = eventWorld.consumeMicroEvent(untouchedChest.id);
 assert.equal(directlyConsumed.wasTriggered, false, "consume may atomically trigger an untouched event");
-assert.equal(eventWorld.triggerMicroEvent(second.id), null);
+assert.equal(eventWorld.triggerMicroEvent(untouchedChest.id), null);
 
 eventWorld.reset("micro-event-probe", { sectorId: "ore_ridge" });
 assert.deepEqual(eventWorld.getMicroEvents(), eventTwin.getMicroEvents(), "reset must restore deterministic ready events");
 
 const stagedFingerprint = tileFingerprint(eventWorld);
-const stagedEvent = eventWorld.stageMicroEventNearSpawn();
-const stagedTwin = eventTwin.stageMicroEventNearSpawn();
+const stagedEvent = eventWorld.stageMicroEventNearSpawn("ancient_container");
+const stagedTwin = eventTwin.stageMicroEventNearSpawn("ancient_container");
 const stagedSpawn = eventWorld.getSpawn();
 assert.ok(stagedEvent, "a dry-shift pity event must be stageable near the landing chamber");
 assert.deepEqual(stagedEvent, stagedTwin, "staged pity events must stay deterministic");
@@ -307,29 +477,28 @@ assert.ok(
   !["air", "bedrock"].includes(eventWorld.getTile(stagedEvent.tx, stagedEvent.ty)?.kind),
   "a staged event must remain a physical underground target",
 );
-if (stagedEvent.type === "ancient_container") assertContainerLoot(eventWorld, stagedEvent);
-assert.equal(eventWorld.getMicroEvents().length, UNDERGROUND_EVENT_TYPES.length);
+assert.equal(stagedEvent.type, "ancient_container");
+assertContainerLoot(eventWorld, stagedEvent);
+assert.equal(eventWorld.getMicroEvents().length, 1);
 assert.equal(tileFingerprint(eventWorld), stagedFingerprint, "staging an event must not change rock or ore density");
 
 let checkedStagedEvents = 0;
 for (let seed = 0; seed < 12; seed += 1) {
-  for (const definition of UNDERGROUND_EVENT_TYPES) {
-    const surfaceWorld = new MineWorld(ORE_TYPES, `surface-pity-${seed}-${definition.id}`);
-    const surfaceStaged = surfaceWorld.stageMicroEventNearSpawn(definition.id, surfaceWorld.getSpawn());
-    assert.ok(surfaceStaged, `surface pity must stage ${definition.id} for seed ${seed}`);
+  const surfaceWorld = new MineWorld(ORE_TYPES, `surface-pity-${seed}-ancient-container`);
+  const surfaceStaged = surfaceWorld.stageMicroEventNearSpawn("ancient_container", surfaceWorld.getSpawn());
+  assert.ok(surfaceStaged, `surface pity must stage the chest for seed ${seed}`);
 
-    const liftWorld = new MineWorld(ORE_TYPES, `lift-pity-${seed}-${definition.id}`);
-    const lift = liftWorld.getLiftStart(180, 0.65, 180, { unlockedTierCap: 9 });
-    assert.ok(lift, `lift fixture must exist for ${definition.id} seed ${seed}`);
-    const liftStaged = liftWorld.stageMicroEventNearSpawn(definition.id, lift);
-    assert.ok(liftStaged, `lift pity must stage ${definition.id} for seed ${seed}`);
-    assert.ok(
-      Math.hypot(liftStaged.tx - lift.tx, liftStaged.ty - lift.ty) <= 8
-        || (lift.target && liftStaged.tx === lift.target.tx && liftStaged.ty === lift.target.ty),
-      "lift pity must stay near the current landing or its guaranteed target",
-    );
-    checkedStagedEvents += 2;
-  }
+  const liftWorld = new MineWorld(ORE_TYPES, `lift-pity-${seed}-ancient-container`);
+  const lift = liftWorld.getLiftStart(180, 0.65, 180, { unlockedTierCap: 9 });
+  assert.ok(lift, `lift fixture must exist for chest seed ${seed}`);
+  const liftStaged = liftWorld.stageMicroEventNearSpawn("ancient_container", lift);
+  assert.ok(liftStaged, `lift pity must stage the chest for seed ${seed}`);
+  assert.ok(
+    Math.hypot(liftStaged.tx - lift.tx, liftStaged.ty - lift.ty) <= 8
+      || (lift.target && liftStaged.tx === lift.target.tx && liftStaged.ty === lift.target.ty),
+    "lift pity must stay near the current landing or its guaranteed target",
+  );
+  checkedStagedEvents += 2;
 }
 
 // Every sector and seed starts with the same short, mineable economy seam:
@@ -347,7 +516,7 @@ for (let seed = 1; seed <= 8; seed += 1) {
     assert.equal(firstCopper?.oreId, "copper", `${sector.id} must expose starter copper`);
     assert.equal(firstCopper?.maxHp, 2, "first copper must fit inside the opening shift");
     assert.equal(coal?.oreId, "coal", `${sector.id} must guarantee early coal`);
-    assert.equal(coal?.maxHp, 6, "starter coal must be soft but still distinct from copper");
+    assert.equal(coal?.maxHp, 4, "starter coal must fit the opening shift without becoming free");
     assert.equal(secondCopper?.oreId, "copper", `${sector.id} must finish the starter seam with copper`);
     assert.equal(secondCopper?.maxHp, 3, "second copper must stay soft");
     assert.ok(firstCopper.discovered && coal.discovered && secondCopper.discovered);
@@ -362,11 +531,35 @@ for (let seed = 1; seed <= 8; seed += 1) {
   }
 }
 
+// The three additional guaranteed copper probes must lead into the shaft,
+// never recreate the former shallow left/right farming strip. Record the
+// requested locations without depending on incidental caves in one seed.
+const starterFanWorld = new MineWorld(ORE_TYPES, "starter-descending-fan", { sectorId: "stable_strata" });
+const starterFanSpawn = starterFanWorld.getSpawn();
+const starterFanRequests = [];
+const originalNearestSolidTile = starterFanWorld._nearestSolidTile;
+starterFanWorld._nearestSolidTile = (tx, ty, radius) => {
+  starterFanRequests.push({
+    dx: tx - starterFanSpawn.tx,
+    dy: ty - starterFanSpawn.ty,
+    radius,
+  });
+  return null;
+};
+starterFanWorld._placeStarterOre();
+starterFanWorld._nearestSolidTile = originalNearestSolidTile;
+assert.deepEqual(starterFanRequests, [
+  { dx: -2, dy: 4, radius: 2 },
+  { dx: 2, dy: 5, radius: 2 },
+  { dx: 0, dy: 7, radius: 2 },
+]);
+assert.ok(starterFanRequests.every((request) => request.dy >= 4 && Math.abs(request.dx) <= 2));
+
 // A direct diagonal must not squeeze through the seam between two intact
 // blocks. The public route finder must instead choose one of the orthogonal
 // blocks and enter the goal from a cardinal direction.
 const cornerWorld = new MineWorld(ORE_TYPES, "corner-cut-probe");
-const cornerStart = { tx: 120, ty: 40 };
+const cornerStart = { tx: Math.floor(WORLD_CONFIG.WIDTH / 2), ty: 40 };
 const cornerGoal = { tx: cornerStart.tx + 1, ty: cornerStart.ty + 1 };
 for (let offsetY = -2; offsetY <= 3; offsetY += 1) {
   for (let offsetX = -2; offsetX <= 3; offsetX += 1) {
@@ -449,7 +642,7 @@ assert.equal(eventWorld.getTile(firstOre.tx, firstOre.ty).hp, hpBeforeRoute, "ro
 // supplied width. Falloff bands therefore belong to the caller: the laser must
 // pass only its permanent core width and resolve thermal edges separately.
 const rayContractWorld = new MineWorld(ORE_TYPES, "ray-width-contract");
-const rayOriginTx = 120;
+const rayOriginTx = Math.floor(WORLD_CONFIG.WIDTH / 2);
 const rayOriginTy = 40;
 const rayCore = rayContractWorld.getTile(rayOriginTx + 2, rayOriginTy);
 const rayEdge = rayContractWorld.getTile(rayOriginTx + 2, rayOriginTy + 1);
@@ -476,9 +669,13 @@ assert.equal(rayEdge.hp, 90, "damageRay has no implicit edge falloff at wider wi
 console.log(JSON.stringify({
   ok: true,
   diagnosticProfiles: legacyProfiles.length,
-  microEventTypes: events.length,
+  physicalEventTypes: events.length,
+  globalEventTypes: scheduledTypes.size,
   checkedStarterSeams,
   checkedStagedEvents,
+  checkedDepthGatedOre,
+  sampledOreDensity: Number(sampledOreDensity.toFixed(4)),
+  sampledCaveDensity: Number(sampledCaveDensity.toFixed(4)),
   maxExpectedNodeBudgetDrift: Number(maxExpectedNodeBudgetDrift.toFixed(4)),
   maxGeneratedNodeBudgetDrift: Number(maxGeneratedNodeBudgetDrift.toFixed(4)),
   cavernAir: cavern.undergroundAir,
