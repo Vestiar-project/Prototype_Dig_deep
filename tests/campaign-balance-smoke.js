@@ -282,7 +282,10 @@ for (const campaign of campaigns) {
   assert.ok(progressAt("focus") >= 0.3, `ore focus should sit beyond the opening 30%: ${JSON.stringify(campaign)}`);
   assert.equal(campaign.completed, true, `campaign ${campaign.seed} must be completable`);
   assert.ok(campaign.elapsedMinutes >= 55 && campaign.elapsedMinutes <= 105, `campaign ${campaign.seed} should remain a 55-105 minute optimized run: ${JSON.stringify(campaign)}`);
-  assert.ok(progressAt("leastResistance") >= 0.08 && progressAt("leastResistance") <= 0.3, `route planning should fill the early progression gap: ${JSON.stringify(campaign)}`);
+  assert.ok(
+    campaign.milestoneMinutes.leastResistance >= 2 && campaign.milestoneMinutes.leastResistance <= 18,
+    `foundational route planning should arrive during the opening rather than scale with the late-game duration: ${JSON.stringify(campaign)}`,
+  );
   assert.ok(progressAt("impactWave") >= 0.15 && progressAt("impactWave") <= 0.5, `impact wave should arrive around the early/middle transition: ${JSON.stringify(campaign)}`);
   assert.ok(progressAt("mineLift") >= 0.33 && progressAt("mineLift") <= 0.65, `mine lift should arrive before repeated deep descents dominate: ${JSON.stringify(campaign)}`);
   assert.ok(
@@ -323,8 +326,8 @@ for (const campaign of campaigns) {
     campaign.milestoneMinutes.solarDrill,
   );
   assert.ok(
-    campaign.milestoneMinutes.finalPerk - lastCapstoneMinute >= 0.9,
-    `the finale must wait for at least one full preparation shift after the last capstone: ${JSON.stringify(campaign)}`,
+    campaign.milestoneMinutes.finalPerk - lastCapstoneMinute >= 2,
+    `the finale must include two completed Solar Drill shifts after the last capstone: ${JSON.stringify(campaign)}`,
   );
   const capstoneMinutes = [
     campaign.milestoneMinutes.earthCall,

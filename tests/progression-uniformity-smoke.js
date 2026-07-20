@@ -8,6 +8,9 @@ const { Worker, isMainThread, parentPort, workerData } = require("node:worker_th
 // nodes are listed separately because their later levels unlock new behavior.
 const NOTABLE_MECHANICS = Object.freeze([
   { id: "sense_echo_pulse", level: 1, label: "resonant ping" },
+  { id: "sense_deep_resonance", level: 1, label: "deep sector" },
+  { id: "sense_deep_resonance", level: 2, label: "deep sector backup" },
+  { id: "sense_deep_resonance", level: 3, label: "deep sector map" },
   { id: "sense_clear_signal", level: 1, label: "clear signal" },
   { id: "sense_vein_whisper", level: 1, label: "vein lock" },
   { id: "sense_seismic_memory", level: 1, label: "seismic memory" },
@@ -23,6 +26,8 @@ const NOTABLE_MECHANICS = Object.freeze([
   { id: "sense_triangular_fix", level: 2, label: "triangulated gadget sector" },
   { id: "sense_earth_call", level: 1, label: "earth call" },
   { id: "dig_sweeping_arc", level: 1, label: "sweeping arc" },
+  { id: "dig_light_footwork", level: 2, label: "opening sprint" },
+  { id: "dig_light_footwork", level: 4, label: "target relay sprint" },
   { id: "dig_twin_stroke", level: 1, label: "twin stroke" },
   { id: "dig_precision_path", level: 1, label: "precision path" },
   { id: "dig_wall_bite", level: 1, label: "wall bite" },
@@ -31,6 +36,7 @@ const NOTABLE_MECHANICS = Object.freeze([
   { id: "dig_mine_lift", level: 1, label: "mine lift" },
   { id: "dig_quarry_presence", level: 1, label: "quarry rhythm" },
   { id: "power_furious_swing", level: 1, label: "critical strikes" },
+  { id: "power_fault_finder", level: 3, label: "guaranteed fault cadence" },
   { id: "power_momentum", level: 1, label: "approach strike" },
   { id: "power_shatterpoint", level: 1, label: "impact wave" },
   { id: "power_overcharge_strike", level: 1, label: "true overkill" },
@@ -328,349 +334,245 @@ function simulateCampaign(api, seed, strategy, maxRuns = 480) {
         entries.push({
           run,
           minute: Number((elapsedSeconds / 60).toFixed(2)),
-          level: definition.level,
-          unlocked: Boolean(definition.unlocked),
-          available: Boolean(definition.available),
-          affordable: Boolean(definition.affordable),
-          requires: definition.requires || [],
-          requiresOreDiscovery: definition.requiresOreDiscovery || null,
-          recipe,
-          deficits: Object.fromEntries(Object.entries(recipe).map(([oreId, amount]) => [
-            oreId,
-            Math.max(0, amount - (inventory[oreId] || 0)),
-          ])),
-          inventory,
-        });
-        if (entries.length > 6) entries.shift();
-      }
-    }
-    const bought = buyWithStrategy(api, strategy, finalPath, 300);
-    for (const id of traceIds) {
-      if (bought.includes(id)) completedTargetTraces.add(id);
-    }
-    snapshot = api.getSnapshot();
-    if (tracePurchases && bought.length) {
-      const tracedLevels = new Map(beforeLevelMap);
-      purchaseTimeline.push({
-        run,
-        minute: Number((elapsedSeconds / 60).toFixed(2)),
-        purchases: bought.map((id) => {
-          const level = (tracedLevels.get(id) || 0) + 1;
-          tracedLevels.set(id, level);
-          return `${id}@${level}`;
-        }),
-      });
-    }
-    const levelPackage = snapshot.purchasedLevels - beforeLevels;
-    assert.equal(levelPackage, bought.length, `${strategy}/${seed}: buyer must report every purchased level`);
-    const currentMechanics = reachedMechanics(levelMap(api));
-    const newlyReached = [...currentMechanics].filter((key) => !previousMechanics.has(key));
-    if (levelPackage > maxLevelPackage) {
-      maxLevelPackage = levelPackage;
-      maxLevelPackageDetails = {
-        run,
-        minute: Number((elapsedSeconds / 60).toFixed(2)),
-        levels: levelPackage,
-        mechanics: [...newlyReached],
-        bought: [...bought],
-      };
-    }
-    if (newlyReached.length > maxMechanicPackage) {
-      maxMechanicPackage = newlyReached.length;
-      maxMechanicPackageDetails = {
-        run,
-        minute: Number((elapsedSeconds / 60).toFixed(2)),
-        levels: levelPackage,
-        mechanics: [...newlyReached],
-        bought: [...bought],
-      };
-    }
-    for (const key of newlyReached) mechanicTimes.push({ key, seconds: elapsedSeconds });
-    previousMechanics = currentMechanics;
+          level:зЛh‘йм¶»§q«^vK€™\]Z\™\О€Yљ[љ][Ы‹њ™\]Z\™\ИЧK€™\]Z\™\УЬ™Q\ШЫЭ™\ћN€Yљ[љ][Ы‹њ™\]Z\™\УЬ™Q\ШЫЭ™\ћHќ[€™XЪ\K€YљXЪ]О€Шљ™XЭ™њ›ЫQ[ќљY\КШљ™XЭ™[ќљY\К™XЪ\JK›X\
 
-    if (strategy === "final-path") {
-      const simulatedLevels = new Map(beforeLevelMap);
-      let pathPurchase = false;
-      for (const id of bought) {
-        const before = simulatedLevels.get(id) || 0;
-        const target = finalPath.get(id) || 0;
-        if (before < target) pathPurchase = true;
-        simulatedLevels.set(id, before + 1);
-      }
-      pathDryRuns = pathPurchase ? 0 : pathDryRuns + 1;
-    }
-    // Aggregate focus is the normal player heuristic. A final-path player only
-    // intervenes after three consecutive workshops made no path progress.
-    setUsefulFocus(api, strategy, finalPath, strategy === "final-path" && pathDryRuns >= 3);
+ЫЬ™RY[[Э[ќJHO€В€Ь™RY€X]›X^
+[[Э[ќH
+[ќ™[ќЬћVЫЬ™RYH
+JK€JJK€[ќ™[ќЬћK€JNВ€Y€
+[ќљY\Л›[™Э€ЉH[ќљY\ЛњЪYќ
 
-    if (snapshot.campaign.ready) {
-      completed = true;
-      break;
-    }
-    // Stop pathological strategies at 180 minutes; incompletion is reported
-    // and fails below without consuming unbounded CI time.
-    if (elapsedSeconds >= 180 * 60) break;
-  }
+NВ€B€B€ЫЫњЭ›ЭYЪHќ^UЪ]Э]YЮJ\KЭ]YЮKљ[[]М
+NВ€›Ь€
+ЫЫњЭYЩ€XЩRYКHВ€Y€
+›ЭYЪљ[ЫY\КY
+JHЫЫ\]Y\™Щ]XЩ\ЛY
+Y
+NВ€B€Ы\ЪЭH\K™Щ]Ы\ЪЭ
 
-  const finalSnapshot = api.getSnapshot();
-  const mechanicsAtTime = new Map();
-  for (const entry of mechanicTimes) {
-    if (!mechanicsAtTime.has(entry.seconds)) mechanicsAtTime.set(entry.seconds, []);
-    mechanicsAtTime.get(entry.seconds).push(entry.key);
-  }
-  const checkpoints = [
-    { seconds: 0, mechanics: ["campaign-start"] },
-    ...[...mechanicsAtTime]
-      .sort(([left], [right]) => left - right)
-      .map(([seconds, mechanics]) => ({ seconds, mechanics })),
-    { seconds: elapsedSeconds, mechanics: ["campaign-end"] },
-  ];
-  let maxMechanicGapSeconds = 0;
-  let maxMechanicGapDetails = null;
-  for (let index = 1; index < checkpoints.length; index += 1) {
-    const gap = checkpoints[index].seconds - checkpoints[index - 1].seconds;
-    if (gap > maxMechanicGapSeconds) {
-      maxMechanicGapSeconds = gap;
-      maxMechanicGapDetails = {
-        fromMinute: Number((checkpoints[index - 1].seconds / 60).toFixed(2)),
-        toMinute: Number((checkpoints[index].seconds / 60).toFixed(2)),
-        minutes: Number((gap / 60).toFixed(2)),
-        after: [...checkpoints[index - 1].mechanics],
-        before: [...checkpoints[index].mechanics],
-      };
-    }
-  }
+NВ€Y€
+XЩT\Ъ\Щ\И	‰€›ЭYЪ›[™Э
+HВ€ЫЫњЭXЩY]™[ИH™]ИX\
+™Y›Ь™S]™[X\
+NВ€\Ъ\ЩU[Y[[™Kњ\Ъ
+В€ќ[‹€Z[ќ]N€ќ[X™\Љ
+[\ЩYЩXЫЫ™ИИЊ
+KќСљ^Y
+ЉJK€\Ъ\Щ\О€›ЭYЪ›X\
 
-  return {
-    seed,
-    strategy,
-    completed,
-    runs,
-    elapsedMinutes: Number((elapsedSeconds / 60).toFixed(2)),
-    firstEventMinutes: firstEventSeconds == null ? null : Number((firstEventSeconds / 60).toFixed(2)),
-    maxMechanicGapMinutes: Number((maxMechanicGapSeconds / 60).toFixed(2)),
-    maxMechanicGapDetails,
-    maxLevelPackage,
-    maxLevelPackageDetails,
-    maxMechanicPackage,
-    maxMechanicPackageDetails,
-    mechanicsReached: previousMechanics.size,
-    milestoneMinutes: Object.fromEntries(mechanicTimes.map((entry) => [
-      entry.key,
-      Number((entry.seconds / 60).toFixed(2)),
-    ])),
-    ...(tracePurchases ? { purchaseTimeline } : {}),
-    ...(traceIds.size ? { targetTrace } : {}),
-    purchasedLevels: finalSnapshot.purchasedLevels,
-  };
-}
+Y
+HO€В€ЫЫњЭ]™[H
+XЩY]™[Л™Щ]
+Y
+H
+H
+ИNВ€XЩY]™[ЛњЩ]
+Y]™[
+NВ€™]\›€	ЪYP	Ы]™[XВ€JK€JNВ€B€ЫЫњЭ]™[XЪШYЩHHЫ\ЪЭњ\Ъ\ЩY]™[ИH™Y›Ь™S]™[ОВ€\ЬЩ\ќ™\]X[
+]™[XЪШYЩK›ЭYЪ›[™Э	ЬЭ]YЮ_KЙЬЩYYN€ќ^Y\€]\Э™\Ьќ]™\ћH\Ъ\ЩY]™[
+NВ€ЫЫњЭЭ\њ™[ќYXЪ[љXЬИH™XXЪYYXЪ[љXЬК]™[X\
+\JJNВ€ЫЫњЭ™]ЫT™XXЪYHЛ‹‹Э\њ™[ќYXЪ[љXЬЧK™љ[\Љ
+Щ^JHO€\™]љ[Э\УYXЪ[љXЬЛљ\КЩ^JJNВ€Y€
+]™[XЪШYЩH€X^]™[XЪШYЩJHВ€X^]™[XЪШYЩHH]™[XЪШYЩNВ€X^]™[XЪШYЩQ]Z[ИHВ€ќ[‹€Z[ќ]N€ќ[X™\Љ
+[\ЩYЩXЫЫ™ИИЊ
+KќСљ^Y
+ЉJK€]™[О€]™[XЪШYЩK€YXЪ[љXЬО€Л‹‹›™]ЫT™XXЪYK€›ЭYЪ€Л‹‹›ЭYЪK€NВ€B€Y€
+™]ЫT™XXЪY›[™Э€X^YXЪ[љXФXЪШYЩJHВ€X^YXЪ[љXФXЪШYЩHH™]ЫT™XXЪY›[™ЭВ€X^YXЪ[љXФXЪШYЩQ]Z[ИHВ€ќ[‹€Z[ќ]N€ќ[X™\Љ
+[\ЩYЩXЫЫ™ИИЊ
+KќСљ^Y
+ЉJK€]™[О€]™[XЪШYЩK€YXЪ[љXЬО€Л‹‹›™]ЫT™XXЪYK€›ЭYЪ€Л‹‹›ЭYЪK€NВ€B€›Ь€
+ЫЫњЭЩ^HЩ€™]ЫT™XXЪY
+HYXЪ[љXХ[Y\Лњ\Ъ
+ИЩ^KЩXЫЫ™О€[\ЩYЩXЫЫ™ИJNВ€™]љ[Э\УYXЪ[љXЬИHЭ\њ™[ќYXЪ[љXЬОВ‚€Y€
+Э]YЮHOOH™љ[[\]ЉHВ€ЫЫњЭЪ[][]Y]™[ИH™]ИX\
+™Y›Ь™S]™[X\
+NВ€]]\Ъ\ЩHH[ЩNВ€›Ь€
+ЫЫњЭYЩ€›ЭYЪ
+HВ€ЫЫњЭ™Y›Ь™HHЪ[][]Y]™[Л™Щ]
+Y
+HВ€ЫЫњЭ\™Щ]Hљ[[]™Щ]
+Y
+HВ€Y€
+™Y›Ь™H\™Щ]
+H]\Ъ\ЩHHќYNВ€Ъ[][]Y]™[ЛњЩ]
+Y™Y›Ь™H
+ИJNВ€B€]ћTќ[њИH]\Ъ\ЩHИ€]ћTќ[њИ
+ИNВ€B€ЛИYЩЬ™YШ]H›ШЭ\И\ИH›Ь›X[^Y\€]\љ\ЭXЛ€Hљ[[\]^Y\€Ы›B€ЛИ[ќ\ќ™[™\ИYќ\€™YHЫЫњЩXЭ]]™HЫЬљЬЪЬИXYH›И]›ЩЬ™\ЬЛ‚€Щ]\ЩYќ[›ШЭ\К\KЭ]YЮKљ[[]Э]YЮHOOH™љ[[\]€	‰€]ћTќ[њИЏHКNВ‚€Y€
+Ы\ЪЭШ[\ZYЫ‹њ™XYJHВ€ЫЫ\]YHќYNВ€њ™XZОВ€B€ЛИЭЬ]ЫЩЪXШ[Э]YЪY\И]NZ[ќ]\ОИ[ЫЫ\][Ы€\И™\ЬќY€ЛИ[™Z[И™[ЭИЪ]Э]ЫЫњЭ[Z[™И[›Э[™YТH[YK‚€Y€
+[\ЩYЩXЫЫ™ИЏHN
+€Њ
+Hњ™XZОВ€B‚€ЫЫњЭљ[[Ы\ЪЭH\K™Щ]Ы\ЪЭ
 
-function percentile(values, fraction) {
-  assert.ok(values.length > 0, "cannot calculate a percentile of an empty sample");
-  const sorted = [...values].sort((a, b) => a - b);
-  const rank = Math.max(0, Math.ceil(sorted.length * fraction) - 1);
-  return sorted[rank];
-}
+NВ€ЫЫњЭYXЪ[љXЬР][YHH™]ИX\
 
-function summarize(campaigns) {
-  const numeric = (field) => campaigns.map((campaign) => campaign[field]).filter(Number.isFinite);
-  const durations = numeric("elapsedMinutes");
-  const gaps = numeric("maxMechanicGapMinutes");
-  const events = numeric("firstEventMinutes");
-  const levelPackages = numeric("maxLevelPackage");
-  const mechanicPackages = numeric("maxMechanicPackage");
-  const milestoneMedians = Object.fromEntries(NOTABLE_MECHANICS.map((mechanic) => {
-    const key = `${mechanic.id}@${mechanic.level}`;
-    const samples = campaigns
-      .map((campaign) => campaign.milestoneMinutes?.[key])
-      .filter(Number.isFinite);
-    return [key, {
-      reached: samples.length,
-      p50: samples.length ? percentile(samples, 0.5) : null,
-      p90: samples.length ? percentile(samples, 0.9) : null,
-    }];
-  }));
-  return {
-    campaigns: campaigns.length,
-    completed: campaigns.filter((campaign) => campaign.completed).length,
-    elapsedMinutes: {
-      p10: percentile(durations, 0.1),
-      p50: percentile(durations, 0.5),
-      p90: percentile(durations, 0.9),
-      max: Math.max(...durations),
-    },
-    maxMechanicGapMinutes: {
-      p50: percentile(gaps, 0.5),
-      p90: percentile(gaps, 0.9),
-      max: Math.max(...gaps),
-    },
-    firstEventMinutes: {
-      found: events.length,
-      p50: events.length ? percentile(events, 0.5) : null,
-      p90: events.length ? percentile(events, 0.9) : null,
-      max: events.length ? Math.max(...events) : null,
-    },
-    maxLevelPackage: {
-      p50: percentile(levelPackages, 0.5),
-      p90: percentile(levelPackages, 0.9),
-      max: Math.max(...levelPackages),
-    },
-    maxMechanicPackage: {
-      p50: percentile(mechanicPackages, 0.5),
-      p90: percentile(mechanicPackages, 0.9),
-      max: Math.max(...mechanicPackages),
-    },
-    milestoneMinutes: milestoneMedians,
-  };
-}
+NВ€›Ь€
+ЫЫњЭ[ќћHЩ€YXЪ[љXХ[Y\КHВ€Y€
+[YXЪ[љXЬР][YKљ\К[ќћKњЩXЫЫ™КJHYXЪ[љXЬР][YKњЩ]
+[ќћKњЩXЫЫ™ЛЧJNВ€YXЪ[љXЬР][YK™Щ]
+[ќћKњЩXЫЫ™КKњ\Ъ
+[ќћKљЩ^JNВ€B€ЫЫњЭЪXЪЬЪ[ќИHВ€ИЩXЫЫ™О€YXЪ[љXЬО€ИШ[\ZYЫ‹\Э\ќ—HK€‹‹–Л‹‹›YXЪ[љXЬР][YWB€њЫЬќ
 
-if (!isMainThread) {
-  // Production run stepping derives its synthetic clock from performance.now().
-  // Leaving that base tied to process uptime introduces sub-millisecond
-  // floating-point differences at 50 ms run boundaries. A single extra strike
-  // can then change ore income and cascade into a different purchase order.
-  // Freeze both wall-clock sources before loading the runtime so identical
-  // seed/strategy jobs remain bit-for-bit repeatable across fresh processes.
-  Object.defineProperty(globalThis, "performance", {
-    value: Object.freeze({ now: () => 0 }),
-    configurable: true,
-  });
-  Date.now = () => 1_700_000_000_000;
-  // runtime-smoke builds the same DOM/canvas shims used by the main runtime
-  // suite, then loads the production upgrade, world and game modules.
-  const originalLog = console.log;
-  console.log = () => {};
-  require("./runtime-smoke.js");
-  console.log = originalLog;
-  const api = global.__DEPTH_ZERO__;
-  assert.ok(api, "real headless runtime must initialize in every worker");
-  const job = workerData.job;
-  parentPort.postMessage(simulateCampaign(api, job.seed, job.strategy));
-} else {
-  const startedAt = Date.now();
-  // Twenty unique seeds are stratified across all three strategies. Running
-  // one full real-time campaign per seed keeps this broad audit below the
-  // smoke-suite budget instead of multiplying it into a long benchmark.
-  const requestedSeed = Number(process.env.PROGRESSION_SINGLE_SEED);
-  const requestedStrategy = process.env.PROGRESSION_SINGLE_STRATEGY;
-  const requestedStrategyBatch = process.env.PROGRESSION_ONLY_STRATEGY;
-  const auditOnly = process.env.PROGRESSION_AUDIT_ONLY === "1";
-  const summaryOnly = process.env.PROGRESSION_SUMMARY_ONLY === "1";
-  const jobs = Number.isFinite(requestedSeed) && STRATEGIES.includes(requestedStrategy)
-    ? [{ seed: requestedSeed, strategy: requestedStrategy }]
-    : PRIMARY_SEEDS.map((seed, index) => ({
-      seed,
-      strategy: STRATEGIES[index % STRATEGIES.length],
-    })).filter((job) => !STRATEGIES.includes(requestedStrategyBatch) || job.strategy === requestedStrategyBatch);
-  // Five isolated runtimes keep the exact 20-seed suite close to the
-  // ninety-second smoke-test budget on the reference workstation.
-  const workerCount = Math.min(5, jobs.length);
-  // Put the slower goal-driven campaigns first. Each campaign gets a fresh
-  // runtime: debug resets are intentionally not trusted to clear every
-  // transient animation/proc field between independent balance samples.
-  const orderedJobs = [...jobs].sort((left, right) => (
-    STRATEGIES.indexOf(right.strategy) - STRATEGIES.indexOf(left.strategy)
-  ));
-  let nextJobIndex = 0;
-  const campaignResults = [];
-  const runFreshCampaign = (job) => new Promise((resolve, reject) => {
-    const worker = new Worker(__filename, { workerData: { job } });
-    worker.once("message", resolve);
-    worker.once("error", reject);
-    worker.once("exit", (code) => {
-      if (code !== 0) reject(new Error(`progression worker exited with code ${code}`));
-    });
-  });
-  const runLane = async () => {
-    while (nextJobIndex < orderedJobs.length) {
-      const job = orderedJobs[nextJobIndex];
-      nextJobIndex += 1;
-      campaignResults.push(await runFreshCampaign(job));
-    }
-  };
+ЫYќKЬљYЪJHO€YќHљYЪ
+B€›X\
 
-  Promise.all(Array.from({ length: workerCount }, () => runLane())).then(() => {
-    const campaigns = campaignResults.sort((left, right) => (
-      STRATEGIES.indexOf(left.strategy) - STRATEGIES.indexOf(right.strategy)
-      || left.seed - right.seed
-    ));
-    const overall = summarize(campaigns);
-    const byStrategy = Object.fromEntries(STRATEGIES
-      .filter((strategy) => campaigns.some((campaign) => campaign.strategy === strategy))
-      .map((strategy) => [
-      strategy,
-      summarize(campaigns.filter((campaign) => campaign.strategy === strategy)),
-      ]));
+ЬЩXЫЫ™ЛYXЪ[љXЬЧJHO€
+ИЩXЫЫ™ЛYXЪ[љXЬИJJK€ИЩXЫЫ™О€[\ЩYЩXЫЫ™ЛYXЪ[љXЬО€ИШ[\ZYЫ‹Y[™—HK€NВ€]X^YXЪ[љXСШ\ЩXЫЫ™ИHВ€]X^YXЪ[љXСШ\]Z[ИHќ[В€›Ь€
+][™^HNИ[™^ЪXЪЬЪ[ќЛ›[™ЭИ[™^
+ПHJHВ€ЫЫњЭШ\HЪXЪЬЪ[ќЦЪ[™^KњЩXЫЫ™ИHЪXЪЬЪ[ќЦЪ[™^HWKњЩXЫЫ™ОВ€Y€
+Ш\€X^YXЪ[љXСШ\ЩXЫЫ™КHВ€X^YXЪ[љXСШ\ЩXЫЫ™ИHШ\В€X^YXЪ[љXСШ\]Z[ИHВ€њ›ЫSZ[ќ]N€ќ[X™\Љ
+ЪXЪЬЪ[ќЦЪ[™^HWKњЩXЫЫ™ИИЊ
+KќСљ^Y
+ЉJK€УZ[ќ]N€ќ[X™\Љ
+ЪXЪЬЪ[ќЦЪ[™^KњЩXЫЫ™ИИЊ
+KќСљ^Y
+ЉJK€Z[ќ]\О€ќ[X™\Љ
+Ш\ИЊ
+KќСљ^Y
+ЉJK€Yќ\Ћ€Л‹‹ЪXЪЬЪ[ќЦЪ[™^HWK›YXЪ[љXЬЧK€™Y›Ь™N€Л‹‹ЪXЪЬЪ[ќЦЪ[™^K›YXЪ[љXЬЧK€NВ€B€B‚€™]\›€В€ЩYY€Э]YЮK€ЫЫ\]Y€ќ[њЛ€[\ЩYZ[ќ]\О€ќ[X™\Љ
+[\ЩYЩXЫЫ™ИИЊ
+KќСљ^Y
+ЉJK€љ\њЭ]™[ќZ[ќ]\О€љ\њЭ]™[ќЩXЫЫ™ИOHќ[Иќ[€ќ[X™\Љ
+љ\њЭ]™[ќЩXЫЫ™ИИЊ
+KќСљ^Y
+ЉJK€X^YXЪ[љXСШ\Z[ќ]\О€ќ[X™\Љ
+X^YXЪ[љXСШ\ЩXЫЫ™ИИЊ
+KќСљ^Y
+ЉJK€X^YXЪ[љXСШ\]Z[Л€X^]™[XЪШYЩK€X^]™[XЪШYЩQ]Z[Л€X^YXЪ[љXФXЪШYЩK€X^YXЪ[љXФXЪШYЩQ]Z[Л€YXЪ[љXЬФ™XXЪY€™]љ[Э\УYXЪ[љXЬЛњЪ^™K€Z[\ЭЫ™SZ[ќ]\О€Шљ™XЭ™њ›ЫQ[ќљY\КYXЪ[љXХ[Y\Л›X\
 
-    const outlierDetails = {
-      longest: [...campaigns]
-        .sort((left, right) => right.elapsedMinutes - left.elapsedMinutes)
-        .slice(0, 3)
-        .map(({ seed, strategy, elapsedMinutes }) => ({ seed, strategy, elapsedMinutes })),
-      gaps: [...campaigns]
-        .sort((left, right) => right.maxMechanicGapMinutes - left.maxMechanicGapMinutes)
-        .slice(0, 5)
-        .map(({ seed, strategy, maxMechanicGapMinutes, maxMechanicGapDetails }) => ({
-          seed,
-          strategy,
-          maxMechanicGapMinutes,
-          details: maxMechanicGapDetails,
-        })),
-      levelPackages: [...campaigns]
-        .sort((left, right) => right.maxLevelPackage - left.maxLevelPackage)
-        .slice(0, 5)
-        .map(({ seed, strategy, maxLevelPackage, maxLevelPackageDetails }) => ({
-          seed,
-          strategy,
-          maxLevelPackage,
-          details: maxLevelPackageDetails,
-        })),
-      mechanicPackages: [...campaigns]
-        .sort((left, right) => right.maxMechanicPackage - left.maxMechanicPackage)
-        .slice(0, 5)
-        .map(({ seed, strategy, maxMechanicPackage, maxMechanicPackageDetails }) => ({
-          seed,
-          strategy,
-          maxMechanicPackage,
-          details: maxMechanicPackageDetails,
-        })),
-    };
-    const diagnostic = {
-      uniqueSeeds: new Set(campaigns.map((campaign) => campaign.seed)).size,
-      notableMechanics: NOTABLE_MECHANICS.length,
-      wallSeconds: Number(((Date.now() - startedAt) / 1000).toFixed(2)),
-      overall,
-      byStrategy,
-      outliers: outlierDetails,
-      ...(summaryOnly ? {} : { campaigns }),
-    };
-    try {
-      if (auditOnly) {
-        console.log(JSON.stringify({ auditOnly: true, ...diagnostic }));
-        return;
-      }
-      assert.equal(new Set(campaigns.map((campaign) => campaign.seed)).size, 20, "the audit must cover at least 20 unique seeds");
-      assert.equal(new Set(campaigns.map((campaign) => campaign.strategy)).size, 3, "the audit must exercise three buying strategies");
-      assert.equal(overall.completed, overall.campaigns, "every sampled strategy must finish the campaign");
-      assert.ok(overall.elapsedMinutes.p10 >= 45, `campaign must retain a real opening and middle game: ${JSON.stringify(overall.elapsedMinutes)}`);
-      assert.ok(overall.elapsedMinutes.p90 <= 135, `90% of campaigns should fit the 1-2 hour target with margin: ${JSON.stringify(overall.elapsedMinutes)}`);
-      assert.ok(overall.maxMechanicGapMinutes.p90 <= 8, `90% of campaigns need a notable unlock at least every eight minutes: ${JSON.stringify(overall.maxMechanicGapMinutes)}`);
-      assert.ok(overall.maxMechanicGapMinutes.max <= 10, `no sampled campaign should go ten minutes without a notable unlock: ${JSON.stringify(overall.maxMechanicGapMinutes)}`);
-      assert.ok(overall.maxLevelPackage.p90 <= 35, `late economy must not collapse into giant level packages: ${JSON.stringify(overall.maxLevelPackage)}`);
-      assert.ok(overall.maxMechanicPackage.p90 <= 4, `notable mechanics need room to breathe between purchases: ${JSON.stringify(overall.maxMechanicPackage)}`);
-      assert.equal(overall.firstEventMinutes.found, overall.campaigns, "every sampled campaign must encounter an underground event");
-      assert.ok(overall.firstEventMinutes.p90 <= 15, `events should become visible during the early game: ${JSON.stringify(overall.firstEventMinutes)}`);
-      assert.ok(overall.firstEventMinutes.max <= 20, `no seed should hide its first event beyond twenty minutes: ${JSON.stringify(overall.firstEventMinutes)}`);
-    } catch (error) {
-      // Keep the full measurement visible when a target-state assertion fails;
-      // this test is also the balancing audit used to guide the next fix.
-      console.log(JSON.stringify({ diagnostic: true, ...diagnostic }));
-      throw error;
-    }
+[ќћJHO€В€[ќћKљЩ^K€ќ[X™\Љ
+[ќћKњЩXЫЫ™ИИЊ
+KќСљ^Y
+ЉJK€JJK€‹‹ЉXЩT\Ъ\Щ\ИИИ\Ъ\ЩU[Y[[™HH€ЯJK€‹‹ЉXЩRYЛњЪ^™HИИ\™Щ]XЩHH€ЯJK€\Ъ\ЩY]™[О€љ[[Ы\ЪЭњ\Ъ\ЩY]™[Л€NВџB‚™ќ[Э[Ы€\Щ[ќ[J[Y\ЛњXЭ[ЫЉHВ€\ЬЩ\ќ›ЪК[Y\Л›[™Э€Ш[››ЭШ[Э[]HH\Щ[ќ[HЩ€[€[\HШ[\HЉNВ€ЫЫњЭЫЬќYHЛ‹‹ќ[Y\ЧKњЫЬќ
 
-    console.log(JSON.stringify({ ok: true, ...diagnostic }));
-  }).catch((error) => {
-    console.error(error?.stack || error);
-    process.exitCode = 1;
-  });
-}
+KЉHO€HHЉNВ€ЫЫњЭ[љИHX]›X^
+X]ЩZ[
+ЫЬќY›[™Э
+€њXЭ[ЫЉHHJNВ€™]\›€ЫЬќYЬ[љЧNВџB‚™ќ[Э[Ы€Э[[X\љ^™JШ[\ZYЫњКHВ€ЫЫњЭќ[Y\љXИH
+љY[
+HO€Ш[\ZYЫњЛ›X\
+
+Ш[\ZYЫЉHO€Ш[\ZYЫ–ЩљY[JK™љ[\Љќ[X™\‹љ\Сљ[љ]JNВ€ЫЫњЭ\][ЫњИHќ[Y\љXК™[\ЩYZ[ќ]\ИЉNВ€ЫЫњЭШ\ИHќ[Y\љXК›X^YXЪ[љXСШ\Z[ќ]\ИЉNВ€ЫЫњЭ]™[ќИHќ[Y\љXК™љ\њЭ]™[ќZ[ќ]\ИЉNВ€ЫЫњЭ]™[XЪШYЩ\ИHќ[Y\љXК›X^]™[XЪШYЩHЉNВ€ЫЫњЭYXЪ[љXФXЪШYЩ\ИHќ[Y\љXК›X^YXЪ[љXФXЪШYЩHЉNВ€ЫЫњЭZ[\ЭЫ™SYYX[њИHШљ™XЭ™њ›ЫQ[ќљY\К“ХP“WУQPТS’PФЛ›X\
+
+YXЪ[љXКHO€В€ЫЫњЭЩ^HH	ЫYXЪ[љXЛљYP	ЫYXЪ[љXЛ›]™[XВ€ЫЫњЭШ[\\ИHШ[\ZYЫњВ€›X\
+
+Ш[\ZYЫЉHO€Ш[\ZYЫ‹›Z[\ЭЫ™SZ[ќ]\ПЛ–ЪЩ^WJB€™љ[\Љќ[X™\‹љ\Сљ[љ]JNВ€™]\›€ЪЩ^KВ€™XXЪY€Ш[\\Л›[™Э€L€Ш[\\Л›[™ЭИ\Щ[ќ[JШ[\\ЛЌJH€ќ[€L€Ш[\\Л›[™ЭИ\Щ[ќ[JШ[\\ЛЋJH€ќ[€WNВ€JJNВ€™]\›€В€Ш[\ZYЫњО€Ш[\ZYЫњЛ›[™Э€ЫЫ\]Y€Ш[\ZYЫњЛ™љ[\Љ
+Ш[\ZYЫЉHO€Ш[\ZYЫ‹ЫЫ\]Y
+K›[™Э€[\ЩYZ[ќ]\О€В€L€\Щ[ќ[J\][ЫњЛЊJK€L€\Щ[ќ[J\][ЫњЛЌJK€L€\Щ[ќ[J\][ЫњЛЋJK€X^€X]›X^
+‹‹™\][ЫњКK€K€X^YXЪ[љXСШ\Z[ќ]\О€В€L€\Щ[ќ[JШ\ЛЌJK€L€\Щ[ќ[JШ\ЛЋJK€X^€X]›X^
+‹‹™Ш\КK€K€љ\њЭ]™[ќZ[ќ]\О€В€›Э[™€]™[ќЛ›[™Э€L€]™[ќЛ›[™ЭИ\Щ[ќ[J]™[ќЛЌJH€ќ[€L€]™[ќЛ›[™ЭИ\Щ[ќ[J]™[ќЛЋJH€ќ[€X^€]™[ќЛ›[™ЭИX]›X^
+‹‹™]™[ќКH€ќ[€K€X^]™[XЪШYЩN€В€L€\Щ[ќ[J]™[XЪШYЩ\ЛЌJK€L€\Щ[ќ[J]™[XЪШYЩ\ЛЋJK€X^€X]›X^
+‹‹›]™[XЪШYЩ\КK€K€X^YXЪ[љXФXЪШYЩN€В€L€\Щ[ќ[JYXЪ[љXФXЪШYЩ\ЛЌJK€L€\Щ[ќ[JYXЪ[љXФXЪШYЩ\ЛЋJK€X^€X]›X^
+‹‹›YXЪ[љXФXЪШYЩ\КK€K€Z[\ЭЫ™SZ[ќ]\О€Z[\ЭЫ™SYYX[њЛ€NВџB‚љY€
+Z\УXZ[•™XY
+HВ€ЛИ›ЩXЭ[Ы€ќ[€Э\[™И\љ]™\И]ИЮ[ќ]XИЫШЪИњ›ЫH\™›Ь›X[ЩK››ЭК
+K‚€ЛИX]љ[™И]\ЩHYYИ›ШЩ\ЬИ\[YH[ќ›ЩXЩ\ИЭX‹[Z[\ЩXЫЫ™€ЛИ›Ш][™Л\Ъ[ќY™™\™[Щ\И]L\Иќ[€›Э[™\љY\Л€HЪ[™ЫH^HЭљZЩB€ЛИШ[€[€Ъ[™ЩHЬ™H[ЫЫYH[™Ш\ШШYH[ќИHY™™\™[ќ\Ъ\ЩHЬ™\‹‚€ЛИњ™Y^™H›ЭШ[XЫШЪИЫЭ\Щ\И™Y›Ь™HШY[™ИHќ[ќ[YHЫИY[ќXШ[€ЛИЩYYЬЭ]YЮH›ШњИ™[XZ[€љ]Y›Ь‹Xљ]™\X]X›HXЬ›ЬЬИњ™\Ъ›ШЩ\ЬЩ\Л‚€Шљ™XЭ™Yљ[™T›Ь\ќJЫШ[\Лњ\™›Ь›X[ЩH‹В€[YN€Шљ™XЭ™њ™Y^™JИ›ЭО€
+
+HO€JK€ЫЫ™љYЭ\X›N€ќYK€JNВ€]K››ЭИH
+
+HO€WНММММВ€ЛИќ[ќ[YK\Ы[ЪЩHќZ[ИHШ[YHУKШШ[ќ\ИЪ[\И\ЩYћHHXZ[€ќ[ќ[YB€ЛИЭZ]K[€ШYИH›ЩXЭ[Ы€\ЬYKЫЬ›[™Ш[YH[Щ[\Л‚€ЫЫњЭЬљYЪ[[ЩИHЫЫњЫЫK›ЩОВ€ЫЫњЫЫK›ЩИH
+
+HO€ЯNВ€™\]Z\™J‹‹Ьќ[ќ[YK\Ы[ЪЩKљњИЉNВ€ЫЫњЫЫK›ЩИHЬљYЪ[[ЩОВ€ЫЫњЭ\HHЫШ[—ЧСTЦ‘T“ЧЧОВ€\ЬЩ\ќ›ЪК\Kњ™X[XY\ЬИќ[ќ[YH]\Э[љ]X[^™H[€]™\ћHЫЬљЩ\€ЉNВ€ЫЫњЭ›Ш€HЫЬљЩ\‘]Kљ›ШЋВ€\™[ќЬќњЬЭY\ЬШYЩJЪ[][]PШ[\ZYЫЉ\K›Ш‹њЩYY›Ш‹њЭ]YЮJJNВџH[ЩHВ€ЫЫњЭЭ\ќY]H]K››ЭК
+NВ€ЛИЩ[ќH[љ\]YHЩYYИ\™HЭ]YљYYXЬ›ЬЬИ[™YHЭ]YЪY\Л€ќ[›љ[™В€ЛИЫ™Hќ[™X[][YHШ[\ZYЫ€\€ЩYYЩY\И\Ињ›ШY]Y]™[ЭИB€ЛИЫ[ЪЩK\ЭZ]HќYЩ][њЭXYЩ€][\Z[™И][ќИHЫ™И™[ЪX\љЛ‚€ЫЫњЭ™\]Y\ЭYЩYYHќ[X™\Љ›ШЩ\ЬЛ™[ќ‹”“СФ‘TФТSУ—ФТS‘УWФСQQ
+NВ€ЫЫњЭ™\]Y\ЭYЭ]YЮHH›ШЩ\ЬЛ™[ќ‹”“СФ‘TФТSУ—ФТS‘УWФХђUQЦNВ€ЫЫњЭ™\]Y\ЭYЭ]YЮP]ЪH›ШЩ\ЬЛ™[ќ‹”“СФ‘TФТSУ—УУ“WФХђUQЦNВ€ЫЫњЭ]Y]Ы›HH›ШЩ\ЬЛ™[ќ‹”“СФ‘TФТSУ—РUQUУУ“HOOHЊHЋВ€ЫЫњЭЭ[[X\ћSЫ›HH›ШЩ\ЬЛ™[ќ‹”“СФ‘TФТSУ—ФХSSPT–WУУ“HOOHЊHЋВ€ЫЫњЭ›ШњИHќ[X™\‹љ\Сљ[љ]J™\]Y\ЭYЩYY
+H	‰€ХђUQТQTЛљ[ЫY\К™\]Y\ЭYЭ]YЮJB€ИЮИЩYY€™\]Y\ЭYЩYYЭ]YЮN€™\]Y\ЭYЭ]YЮHWB€€’SPT–WФСQQЛ›X\
+
+ЩYY[™^
+HO€
+В€ЩYY€Э]YЮN€ХђUQТQTЦЪ[™^	HХђUQТQTЛ›[™ЭK€JJK™љ[\Љ
+›ШЉHO€TХђUQТQTЛљ[ЫY\К™\]Y\ЭYЭ]YЮP]Ъ
+H›Ш‹њЭ]YЮHOOH™\]Y\ЭYЭ]YЮP]Ъ
+NВ€ЛИљ]™H\ЫЫ]Yќ[ќ[Y\ИЩY\H^XЭЊ\ЩYYЭZ]HЫЬЩHИB€ЛИљ[™]K\ЩXЫЫ™Ы[ЪЩK]\ЭќYЩ]Ы€H™Y™\™[ЩHЫЬљЬЭ][Ы‹‚€ЫЫњЭЫЬљЩ\ђЫЭ[ќHX]›Z[ЉK›ШњЛ›[™Э
+NВ€ЛИ]HЫЭЩ\€ЫШ[Yљ]™[€Ш[\ZYЫњИљ\њЭ€XXЪШ[\ZYЫ€Щ]ИHњ™\Ъ€ЛИќ[ќ[YN€XќYИ™\Щ]И\™H[ќ[ќ[Ы[H›Эќ\ЭYИЫX\€]™\ћB€ЛИ[њЪY[ќ[љ[X][Ы‹Ь›ШИљY[™]ЩY[€[™\[™[ќ[[ЩHШ[\\Л‚€ЫЫњЭЬ™\™Y›ШњИHЛ‹‹љ›ШњЧKњЫЬќ
+
+YќљYЪ
+HO€
+€ХђUQТQTЛљ[™^ЩЉљYЪњЭ]YЮJHHХђUQТQTЛљ[™^ЩЉYќњЭ]YЮJB€
+JNВ€]™^›Ш’[™^HВ€ЫЫњЭШ[\ZYЫ”™\Э[ИHЧNВ€ЫЫњЭќ[‘њ™\ЪШ[\ZYЫ€H
+›ШЉHO€™]И›ЫZ\ЩJ
+™\ЫЫ™K™Z™XЭ
+HO€В€ЫЫњЭЫЬљЩ\€H™]ИЫЬљЩ\ЉЧЩљ[[[YKИЫЬљЩ\‘]N€И›Ш€HJNВ€ЫЬљЩ\‹›ЫЩJ›Y\ЬШYЩH‹™\ЫЫ™JNВ€ЫЬљЩ\‹›ЫЩJ™\њ›Ь€‹™Z™XЭ
+NВ€ЫЬљЩ\‹›ЫЩJ™^]‹
+ЫЩJHO€В€Y€
+ЫЩHOOH
+H™Z™XЭ
+™]И\њ›ЬЉ›ЩЬ™\ЬЪ[Ы€ЫЬљЩ\€^]YЪ]ЫЩH	ШЫЩ_X
+JNВ€JNВ€JNВ€ЫЫњЭќ[“[™HH\Ю[И
+
+HO€В€Ъ[H
+™^›Ш’[™^Ь™\™Y›ШњЛ›[™Э
+HВ€ЫЫњЭ›Ш€HЬ™\™Y›ШњЦЫ™^›Ш’[™^NВ€™^›Ш’[™^
+ПHNВ€Ш[\ZYЫ”™\Э[Лњ\Ъ
+]ШZ]ќ[‘њ™\ЪШ[\ZYЫЉ›ШЉJNВ€B€NВ‚€›ЫZ\ЩK[
+\њ^K™њ›ЫJИ[™Э€ЫЬљЩ\ђЫЭ[ќK
+
+HO€ќ[“[™J
+JJKќ[Љ
+
+HO€В€ЫЫњЭШ[\ZYЫњИHШ[\ZYЫ”™\Э[ЛњЫЬќ
+
+YќљYЪ
+HO€
+€ХђUQТQTЛљ[™^ЩЉYќњЭ]YЮJHHХђUQТQTЛљ[™^ЩЉљYЪњЭ]YЮJB€YќњЩYYHљYЪњЩYY€
+JNВ€ЫЫњЭЭ™\[HЭ[[X\љ^™JШ[\ZYЫњКNВ€ЫЫњЭћTЭ]YЮHHШљ™XЭ™њ›ЫQ[ќљY\КХђUQТQTВ€™љ[\Љ
+Э]YЮJHO€Ш[\ZYЫњЛњЫЫYJ
+Ш[\ZYЫЉHO€Ш[\ZYЫ‹њЭ]YЮHOOHЭ]YЮJJB€›X\
+
+Э]YЮJHO€В€Э]YЮK€Э[[X\љ^™JШ[\ZYЫњЛ™љ[\Љ
+Ш[\ZYЫЉHO€Ш[\ZYЫ‹њЭ]YЮHOOHЭ]YЮJJK€JJNВ‚€ЫЫњЭЭ]Y\‘]Z[ИHВ€Ы™Щ\Э€Л‹‹Ш[\ZYЫњЧB€њЫЬќ
+
+YќљYЪ
+HO€љYЪ™[\ЩYZ[ќ]\ИHYќ™[\ЩYZ[ќ]\КB€њЫXЩJКB€›X\
+
+ИЩYYЭ]YЮK[\ЩYZ[ќ]\ИJHO€
+ИЩYYЭ]YЮK[\ЩYZ[ќ]\ИJJK€Ш\О€Л‹‹Ш[\ZYЫњЧB€њЫЬќ
+
+YќљYЪ
+HO€љYЪ›X^YXЪ[љXСШ\Z[ќ]\ИHYќ›X^YXЪ[љXСШ\Z[ќ]\КB€њЫXЩJJB€›X\
+
+ИЩYYЭ]YЮKX^YXЪ[љXСШ\Z[ќ]\ЛX^YXЪ[љXСШ\]Z[ИJHO€
+В€ЩYY€Э]YЮK€X^YXЪ[љXСШ\Z[ќ]\Л€]Z[О€X^YXЪ[љXСШ\]Z[Л€JJK€]™[XЪШYЩ\О€Л‹‹Ш[\ZYЫњЧB€њЫЬќ
+
+YќљYЪ
+HO€љYЪ›X^]™[XЪШYЩHHYќ›X^]™[XЪШYЩJB€њЫXЩJJB€›X\
+
+ИЩYYЭ]YЮKX^]™[XЪШYЩKX^]™[XЪШYЩQ]Z[ИJHO€
+В€ЩYY€Э]YЮK€X^]™[XЪШYЩK€]Z[О€X^]™[XЪШYЩQ]Z[Л€JJK€YXЪ[љXФXЪШYЩ\О€Л‹‹Ш[\ZYЫњЧB€њЫЬќ
+
+YќљYЪ
+HO€љYЪ›X^YXЪ[љXФXЪШYЩHHYќ›X^YXЪ[љXФXЪШYЩJB€њЫXЩJJB€›X\
+
+ИЩYYЭ]YЮKX^YXЪ[љXФXЪШYЩKX^YXЪ[љXФXЪШYЩQ]Z[ИJHO€
+В€ЩYY€Э]YЮK€X^YXЪ[љXФXЪШYЩK€]Z[О€X^YXЪ[љXФXЪШYЩQ]Z[Л€JJK€NВ€ЫЫњЭXYЫ›ЬЭXИHВ€[љ\]YTЩYYО€™]ИЩ]
+Ш[\ZYЫњЛ›X\
+
+Ш[\ZYЫЉHO€Ш[\ZYЫ‹њЩYY
+JKњЪ^™K€›ЭX›SYXЪ[љXЬО€“ХP“WУQPТS’PФЛ›[™Э€Ш[ЩXЫЫ™О€ќ[X™\Љ
+
+]K››ЭК
+HHЭ\ќY]
+HИL
+KќСљ^Y
+ЉJK€Э™\[€ћTЭ]YЮK€Э]Y\њО€Э]Y\‘]Z[Л€‹‹ЉЭ[[X\ћSЫ›HИЯH€ИШ[\ZYЫњИJK€NВ€ћHВ€Y€
+]Y]Ы›JHВ€ЫЫњЫЫK›ЩК”УУ‹њЭљ[™ЪYћJИ]Y]Ы›N€ќYK‹‹™XYЫ›ЬЭXИJJNВ€™]\›ЋВ€B€\ЬЩ\ќ™\]X[
+™]ИЩ]
+Ш[\ZYЫњЛ›X\
+
+Ш[\ZYЫЉHO€Ш[\ZYЫ‹њЩYY
+JKњЪ^™KЊќH]Y]]\ЭЫЭ™\€]X\ЭЊ[љ\]YHЩYYИЉNВ€\ЬЩ\ќ™\]X[
+™]ИЩ]
+Ш[\ZYЫњЛ›X\
+
+Ш[\ZYЫЉHO€Ш[\ZYЫ‹њЭ]YЮJJKњЪ^™KЛќH]Y]]\Э^\Ъ\ЩH™YHќ^Z[™ИЭ]YЪY\ИЉNВ€\ЬЩ\ќ™\]X[
+Э™\[ЫЫ\]YЭ™\[Ш[\ZYЫњЛ™]™\ћHШ[\YЭ]YЮH]\Эљ[љ\ЪHШ[\ZYЫ€ЉNВ€\ЬЩ\ќ›ЪКЭ™\[™[\ЩYZ[ќ]\ЛњLЏHKШ[\ZYЫ€]\Э™]Z[€H™X[Ь[љ[™И[™ZYHШ[YN€	Т”УУ‹њЭљ[™ЪYћJЭ™\[™[\ЩYZ[ќ]\К_X
+NВ€\ЬЩ\ќ›ЪКЭ™\[™[\ЩYZ[ќ]\ЛњLHLНKL	HЩ€Ш[\ZYЫњИЪЭ[љ]HKL€Э\€\™Щ]Ъ]X\™Ъ[Ћ€	Т”УУ‹њЭљ[™ЪYћJЭ™\[™[\ЩYZ[ќ]\К_X
+NВ€\ЬЩ\ќ›ЪКЭ™\[›X^YXЪ[љXСШ\Z[ќ]\ЛњLHL	HЩ€Ш[\ZYЫњИ™YYH›ЭX›H[›ШЪИ]X\Э]™\ћHZYЪZ[ќ]\О€	Т”УУ‹њЭљ[™ЪYћJЭ™\[›X^YXЪ[љXСШ\Z[ќ]\К_X
+NВ€\ЬЩ\ќ›ЪКЭ™\[›X^YXЪ[љXСШ\Z[ќ]\Л›X^HL›ИШ[\YШ[\ZYЫ€ЪЭ[ЫИ[€Z[ќ]\ИЪ]Э]H›ЭX›H[›ШЪО€	Т”УУ‹њЭљ[™ЪYћJЭ™\[›X^YXЪ[љXСШ\Z[ќ]\К_X
+NВ€\ЬЩ\ќ›ЪКЭ™\[›X^]™[XЪШYЩKњLHНK]HXЫЫ›Ы^H]\Э›ЭЫЫ\ЩH[ќИЪX[ќ]™[XЪШYЩ\О€	Т”УУ‹њЭљ[™ЪYћJЭ™\[›X^]™[XЪШYЩJ_X
+NВ€\ЬЩ\ќ›ЪКЭ™\[›X^YXЪ[љXФXЪШYЩKњLH›ЭX›HYXЪ[љXЬИ™YY›ЫЫHИњ™X]H™]ЩY[€\Ъ\Щ\О€	Т”УУ‹њЭљ[™ЪYћJЭ™\[›X^YXЪ[љXФXЪШYЩJ_X
+NВ€\ЬЩ\ќ™\]X[
+Э™\[™љ\њЭ]™[ќZ[ќ]\Л™›Э[™Э™\[Ш[\ZYЫњЛ™]™\ћHШ[\YШ[\ZYЫ€]\Э[ЫЭ[ќ\€[€[™\™Ь›Э[™]™[ќЉNВ€\ЬЩ\ќ›ЪКЭ™\[™љ\њЭ]™[ќZ[ќ]\ЛњLHMK]™[ќИЪЭ[™XЫЫYHљ\ЪX›H\љ[™ИHX\›HШ[YN€	Т”УУ‹њЭљ[™ЪYћJЭ™\[™љ\њЭ]™[ќZ[ќ]\К_X
+NВ€\ЬЩ\ќ›ЪКЭ™\[™љ\њЭ]™[ќZ[ќ]\Л›X^HЊ›ИЩYYЪЭ[YH]Иљ\њЭ]™[ќ™^[Ы™Щ[ќHZ[ќ]\О€	Т”УУ‹њЭљ[™ЪYћJЭ™\[™љ\њЭ]™[ќZ[ќ]\К_X
+NВ€HШ]Ъ
+\њ›ЬЉHВ€ЛИЩY\Hќ[YX\Э\™[Y[ќљ\ЪX›HЪ[€H\™Щ]\Э]H\ЬЩ\ќ[Ы€Z[ОВ€ЛИ\И\Э\И[ЫИH[[Ъ[™И]Y]\ЩYИЭZYHH™^љ^‚€ЫЫњЫЫK›ЩК”УУ‹њЭљ[™ЪYћJИXYЫ›ЬЭXО€ќYK‹‹™XYЫ›ЬЭXИJJNВ€›ЭИ\њ›ЬЋВ€B‚€ЫЫњЫЫK›ЩК”УУ‹њЭљ[™ЪYћJИЪО€ќYK‹‹™XYЫ›ЬЭXИJJNВ€JKШ]Ъ
+
+\њ›ЬЉHO€В€ЫЫњЫЫK™\њ›ЬЉ\њ›ЬЏЛњЭXЪИ\њ›ЬЉNВ€›ШЩ\ЬЛ™^]ЫЩHHNВ€JNВџB
