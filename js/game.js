@@ -76,6 +76,7 @@ const FINAL_LAYER_DEPTH_METERS = Math.max(
 const WORKSHOP_FIRST_RANK_CAP = 4;
 const WORKSHOP_BREAKTHROUGH_CAP = 4;
 const WORKSHOP_LEVEL_CAP = 35;
+const UPGRADE_ICON_DIRECTORY = 'assets/icons/upgrades';
 const STORAGE_KEY = 'depth-zero-save-v1';
 const CAMPAIGN = Object.freeze({
   requiredLifetimeChunks: 4_000,
@@ -3714,6 +3715,32 @@ function oreBreakdownMarkup(bag = {}) {
   )).join('');
 }
 
+function upgradeIconAssetUrl(definition) {
+  return `${UPGRADE_ICON_DIRECTORY}/${definition.id}.png`;
+}
+
+function prepareUpgradeIconImage(node) {
+  const icon = node.querySelector('.upgrade-node__icon');
+  const image = icon?.querySelector('.upgrade-node__icon-image');
+  if (!icon || !image) return;
+
+  const showImage = () => {
+    icon.classList.add('has-image');
+    icon.classList.remove('is-missing');
+  };
+  const keepFallback = () => {
+    icon.classList.remove('has-image');
+    icon.classList.add('is-missing');
+  };
+
+  image.addEventListener('load', showImage, { once: true });
+  image.addEventListener('error', keepFallback, { once: true });
+  if (image.complete) {
+    if (image.naturalWidth > 0) showImage();
+    else keepFallback();
+  }
+}
+
 function renderUpgrades() {
   if (!ui.upgradeNodes || !ui.upgradeWorld || !ui.upgradeEdges) return;
   const previousVisible = state.visibleUpgradeIds;
@@ -3807,7 +3834,19 @@ function renderUpgrades() {
           : 'Не хватает руды — недостающие позиции отмечены красным';
     node.setAttribute('aria-label', `${definition.name}. ${definition.description}. Уровень ${level} из ${definition.maxLevel}. ${requirements}. ${priceText}. ${actionHint}`);
     node.innerHTML = `
-      <span class="upgrade-node__icon" aria-hidden="true">${definition.icon || '◆'}</span>
+      <span class="upgrade-node__icon" aria-hidden="true">
+        <span class="upgrade-node__icon-fallback">${definition.icon || '◆'}</span>
+        <img
+          class="upgrade-node__icon-image"
+          src="${upgradeIconAssetUrl(definition)}"
+          alt=""
+          width="192"
+          height="192"
+          loading="lazy"
+          decoding="async"
+          draggable="false"
+        />
+      </span>
       <span class="upgrade-node__level">${atMax && definition.maxLevel === 1 ? '✓' : `${level}/${definition.maxLevel}`}</span>
       <span class="upgrade-node__tooltip" role="tooltip">
         <strong class="tooltip__title">${definition.name}</strong>
@@ -3817,6 +3856,7 @@ function renderUpgrades() {
         <span class="tooltip__hint">${actionHint}</span>
       </span>
     `;
+    prepareUpgradeIconImage(node);
     nodeFragment.append(node);
   }
   ui.upgradeNodes.replaceChildren(nodeFragment);

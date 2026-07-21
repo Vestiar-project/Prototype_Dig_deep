@@ -2179,11 +2179,51 @@ button.upgrade-node { font: inherit; }
   display: grid;
   width: 30px;
   height: 30px;
+  position: relative;
   place-items: center;
+  overflow: hidden;
+  isolation: isolate;
   border: 1px solid color-mix(in srgb, var(--category-color) 65%, #183a3f);
   color: var(--category-color);
   background: rgba(2, 12, 17, 0.58);
   font-size: 15px;
+}
+
+.upgrade-node__icon-fallback,
+.upgrade-node__icon-image {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.upgrade-node__icon-fallback {
+  z-index: 0;
+  transition: opacity 120ms ease;
+}
+
+.upgrade-node__icon-image {
+  z-index: 1;
+  display: block;
+  width: 125%;
+  height: 125%;
+  max-width: none;
+  object-fit: contain;
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  transition: opacity 120ms ease;
+}
+
+.upgrade-node__icon.has-image .upgrade-node__icon-fallback {
+  opacity: 0;
+}
+
+.upgrade-node__icon.has-image .upgrade-node__icon-image {
+  opacity: 1;
+}
+
+.upgrade-node__icon.is-missing .upgrade-node__icon-image {
+  display: none;
 }
 
 .upgrade-node__name {

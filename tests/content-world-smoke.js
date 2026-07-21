@@ -366,6 +366,23 @@ const playerFacingSource = ["index.html", path.join("js", "game.js")]
 const gameSource = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
 const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const stylesSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
+const upgradeIconDirectory = path.join(root, "assets", "icons", "upgrades");
+const expectedUpgradeIcons = UPGRADE_DEFS.map((definition) => `${definition.id}.png`).sort();
+const actualUpgradeIcons = fs.readdirSync(upgradeIconDirectory)
+  .filter((filename) => filename.toLocaleLowerCase("en").endsWith(".png"))
+  .sort();
+assert.deepEqual(actualUpgradeIcons, expectedUpgradeIcons, "every upgrade must have exactly one matching PNG icon");
+for (const filename of actualUpgradeIcons) {
+  const png = fs.readFileSync(path.join(upgradeIconDirectory, filename));
+  assert.equal(png.subarray(0, 8).toString("hex"), "89504e470d0a1a0a", `${filename} must be a valid PNG`);
+  assert.equal(png.readUInt32BE(16), 192, `${filename} must be 192 px wide`);
+  assert.equal(png.readUInt32BE(20), 192, `${filename} must be 192 px tall`);
+  assert.equal(png[25], 6, `${filename} must retain RGBA transparency`);
+}
+assert.match(gameSource, /assets\/icons\/upgrades/);
+assert.match(gameSource, /upgradeIconAssetUrl\(definition\)/);
+assert.match(gameSource, /upgrade-node__icon-fallback/);
+assert.match(stylesSource, /\.upgrade-node__icon\.has-image\s+\.upgrade-node__icon-image/);
 assert.doesNotMatch(
   playerFacingSource,
   /Стаж экспедиции/i,
@@ -421,13 +438,13 @@ assert.match(indexSource, /id=["']startUpgrades["']/, "the title screen needs a 
 assert.match(gameSource, /startUpgrades\?\.addEventListener\(['"]click['"],\s*openUpgradeScreen\)/, "the title workshop button must open the existing upgrade screen");
 assert.match(stylesSource, /\.result-header h2[\s\S]*?\.micro-event-banner[\s\S]*?\{\s*text-shadow:\s*none/, "the result heading must remain readable without a same-colour duplicate shadow");
 assert.match(indexSource, /class=["'][^"']*theme-rust-comic/);
-assert.match(indexSource, /styles\.css\?v=deep-shaft-9-tech1/);
-assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-9-tech1/);
-assert.match(indexSource, /js\/world\.js\?v=deep-shaft-9-tech1/);
-assert.match(indexSource, /js\/music\.js\?v=deep-shaft-9-tech1/);
-assert.match(indexSource, /js\/game\.js\?v=deep-shaft-9-tech1/);
+assert.match(indexSource, /styles\.css\?v=deep-shaft-9-icons1/);
+assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-9-icons1/);
+assert.match(indexSource, /js\/world\.js\?v=deep-shaft-9-icons1/);
+assert.match(indexSource, /js\/music\.js\?v=deep-shaft-9-icons1/);
+assert.match(indexSource, /js\/game\.js\?v=deep-shaft-9-icons1/);
 assert.ok(
-  indexSource.indexOf('js/music.js?v=deep-shaft-9-tech1') < indexSource.indexOf('js/game.js?v=deep-shaft-9-tech1'),
+  indexSource.indexOf('js/music.js?v=deep-shaft-9-icons1') < indexSource.indexOf('js/game.js?v=deep-shaft-9-icons1'),
   "the soundtrack singleton must load before the game audio engine",
 );
 assert.match(indexSource, /id=["']soundToggle["'][\s\S]*?aria-pressed=["']true["']/);
