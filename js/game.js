@@ -77,6 +77,23 @@ const WORKSHOP_FIRST_RANK_CAP = 4;
 const WORKSHOP_BREAKTHROUGH_CAP = 4;
 const WORKSHOP_LEVEL_CAP = 35;
 const UPGRADE_ICON_DIRECTORY = 'assets/icons/upgrades';
+const MINER_SPRITE_DIRECTORY = 'assets/characters/miner';
+const MINER_SPRITE_CANVAS_SIZE = 512;
+const MINER_SPRITE_PIVOT_X = 193;
+const MINER_SPRITE_PIVOT_Y = 450;
+const MINER_SPRITE_SCALE = 0.23;
+const MINER_SPRITE_BASELINE_OFFSET = 22;
+const MINER_SPRITE_VARIANTS = Object.freeze([
+  Object.freeze({ id: 'v01_worn_pick', tier: 1, ranged: false, scale: 1 }),
+  Object.freeze({ id: 'v02_iron_pick', tier: 2, ranged: false, scale: 1 }),
+  Object.freeze({ id: 'v03_steel_pick', tier: 3, ranged: false, scale: 1 }),
+  Object.freeze({ id: 'v04_pneumatic_pick', tier: 4, ranged: false, scale: 0.98 }),
+  Object.freeze({ id: 'v05_super_pick', tier: 5, ranged: false, scale: 1.37 }),
+  Object.freeze({ id: 'v06_mining_laser', tier: 6, ranged: true, scale: 1.05 }),
+  Object.freeze({ id: 'v07_solar_drill', tier: 7, ranged: true, scale: 1 }),
+]);
+const MINER_SPRITE_CACHE = new Map();
+let activeMinerSpriteVariantId = null;
 const STORAGE_KEY = 'depth-zero-save-v1';
 const CAMPAIGN = Object.freeze({
   requiredLifetimeChunks: 4_000,
@@ -1527,6 +1544,7 @@ function startRun(options = {}) {
   if (state.activeTutorialId) dismissTutorial(true);
   sound.unlock();
   stats = normalizeStats(calculateMetaStats(save.levels));
+  preloadMinerVariant(stats);
   newWorld(runOptions.seed ?? getRunSeed(), {
     useLift: true,
     sectorId: runOptions.sectorId || null,
@@ -3377,6 +3395,7 @@ function buyUpgrade(id, options = {}) {
     save.pendingShowcases = { ...(save.pendingShowcases || {}), bomb: true };
   }
   stats = normalizeStats(calculateMetaStats(save.levels));
+  preloadMinerVariant(stats);
   if (!stats.oreFocusUnlocked) save.focusedOreId = null;
   // Once an unpinned node is finished, keep the "next breakthrough" panel
   // useful by advancing selection to the next available incomplete node.
@@ -9607,6 +9626,110 @@ function drawDrones() {
   }
 }
 
+function getMinerSpriteVariant(currentStats = stats) {
+  if (currentStats?.solarDrillEnabled) return MINER_SPRITE_VARIANTS[6];
+  if (currentStats?.laserUnlocked) return MINER_SPRITE_VARIANTS[5];
+  const tier = clamp(Math.floor(currentStats?.toolTier || 1), 1, 5);
+  return MINER_SPRITE_VARIANTS[tier - 1];
+}
+
+function getMinerSpriteAction(player = state.player, currentStats = stats) {
+  const variant = getMinerSpriteVariant(currentStats);
+  if (!player) return 'idle';
+
+  const workRange = currentStats.laserUnlocked
+    ? currentStats.laserRange + TILE_SIZE * 0.75
+    : Math.max(currentStats.digReach, TILE_SIZE * 0.9);
+  const targetInWorkRange = Boolean(
+    state.mode === 'run'
+    && state.target
+    && distance(player.x, player.y, state.target.x, state.target.y) <= workRange + TILE_SIZE * 0.2
+  );
+  const openingBlockedPath = Boolean(
+    state.mode === 'run'
+    && state.target
+    && !currentStats.laserUnlocked
+    && state.stuckElapsed > 0.02
+  );
+  const engaged = targetInWorkRange || openingBlockedPath;
+  if (!engaged && player.moving > 0.16) return 'step';
+  if (engaged && player.swing >= 0.66) return variant.ranged ? 'fire' : 'contact';
+  if (engaged && player.swing > 0.04) return 'recoil';
+  if (engaged) {
+    const preparationLead = variant.ranged ? 0.16 : 0.12;
+    return state.attackCooldown <= preparationLead
+      ? (variant.ranged ? 'aim' : 'prepare')
+      : 'idle';
+  }
+  if (player.moving > 0.16) return 'step';
+  return 'idle';
+}
+
+function getMinerSpriteDescriptor(player = state.player, currentStats = stats) {
+  const variant = getMinerSpriteVariant(currentStats);
+  const action = getMinerSpriteAction(player, currentStats);
+  const filename = `miner_${variant.id}_${action}.png`;
+  return {
+    variant: variant.id,
+    tier: variant.tier,
+    ranged: variant.ranged,
+    scale: variant.scale,
+    action,
+    filename,
+    src: `${MINER_SPRITE_DIRECTORY}/${filename}`,
+  };
+}
+
+function requestMinerSprite(descriptor) {
+  if (!descriptor || typeof window.Image !== 'function') return null;
+  if (descriptor.variant && activeMinerSpriteVariantId !== descriptor.variant) {
+    MINER_SPRITE_CACHE.clear();
+    activeMinerSpriteVariantId = descriptor.variant;
+  }
+  let entry = MINER_SPRITE_CACHE.get(descriptor.filename);
+  if (!entry) {
+    const image = new window.Image();
+    entry = { image, ready: false, failed: false };
+    MINER_SPRITE_CACHE.set(descriptor.filename, entry);
+    image.decoding = 'async';
+    image.onload = () => {
+      entry.ready = image.naturalWidth > 0;
+      entry.failed = !entry.ready;
+    };
+    image.onerror = () => {
+      entry.ready = false;
+      entry.failed = true;
+    };
+    image.src = descriptor.src;
+  }
+  return entry.ready && !entry.failed ? entry.image : null;
+}
+
+function preloadMinerVariant(currentStats = stats) {
+  const variant = getMinerSpriteVariant(currentStats);
+  if (activeMinerSpriteVariantId !== variant.id) {
+    MINER_SPRITE_CACHE.clear();
+    activeMinerSpriteVariantId = variant.id;
+  }
+  const actions = variant.ranged
+    ? ['idle', 'step', 'aim', 'fire', 'recoil']
+    : ['idle', 'step', 'prepare', 'contact', 'recoil'];
+  for (const action of actions) {
+    const filename = `miner_${variant.id}_${action}.png`;
+    requestMinerSprite({ variant: variant.id, filename, src: `${MINER_SPRITE_DIRECTORY}/${filename}` });
+  }
+}
+
+function drawMinerComboLabel(player, bob) {
+  if (!(state.demolitionComboStage > 0 && state.demolitionComboExpires >= state.elapsed)) return;
+  ctx.save();
+  ctx.font = '900 9px ui-monospace, "Lucida Console", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = state.demolitionComboStage === 1 ? '#76dbff' : '#ca9cff';
+  ctx.fillText(`ОРКЕСТР ${state.demolitionComboStage}/3`, player.x, player.y - 84 - bob);
+  ctx.restore();
+}
+
 function drawMiner(now) {
   if (!state.player) return;
   const player = state.player;
@@ -9618,6 +9741,8 @@ function drawMiner(now) {
   const motionNow = REDUCED_MOTION ? 0 : now;
   const walk = Math.sin(motionNow * 0.016) * player.moving;
   const bob = Math.abs(Math.sin(motionNow * 0.016)) * player.moving * 1.1;
+  const spriteDescriptor = getMinerSpriteDescriptor(player, stats);
+  const sprite = requestMinerSprite(spriteDescriptor);
 
   // The lamp sits behind the silhouette, keeping the miner's colours crisp.
   ctx.save();
@@ -9638,9 +9763,32 @@ function drawMiner(now) {
   ctx.globalAlpha = 0.35;
   ctx.fillStyle = '#03090e';
   ctx.beginPath();
-  ctx.ellipse(0, 23, 24, 7, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 23, sprite ? 29 : 24, 7, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
+
+  if (sprite) {
+    const stepTilt = spriteDescriptor.action === 'step'
+      ? Math.sin(motionNow * 0.016) * 0.018 * player.moving
+      : 0;
+    ctx.save();
+    ctx.translate(player.x, player.y + MINER_SPRITE_BASELINE_OFFSET - bob);
+    ctx.rotate(stepTilt * player.facing);
+    const spriteScale = MINER_SPRITE_SCALE * (spriteDescriptor.scale || 1);
+    ctx.scale(player.facing * spriteScale, spriteScale);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(
+      sprite,
+      -MINER_SPRITE_PIVOT_X,
+      -MINER_SPRITE_PIVOT_Y,
+      MINER_SPRITE_CANVAS_SIZE,
+      MINER_SPRITE_CANVAS_SIZE,
+    );
+    ctx.restore();
+    drawMinerComboLabel(player, bob);
+    return;
+  }
 
   ctx.save();
   ctx.translate(player.x, player.y - bob);
@@ -9990,14 +10138,7 @@ function drawMiner(now) {
   ctx.fillRect(12, 5, 2, 2);
   ctx.restore();
 
-  if (state.demolitionComboStage > 0 && state.demolitionComboExpires >= state.elapsed) {
-    ctx.save();
-    ctx.font = '900 9px ui-monospace, "Lucida Console", monospace';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = state.demolitionComboStage === 1 ? '#76dbff' : '#ca9cff';
-    ctx.fillText(`ОРКЕСТР ${state.demolitionComboStage}/3`, player.x, player.y - 84 - bob);
-    ctx.restore();
-  }
+  drawMinerComboLabel(player, bob);
 
   drawTool();
 }
@@ -10618,6 +10759,7 @@ function bindEvents() {
 function initialize() {
   resizeCanvas();
   newWorld(20260716);
+  preloadMinerVariant(stats);
   bindEvents();
   showTitle();
   $('#pauseOverlay')?.classList.add('hidden');
@@ -10730,6 +10872,12 @@ window.__DEPTH_ZERO__ = {
     terrainBaseCache: getTerrainBaseCacheStats(),
   }),
   getStats: () => ({ ...stats }),
+  debugGetMinerSpriteVariant: (overrides = {}) => ({
+    ...getMinerSpriteVariant({
+      ...stats,
+      ...(overrides && typeof overrides === 'object' ? overrides : {}),
+    }),
+  }),
   getTerrainBaseCacheStats,
   getUpgradeCatalog: () => UPGRADE_DEFS.map((definition) => {
     const level = getUpgradeLevel(definition);

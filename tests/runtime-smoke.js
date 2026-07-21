@@ -121,6 +121,21 @@ global.addEventListener = () => {};
 global.requestAnimationFrame = () => 0;
 global.cancelAnimationFrame = () => {};
 global.confirm = () => true;
+const requestedImageSources = [];
+global.Image = class StubImage {
+  constructor() {
+    this.naturalWidth = 512;
+    this.naturalHeight = 512;
+    this.onload = null;
+    this.onerror = null;
+  }
+  set src(value) {
+    this._src = String(value);
+    requestedImageSources.push(this._src);
+    this.onload?.();
+  }
+  get src() { return this._src || ""; }
+};
 global.localStorage = {
   getItem: (key) => localData.get(key) ?? null,
   setItem: (key, value) => localData.set(key, String(value)),
@@ -154,6 +169,12 @@ require(path.join(root, "js", "game.js"));
 const api = global.__DEPTH_ZERO__;
 assert.ok(api, "runtime diagnostics API should initialize");
 assert.equal(api.getSnapshot().upgrades, 102, "all selected upgrade nodes should be registered");
+assert.equal(api.debugGetMinerSpriteVariant({ toolTier: 1, laserUnlocked: false, solarDrillEnabled: false }).id, "v01_worn_pick");
+assert.equal(api.debugGetMinerSpriteVariant({ toolTier: 5, laserUnlocked: false, solarDrillEnabled: false }).id, "v05_super_pick");
+assert.equal(api.debugGetMinerSpriteVariant({ toolTier: 7, laserUnlocked: true, solarDrillEnabled: false }).id, "v06_mining_laser");
+assert.equal(api.debugGetMinerSpriteVariant({ toolTier: 7, laserUnlocked: true, solarDrillEnabled: true }).id, "v07_solar_drill");
+assert.equal(requestedImageSources.length, 5, "only the active equipment tier should preload");
+assert.ok(requestedImageSources.every((source) => source.startsWith("assets/characters/miner/miner_v01_worn_pick_")));
 const initialUpgradeCatalog = api.getUpgradeCatalog();
 assert.equal(
   initialUpgradeCatalog.find((upgrade) => upgrade.id === "gadgets_shock_capsule").breakthrough,

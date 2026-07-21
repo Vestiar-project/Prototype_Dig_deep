@@ -438,13 +438,13 @@ assert.match(indexSource, /id=["']startUpgrades["']/, "the title screen needs a 
 assert.match(gameSource, /startUpgrades\?\.addEventListener\(['"]click['"],\s*openUpgradeScreen\)/, "the title workshop button must open the existing upgrade screen");
 assert.match(stylesSource, /\.result-header h2[\s\S]*?\.micro-event-banner[\s\S]*?\{\s*text-shadow:\s*none/, "the result heading must remain readable without a same-colour duplicate shadow");
 assert.match(indexSource, /class=["'][^"']*theme-rust-comic/);
-assert.match(indexSource, /styles\.css\?v=deep-shaft-9-icons1/);
-assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-9-icons1/);
-assert.match(indexSource, /js\/world\.js\?v=deep-shaft-9-icons1/);
-assert.match(indexSource, /js\/music\.js\?v=deep-shaft-9-icons1/);
-assert.match(indexSource, /js\/game\.js\?v=deep-shaft-9-icons1/);
+assert.match(indexSource, /styles\.css\?v=deep-shaft-9-character1/);
+assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-9-character1/);
+assert.match(indexSource, /js\/world\.js\?v=deep-shaft-9-character1/);
+assert.match(indexSource, /js\/music\.js\?v=deep-shaft-9-character1/);
+assert.match(indexSource, /js\/game\.js\?v=deep-shaft-9-character1/);
 assert.ok(
-  indexSource.indexOf('js/music.js?v=deep-shaft-9-icons1') < indexSource.indexOf('js/game.js?v=deep-shaft-9-icons1'),
+  indexSource.indexOf('js/music.js?v=deep-shaft-9-character1') < indexSource.indexOf('js/game.js?v=deep-shaft-9-character1'),
   "the soundtrack singleton must load before the game audio engine",
 );
 assert.match(indexSource, /id=["']soundToggle["'][\s\S]*?aria-pressed=["']true["']/);
