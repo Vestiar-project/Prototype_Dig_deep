@@ -7,14 +7,14 @@
       name="description"
       content="ГЛУБИНА: НУЛЬ — короткие подземные забеги, автоматическая добыча и большая мета-прокачка."
     />
-    <meta name="theme-color" content="#071b26" />
+    <meta name="theme-color" content="#2b1713" />
     <title>ГЛУБИНА: НУЛЬ</title>
-    <link rel="stylesheet" href="styles.css?v=deep-shaft-6" />
+    <link rel="stylesheet" href="styles.css?v=deep-shaft-11" />
   </head>
   <body>
     <a class="skip-link" href="#gameCanvas">К игровому полю</a>
 
-    <main id="gameShell" aria-label="Игра ГЛУБИНА: НУЛЬ">
+    <main id="gameShell" class="theme-rust-comic" aria-label="Игра ГЛУБИНА: НУЛЬ">
       <canvas
         id="gameCanvas"
         tabindex="0"
@@ -61,6 +61,7 @@
         <div class="timer-module" aria-label="Оставшееся время">
           <div class="timer-topline">
             <span class="hud-label">СМЕНА ЗАКОНЧИТСЯ ЧЕРЕЗ</span>
+            <span id="mobileDepthValue" class="mobile-depth" aria-label="Текущая глубина">↓ 0 м</span>
             <strong id="timerValue">6.0</strong>
           </div>
           <div
@@ -76,20 +77,17 @@
           </div>
         </div>
 
-        <button
+        <div
           id="focusHud"
           class="focus-hud hidden"
-          type="button"
-          title="Выбрать руду для фокуса"
-          aria-haspopup="dialog"
-          aria-controls="runOreFocusDialog"
-          aria-expanded="false"
+          role="status"
+          aria-live="polite"
+          title="Текущий приоритет рудного фокуса"
         >
           <span aria-hidden="true">⌾</span>
           <small>ФОКУС</small>
           <strong id="focusHudName">—</strong>
-          <em>СМЕНИТЬ</em>
-        </button>
+        </div>
 
         <div class="hud-cluster hud-cluster--right">
           <div class="hud-chip" title="Текущий инструмент">
@@ -109,27 +107,6 @@
           </div>
         </div>
       </section>
-
-      <div id="runOreFocusBackdrop" class="run-ore-focus__backdrop hidden">
-        <section
-          id="runOreFocusDialog"
-          class="run-ore-focus panel-frame"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="runOreFocusTitle"
-          aria-describedby="runOreFocusDescription"
-        >
-          <header class="run-ore-focus__header">
-            <span>
-              <small>НАСТРОЙКА ЧУТЬЯ · СМЕНА НА ПАУЗЕ</small>
-              <strong id="runOreFocusTitle">ВЫБЕРИТЕ РУДУ</strong>
-            </span>
-            <button id="closeRunOreFocus" class="run-ore-focus__close" type="button" aria-label="Закрыть выбор руды">×</button>
-          </header>
-          <p id="runOreFocusDescription">Фокус можно менять прямо в забеге. Выбранная руда ищется дальше, остальные жилы временно игнорируются.</p>
-          <div id="runOreFocusChoices" class="run-ore-focus__choices" role="group" aria-label="Выберите приоритетную руду"></div>
-        </section>
-      </div>
 
       <aside
         id="tutorialCoach"
@@ -245,10 +222,16 @@
               <div class="signal-ring signal-ring--outer"></div>
               <div class="signal-ring signal-ring--inner"></div>
               <div class="miner-mark">
-                <span class="miner-lamp"></span>
+                <span class="miner-backpack"></span>
                 <span class="miner-head"></span>
+                <span class="miner-lamp"></span>
+                <span class="miner-visor"></span>
                 <span class="miner-body"></span>
-                <span class="miner-pick"></span>
+                <span class="miner-arm"></span>
+                <span class="miner-belt"></span>
+                <span class="miner-boot miner-boot--left"></span>
+                <span class="miner-boot miner-boot--right"></span>
+                <span class="miner-pick"><span class="miner-pick-head"></span></span>
               </div>
               <span class="ore-mark ore-mark--a"></span>
               <span class="ore-mark ore-mark--b"></span>
@@ -263,7 +246,7 @@
 
           <footer class="start-footer">
             <span><i class="status-dot"></i> АВТОСОХРАНЕНИЕ ВКЛЮЧЕНО</span>
-            <span id="campaignStatus" title="Прогресс основной кампании">РАКЕТА · 0%</span>
+            <span id="campaignStatus" title="Прогресс основной кампании">ГЛУБИНА · 0%</span>
           </footer>
         </div>
       </section>
@@ -582,6 +565,10 @@
                 <span class="btn-icon" aria-hidden="true">⌄</span>
                 ВЕРНУТЬСЯ В ШАХТУ
               </button>
+              <button id="endingResetProgress" class="btn btn--danger" type="button">
+                <span class="btn-icon" aria-hidden="true">↺</span>
+                НАЧАТЬ ЗАНОВО
+              </button>
             </div>
           </footer>
         </div>
@@ -756,9 +743,9 @@
     <noscript>
       <div class="noscript-message">Включите JavaScript, чтобы спуститься в шахту.</div>
     </noscript>
-    <script defer src="js/upgrades.js?v=deep-shaft-6"></script>
-    <script defer src="js/world.js?v=deep-shaft-6"></script>
-    <script defer src="js/music.js?v=deep-shaft-6"></script>
-    <script defer src="js/game.js?v=deep-shaft-6"></script>
+    <script defer src="js/upgrades.js?v=deep-shaft-11"></script>
+    <script defer src="js/world.js?v=deep-shaft-11"></script>
+    <script defer src="js/music.js?v=deep-shaft-11"></script>
+    <script defer src="js/game.js?v=deep-shaft-11"></script>
   </body>
 </html>

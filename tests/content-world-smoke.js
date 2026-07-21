@@ -10,7 +10,7 @@ require(path.join(root, "js", "upgrades.js"));
 require(path.join(root, "js", "world.js"));
 
 const { UPGRADE_DEFS, ORE_TYPES, calculateMetaStats, getUpgradeRecipe } = global.DepthZeroUpgrades;
-const { MineWorld, WORLD_CONFIG } = global.DepthZeroWorld;
+const { MineWorld, WORLD_CONFIG, FINAL_LAYER_TY, FINAL_SEAL_HITS } = global.DepthZeroWorld;
 const ids = new Set(UPGRADE_DEFS.map((definition) => definition.id));
 
 assert.equal(UPGRADE_DEFS.length, 102);
@@ -97,6 +97,9 @@ assert.equal(fullStats.fortunePityThreshold, 5);
 assert.equal(fullStats.motherlodeTriggerBreaks, 20);
 assert.equal(fullStats.demolitionComboEnabled, true);
 assert.equal(fullStats.solarDrillProcEvery, 5);
+assert.equal(calculateMetaStats({ tools_solar_drill: 1 }).solarDrillProcEvery, 0, "the Prism Condenser must not inherit Solar Drill cadence");
+assert.equal(calculateMetaStats({ core_bon_voyage: 1 }).solarDrillProcEvery, 5, "the final Solar Drill must own the fifth-shot cadence");
+assert.equal(calculateMetaStats({ core_bon_voyage: 1 }).solarDrillEnabled, true, "only the final tool may target the planetary seal");
 const oreFocus = UPGRADE_DEFS.find((definition) => definition.id === "sense_ore_focus");
 assert.equal(oreFocus?.requiresOreDiscovery, "silver", "ore focus must unlock after the first T5 sample");
 assert.deepEqual(
@@ -293,6 +296,11 @@ assert.deepEqual(
   { prism_crystal: 5300, void_ore: 1800, star_core: 260 },
   "the final recipe must preserve the calibrated multi-ore accumulation tail",
 );
+const prismCondenser = UPGRADE_DEFS.find((definition) => definition.id === "tools_solar_drill");
+assert.ok(prismCondenser && finalUpgrade, "the late tool branch must retain both the Prism Condenser and Solar Drill");
+assert.notEqual(prismCondenser.name, finalUpgrade.name, "the preparatory module and the finale tool must be distinct upgrades");
+assert.equal(FINAL_LAYER_TY, WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 1, "the planetary seal must occupy the final mineable row");
+assert.equal(FINAL_SEAL_HITS, 3, "the planetary seal must require three Solar Drill finishes");
 assert.deepEqual(
   getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "tools_super_pick_echo"), 0),
   { void_ore: 40, prism_crystal: 40, silver: 15 },
@@ -401,13 +409,27 @@ assert.match(indexSource, /id=["']resumeRun["'][^>]*>ПРОДОЛЖИТЬ</u, "t
 assert.match(stylesSource, /\.pause-overlay__resume\s*\{[\s\S]*?min-height:\s*52px/, "the mobile resume action must be a large touch target");
 assert.match(stylesSource, /@media \(hover: none\) and \(pointer: coarse\)[\s\S]*?\.pause-overlay__desktop-copy\s*\{\s*display:\s*none[\s\S]*?\.pause-overlay__resume\s*\{[\s\S]*?display:\s*inline-flex/, "mobile pause copy must not instruct the player to press Esc");
 assert.match(gameSource, /resumeRun\?\.addEventListener\(['"]click['"],\s*\(\)\s*=>\s*togglePause\(false\)\)/, "the resume button must explicitly clear pause without auto-resuming on visibility return");
-assert.match(indexSource, /styles\.css\?v=deep-shaft-6/);
-assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-6/);
-assert.match(indexSource, /js\/world\.js\?v=deep-shaft-6/);
-assert.match(indexSource, /js\/music\.js\?v=deep-shaft-6/);
-assert.match(indexSource, /js\/game\.js\?v=deep-shaft-6/);
+assert.match(indexSource, /id=["']focusHud["'][\s\S]*?role=["']status["']/, "the in-run focus must be a passive status readout");
+assert.doesNotMatch(indexSource, /id=["']runOreFocusBackdrop["']|id=["']runOreFocusChoices["']/, "focus must not be switched from an active shift");
+assert.doesNotMatch(gameSource, /focusHud\?\.addEventListener\(['"]click['"]/, "the in-run focus HUD must not install a change action");
+assert.match(stylesSource, /\.focus-hud\s*\{[\s\S]*?left:\s*50%[\s\S]*?transform:\s*translateX\(-50%\)/, "focus status must sit bottom-centre instead of over the field guide");
+assert.match(indexSource, /id=["']endingResetProgress["']/, "the completed comic must offer a progress reset");
+assert.match(gameSource, /endingResetProgress\?\.addEventListener\(['"]click['"],\s*resetAllProgress\)/, "the ending reset action must use the normal progress reset path");
+assert.match(gameSource, /version:\s*15/, "the final-seal state must be persisted in schema v15");
+assert.match(indexSource, /class=["'][^"']*theme-rust-comic/);
+assert.match(indexSource, /class=["']miner-backpack["']/);
+assert.match(indexSource, /class=["']miner-visor["']/);
+assert.match(indexSource, /class=["']miner-pick-head["']/);
+assert.doesNotMatch(indexSource, /class=["']miner-prism["']/);
+assert.match(stylesSource, /Current expedition miner[\s\S]*?steel pick[\s\S]*?\.miner-backpack[\s\S]*?\.miner-visor[\s\S]*?\.miner-pick-head/);
+assert.match(stylesSource, /Keep the visibility pass last[\s\S]*?\.result-header h2\s*\{\s*text-shadow:\s*none/);
+assert.match(indexSource, /styles\.css\?v=deep-shaft-11/);
+assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-11/);
+assert.match(indexSource, /js\/world\.js\?v=deep-shaft-11/);
+assert.match(indexSource, /js\/music\.js\?v=deep-shaft-11/);
+assert.match(indexSource, /js\/game\.js\?v=deep-shaft-11/);
 assert.ok(
-  indexSource.indexOf('js/music.js?v=deep-shaft-6') < indexSource.indexOf('js/game.js?v=deep-shaft-6'),
+  indexSource.indexOf('js/music.js?v=deep-shaft-11') < indexSource.indexOf('js/game.js?v=deep-shaft-11'),
   "the soundtrack singleton must load before the game audio engine",
 );
 assert.match(indexSource, /id=["']soundToggle["'][\s\S]*?aria-pressed=["']true["']/);

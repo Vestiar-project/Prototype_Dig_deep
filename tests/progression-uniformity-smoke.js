@@ -72,7 +72,7 @@ const NOTABLE_MECHANICS = Object.freeze([
   { id: "tools_laser_splitter", level: 1, label: "split laser" },
   { id: "tools_mirror_crystal", level: 1, label: "laser ricochet" },
   { id: "tools_super_pick_echo", level: 1, label: "super-pick echo" },
-  { id: "tools_solar_drill", level: 1, label: "solar drill" },
+  { id: "tools_solar_drill", level: 1, label: "prism condenser" },
   { id: "fortune_glimmer_hunter", level: 1, label: "rare ore bonus" },
   { id: "fortune_rich_vein", level: 1, label: "rich veins" },
   { id: "fortune_double_yield", level: 1, label: "double yield" },
@@ -84,7 +84,7 @@ const NOTABLE_MECHANICS = Object.freeze([
   { id: "fortune_wheel", level: 1, label: "fortune wheel" },
   { id: "fortune_findings_catalog", level: 1, label: "depth contract" },
   { id: "fortune_motherlode_covenant", level: 1, label: "motherlode" },
-  { id: "core_bon_voyage", level: 1, label: "bon voyage" },
+  { id: "core_bon_voyage", level: 1, label: "solar drill" },
 ]);
 
 const ORE_VALUE = Object.freeze({
@@ -312,10 +312,17 @@ function simulateCampaign(api, seed, strategy, maxRuns = 480) {
     api.startRun({ seed: `uniformity-${strategy}-${seed}-${run}` });
     api.stepRun(61);
     let snapshot = api.getSnapshot();
-    assert.equal(snapshot.mode, "result", `${strategy}/${seed}: run ${run} must end normally`);
+    assert.ok(
+      snapshot.mode === "result" || snapshot.mode === "ending",
+      `${strategy}/${seed}: run ${run} must end in results or the final comic`,
+    );
     const duration = snapshot.lastRunReport?.duration || 0;
     elapsedSeconds += duration + 10;
     runs = run;
+    if (snapshot.mode === "ending") {
+      completed = Boolean(snapshot.campaign.ready);
+      break;
+    }
     if (firstEventSeconds == null && (snapshot.lastRunReport?.eventCount || 0) > 0) {
       firstEventSeconds = elapsedSeconds - 10;
     }

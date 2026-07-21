@@ -322,6 +322,8 @@ a:focus-visible {
   white-space: normal;
 }
 
+.mobile-depth { display: none; }
+
 .hud-chip--combo strong {
   color: var(--gold-hi);
 }
@@ -1817,7 +1819,8 @@ kbd,
 .focus-hud {
   position: fixed;
   z-index: 29;
-  right: calc(var(--safe-right) + 12px);
+  right: auto;
+  left: 50%;
   bottom: calc(var(--safe-bottom) + 14px);
   display: flex;
   align-items: center;
@@ -1829,24 +1832,12 @@ kbd,
   background: rgba(3, 20, 26, 0.9);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.32);
   font: inherit;
-  cursor: pointer;
-  touch-action: manipulation;
+  pointer-events: none;
+  transform: translateX(-50%);
 }
 
 .focus-hud small { color: #7da29b; font-size: 9px; letter-spacing: 0.1em; }
 .focus-hud strong { color: var(--cream); font-size: 10px; letter-spacing: 0.06em; }
-.focus-hud em {
-  padding-left: 7px;
-  border-left: 1px solid #315e5b;
-  color: #8cdacb;
-  font-size: 8px;
-  font-style: normal;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-}
-.focus-hud:hover,
-.focus-hud:focus-visible { border-color: var(--gold-hi); color: var(--gold-hi); }
-.focus-hud:focus-visible { outline: 3px solid rgba(255, 235, 157, 0.7); outline-offset: 2px; }
 .focus-hud.is-idle { border-style: dashed; }
 
 .focus-hud.is-escalating {
@@ -1858,105 +1849,6 @@ kbd,
 @keyframes focus-frequency-pulse {
   50% { filter: brightness(1.28); }
 }
-
-.run-ore-focus__backdrop {
-  position: fixed;
-  z-index: 112;
-  inset: 0;
-  display: grid;
-  padding: max(14px, var(--safe-top)) max(14px, var(--safe-right)) max(14px, var(--safe-bottom)) max(14px, var(--safe-left));
-  place-items: center;
-  background: rgba(1, 9, 13, 0.8);
-  backdrop-filter: blur(3px);
-}
-
-.run-ore-focus {
-  width: min(660px, 100%);
-  max-height: min(78dvh, 610px);
-  padding: 16px;
-  overflow-y: auto;
-  border-color: #b88d42;
-  background:
-    linear-gradient(180deg, rgba(15, 51, 54, 0.99), rgba(4, 19, 26, 0.995)),
-    repeating-linear-gradient(135deg, transparent 0 10px, rgba(255, 255, 255, 0.025) 10px 11px);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255, 230, 164, 0.12);
-}
-
-.run-ore-focus__header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 46px;
-  align-items: center;
-  gap: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #315a5b;
-}
-
-.run-ore-focus__header > span { display: grid; gap: 3px; }
-.run-ore-focus__header small { color: #82a49d; font-size: 9px; letter-spacing: 0.12em; }
-.run-ore-focus__header strong { color: var(--cream); font-size: 19px; letter-spacing: 0.07em; }
-.run-ore-focus > p { margin: 12px 0; color: #abc0ba; font-size: 12px; font-weight: 400; line-height: 1.5; }
-
-.run-ore-focus__close {
-  display: grid;
-  width: 46px;
-  height: 46px;
-  padding: 0;
-  place-items: center;
-  border: 1px solid #527b74;
-  color: var(--cream);
-  background: #0b2c32;
-  font: inherit;
-  font-size: 26px;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.run-ore-focus__choices {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.run-ore-focus__choice {
-  --ore-color: #6f918b;
-  display: grid;
-  min-width: 0;
-  min-height: 54px;
-  grid-template-columns: 22px minmax(0, 1fr) 18px;
-  align-items: center;
-  gap: 9px;
-  padding: 9px 10px;
-  border: 1px solid #315b5c;
-  color: #b8cfca;
-  background: #082229;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.2;
-  text-align: left;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.run-ore-focus__choice-swatch {
-  width: 19px;
-  height: 19px;
-  border: 1px solid color-mix(in srgb, var(--ore-color) 72%, #d8eee8);
-  background: var(--ore-color);
-  box-shadow: inset 3px 3px 0 rgba(255, 255, 255, 0.18), 2px 2px 0 rgba(0, 0, 0, 0.35);
-  transform: rotate(45deg) scale(0.72);
-}
-
-.run-ore-focus__choice-mark { color: transparent; font-size: 16px; text-align: center; }
-.run-ore-focus__choice:hover,
-.run-ore-focus__choice:focus-visible { border-color: var(--ore-color); color: var(--cream); }
-.run-ore-focus__choice.is-active {
-  border: 2px solid var(--ore-color);
-  color: var(--cream);
-  background: color-mix(in srgb, var(--ore-color) 19%, #071d24);
-  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--ore-color) 72%, #fff3c4);
-}
-.run-ore-focus__choice.is-active .run-ore-focus__choice-mark { color: var(--ore-color); }
 
 .ore-inventory__empty {
   display: grid;
@@ -2721,11 +2613,19 @@ button.upgrade-node { font: inherit; }
   }
 
   .hud-cluster { display: grid; }
-  .hud-cluster .hud-chip:nth-child(2) { display: none; }
+  .hud-cluster--left .hud-chip:nth-child(2),
+  .hud-cluster--right .hud-chip:nth-child(2) { display: none; }
   .hud-chip { min-height: 48px; }
   .timer-module { min-height: 48px; }
   .timer-topline .hud-label { display: none; }
-  .timer-topline { justify-content: center; margin-bottom: 5px; }
+  .timer-topline { justify-content: space-between; margin-bottom: 5px; }
+  .mobile-depth {
+    display: inline-flex;
+    color: #8fc8bd;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+  }
 
   .field-guide { width: 210px; }
   .guide-body p:not(.guide-kicker) { display: none; }
@@ -2802,6 +2702,15 @@ button.upgrade-node { font: inherit; }
     bottom: var(--safe-bottom);
     width: min(214px, calc(100vw - var(--safe-left) - var(--safe-right)));
   }
+  .focus-hud {
+    bottom: calc(var(--safe-bottom) + 10px);
+    max-width: calc(100vw - var(--safe-left) - var(--safe-right) - 84px);
+    min-height: 38px;
+    padding: 6px 9px;
+  }
+  .focus-hud small { font-size: 8px; }
+  .focus-hud strong { overflow: hidden; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+  .field-guide:not(.is-collapsed) { bottom: calc(var(--safe-bottom) + 56px); }
   .field-guide.is-collapsed { width: auto; border: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
   .guide-toggle { min-height: 43px; justify-content: flex-start; }
   .field-guide.is-collapsed .guide-toggle { width: 43px; height: 43px; padding: 0; justify-content: center; border: 1px solid #3d736f; }
@@ -3429,6 +3338,19 @@ button.upgrade-node { font: inherit; }
   height: 26px;
 }
 
+.ending-actions .btn--danger {
+  border-color: #9b5142;
+  color: #ffd9c9;
+  background: linear-gradient(180deg, #5c2d28, #2d1718);
+  box-shadow: inset 0 0 0 2px rgba(255, 181, 145, 0.08), 0 4px 0 #160a0c;
+}
+
+.ending-actions .btn--danger:hover,
+.ending-actions .btn--danger:focus-visible {
+  border-color: #ef9a72;
+  color: #fff0dd;
+}
+
 .ending-screen:not(.hidden) .ending-stage {
   animation: ending-stage-in 420ms steps(5, end) both;
 }
@@ -3505,6 +3427,7 @@ button.upgrade-node { font: inherit; }
 
   .ending-actions .btn {
     flex: 1 1 0;
+    padding-inline: 12px;
   }
 }
 
@@ -4319,6 +4242,771 @@ button.upgrade-node { font: inherit; }
     color: #789791;
     background: #09242a;
     font-size: 6px;
+  }
+}
+
+/* Current expedition miner for the start-screen scan panel. The old mark
+   represented the first prototype; this one mirrors the pressure suit,
+   beard, backpack, visor and steel pick used by the in-game character. */
+#gameShell.theme-rust-comic .miner-mark {
+  width: 104px;
+  height: 124px;
+  filter: drop-shadow(7px 9px 0 rgba(4, 8, 9, 0.58));
+}
+
+#gameShell.theme-rust-comic .miner-backpack {
+  position: absolute;
+  z-index: 0;
+  top: 43px;
+  left: 10px;
+  width: 29px;
+  height: 50px;
+  border: 3px solid var(--comic-ink);
+  background:
+    repeating-linear-gradient(0deg, transparent 0 8px, rgba(232, 188, 117, 0.1) 8px 10px),
+    linear-gradient(105deg, #1c3035, #38535a 58%, #122329);
+  box-shadow: inset 6px 0 0 #70351f, 3px 4px 0 rgba(7, 10, 11, 0.72);
+  border-radius: 5px 8px 9px 3px;
+}
+
+#gameShell.theme-rust-comic .miner-backpack::before {
+  position: absolute;
+  top: 10px;
+  left: 8px;
+  width: 5px;
+  height: 24px;
+  content: "";
+  border: 1px solid #071315;
+  background: linear-gradient(#f0a5ff, #6ff3de);
+  box-shadow: 0 0 8px rgba(113, 242, 221, 0.74);
+  animation: start-miner-power 1.8s steps(2, end) infinite;
+}
+
+#gameShell.theme-rust-comic .miner-backpack::after {
+  position: absolute;
+  top: -13px;
+  left: 11px;
+  width: 3px;
+  height: 15px;
+  content: "";
+  background: #728b8c;
+  box-shadow: 3px -3px 0 #dca4ff;
+  transform: rotate(-9deg);
+}
+
+#gameShell.theme-rust-comic .miner-head {
+  position: absolute;
+  z-index: 4;
+  top: 26px;
+  left: 36px;
+  width: 35px;
+  height: 28px;
+  border: 3px solid var(--comic-ink);
+  background: #cf946b;
+  box-shadow: inset -6px 0 0 #ae6d4c;
+  border-radius: 6px 9px 8px 7px;
+}
+
+#gameShell.theme-rust-comic .miner-head::before {
+  position: absolute;
+  z-index: 2;
+  top: -15px;
+  left: -8px;
+  width: 48px;
+  height: 22px;
+  content: "";
+  border: 3px solid var(--comic-ink);
+  background:
+    linear-gradient(90deg, #6a3929 0 9px, transparent 9px),
+    linear-gradient(135deg, #de7738, #9b472a 70%);
+  box-shadow: inset 0 5px 0 #edab54;
+  clip-path: polygon(6px 4px, 16px 0, 38px 1px, 48px 10px, 47px 18px, 4px 22px, 0 14px);
+}
+
+#gameShell.theme-rust-comic .miner-head::after {
+  position: absolute;
+  z-index: 3;
+  top: 19px;
+  left: 1px;
+  width: 31px;
+  height: 29px;
+  content: "";
+  background: linear-gradient(90deg, #633522, #8d4b2d 50%, #4d2a20);
+  filter: drop-shadow(0 3px 0 var(--comic-ink));
+  clip-path: polygon(0 0, 100% 0, 91% 57%, 70% 100%, 51% 76%, 29% 100%, 6% 58%);
+}
+
+#gameShell.theme-rust-comic .miner-lamp {
+  z-index: 8;
+  top: 10px;
+  left: 64px;
+  width: 12px;
+  height: 11px;
+  border: 3px solid #53291d;
+  background: #fff2a9;
+  box-shadow: 0 0 18px 8px rgba(255, 215, 102, 0.46), 2px 2px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .miner-visor {
+  position: absolute;
+  z-index: 7;
+  top: 30px;
+  left: 44px;
+  width: 27px;
+  height: 10px;
+  border: 2px solid var(--comic-ink);
+  background: linear-gradient(90deg, #77f2dc, #a9fff0 45%, #df9cff);
+  box-shadow: 0 0 10px rgba(119, 242, 220, 0.72), inset 0 2px 0 rgba(255, 255, 255, 0.45);
+  clip-path: polygon(0 1px, 100% 0, calc(100% - 4px) 100%, 3px 82%);
+  animation: start-miner-visor 2.2s steps(2, end) infinite;
+}
+
+#gameShell.theme-rust-comic .miner-body {
+  position: absolute;
+  z-index: 2;
+  top: 54px;
+  left: 28px;
+  width: 48px;
+  height: 43px;
+  border: 3px solid var(--comic-ink);
+  background: linear-gradient(110deg, #15272d, #2d786e 36%, #285d59 72%, #13262c);
+  box-shadow: inset 8px 0 0 #173d3d, inset -6px 0 0 #317f73, 3px 4px 0 rgba(6, 10, 11, 0.6);
+  clip-path: polygon(8px 0, 39px 0, 48px 12px, 43px 37px, 34px 43px, 8px 41px, 0 32px, 0 11px);
+}
+
+#gameShell.theme-rust-comic .miner-body::before {
+  position: absolute;
+  top: 7px;
+  left: 12px;
+  width: 23px;
+  height: 20px;
+  content: "";
+  border: 2px solid #0a1719;
+  background: linear-gradient(135deg, #536e70, #213b40 58%);
+  box-shadow: inset 0 -4px 0 #a75c31;
+  clip-path: polygon(3px 0, 100% 3px, calc(100% - 3px) 100%, 0 calc(100% - 4px));
+}
+
+#gameShell.theme-rust-comic .miner-body::after {
+  position: absolute;
+  top: 11px;
+  left: 19px;
+  width: 4px;
+  height: 4px;
+  content: "";
+  background: #83f5df;
+  box-shadow: 8px 5px 0 #d89bf5, -7px 9px 0 #c46e39;
+}
+
+#gameShell.theme-rust-comic .miner-arm {
+  position: absolute;
+  z-index: 3;
+  top: 55px;
+  left: 68px;
+  width: 19px;
+  height: 34px;
+  border: 3px solid var(--comic-ink);
+  background: linear-gradient(145deg, #bc6333, #713721 60%, #27383b 60%);
+  border-radius: 6px 8px 10px 5px;
+  transform: rotate(-8deg);
+}
+
+#gameShell.theme-rust-comic .miner-arm::after {
+  position: absolute;
+  right: 0;
+  bottom: -2px;
+  width: 11px;
+  height: 11px;
+  content: "";
+  border: 2px solid var(--comic-ink);
+  border-radius: 50%;
+  background: #2b3a3d;
+}
+
+#gameShell.theme-rust-comic .miner-belt {
+  position: absolute;
+  z-index: 5;
+  top: 84px;
+  left: 28px;
+  width: 49px;
+  height: 9px;
+  border: 2px solid var(--comic-ink);
+  background: linear-gradient(90deg, #6c3c26 0 12px, #201813 12px 36px, #84502d 36px);
+}
+
+#gameShell.theme-rust-comic .miner-belt::after {
+  position: absolute;
+  top: 1px;
+  left: 21px;
+  width: 8px;
+  height: 5px;
+  content: "";
+  background: #d0ae5b;
+  box-shadow: inset 0 0 0 2px #44321e;
+}
+
+#gameShell.theme-rust-comic .miner-boot {
+  position: absolute;
+  z-index: 1;
+  top: 95px;
+  width: 23px;
+  height: 15px;
+  border: 3px solid var(--comic-ink);
+  background: linear-gradient(#34484c, #1b292d);
+  box-shadow: inset 0 -4px 0 #788f8d;
+  clip-path: polygon(3px 0, 18px 0, 23px 7px, 21px 15px, 0 15px, 0 6px);
+}
+
+#gameShell.theme-rust-comic .miner-boot--left { left: 28px; transform: rotate(3deg); }
+#gameShell.theme-rust-comic .miner-boot--right { left: 55px; transform: rotate(-4deg) scaleX(-1); }
+
+#gameShell.theme-rust-comic .miner-pick {
+  position: absolute;
+  z-index: 6;
+  top: 78px;
+  left: 76px;
+  width: 55px;
+  height: 8px;
+  border: 2px solid var(--comic-ink);
+  border-radius: 4px;
+  background: linear-gradient(180deg, #c47a3f 0 25%, #7b4027 28% 72%, #3e241c 76%);
+  filter: drop-shadow(3px 4px 0 rgba(4, 8, 9, 0.78));
+  box-shadow: inset 4px 0 0 #d9a063, inset -6px 0 0 #4d2a20;
+  transform: rotate(-43deg);
+  transform-origin: 0 50%;
+}
+
+#gameShell.theme-rust-comic .miner-pick::before {
+  position: absolute;
+  top: 0;
+  left: 7px;
+  width: 27px;
+  height: 2px;
+  content: "";
+  background: rgba(255, 207, 138, 0.7);
+}
+
+#gameShell.theme-rust-comic .miner-pick::after {
+  position: absolute;
+  z-index: 2;
+  top: -3px;
+  right: 3px;
+  width: 9px;
+  height: 10px;
+  content: "";
+  border: 1px solid #07131b;
+  background: linear-gradient(90deg, #566d70, #b8c8c7 48%, #52666a);
+  box-shadow: inset 2px 0 0 #d0dcda;
+}
+
+#gameShell.theme-rust-comic .miner-pick-head {
+  position: absolute;
+  z-index: 3;
+  top: -7px;
+  right: -12px;
+  width: 39px;
+  height: 20px;
+  background: linear-gradient(180deg, #d0dcda 0 22%, #a9bfc0 24% 55%, #5e7478 58% 78%, #33474d 80%);
+  clip-path: polygon(0 49%, 35% 18%, 47% 6%, 62% 10%, 100% 34%, 100% 59%, 62% 55%, 57% 93%, 43% 100%, 39% 55%, 0 61%);
+  filter:
+    drop-shadow(1px 0 0 #07131b)
+    drop-shadow(-1px 0 0 #07131b)
+    drop-shadow(0 1px 0 #07131b)
+    drop-shadow(0 -1px 0 #07131b);
+  transform: rotate(90deg);
+}
+
+#gameShell.theme-rust-comic .miner-pick-head::before {
+  position: absolute;
+  top: 5px;
+  left: 12px;
+  width: 19px;
+  height: 3px;
+  content: "";
+  background: rgba(241, 246, 239, 0.68);
+  transform: rotate(-3deg);
+}
+
+#gameShell.theme-rust-comic .miner-pick-head::after {
+  position: absolute;
+  top: 7px;
+  left: 16px;
+  width: 8px;
+  height: 8px;
+  content: "";
+  border: 2px solid #07131b;
+  background: #657b7e;
+  transform: rotate(45deg);
+}
+
+@keyframes start-miner-power {
+  50% { filter: brightness(1.35); }
+}
+
+@keyframes start-miner-visor {
+  50% { opacity: 0.72; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #gameShell.theme-rust-comic .miner-backpack::before,
+  #gameShell.theme-rust-comic .miner-visor { animation: none; }
+}
+
+/* Rust geocomic visibility pass ----------------------------------------
+   This layer deliberately changes the large silhouettes. The previous
+   pass was readable, but its translucent accents disappeared into the
+   original teal interface. */
+
+#gameShell.theme-rust-comic {
+  --comic-ink: #07090a;
+  --comic-rust: #a84f31;
+  --comic-rust-dark: #54271d;
+  --comic-rust-hi: #df7a45;
+  --comic-bone: #e6d5a5;
+  --comic-ochre: #e5ad45;
+  --comic-patina: #3f7770;
+  --comic-patina-hi: #8ab7aa;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(197, 82, 43, 0.34), transparent 30%),
+    radial-gradient(circle at 86% 15%, rgba(64, 118, 111, 0.2), transparent 32%),
+    linear-gradient(145deg, #21120f, #071719 45%, #020709 100%);
+}
+
+#gameShell.theme-rust-comic .screen-texture {
+  opacity: 0.22;
+  background-image:
+    radial-gradient(circle, rgba(231, 184, 111, 0.24) 0 0.9px, transparent 1.15px),
+    repeating-linear-gradient(107deg, transparent 0 42px, rgba(207, 91, 47, 0.13) 43px 44px),
+    repeating-linear-gradient(0deg, transparent 0 5px, rgba(255, 231, 174, 0.025) 5px 6px),
+    radial-gradient(circle at 50% 50%, transparent 42%, rgba(8, 3, 2, 0.68) 112%);
+  background-size: 7px 7px, 100% 100%, 100% 100%, 100% 100%;
+  mix-blend-mode: normal;
+}
+
+/* Permanent mine-frame rails keep the direction visible during a run. */
+#gameShell.theme-rust-comic .world-dressing::before,
+#gameShell.theme-rust-comic .world-dressing::after {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  bottom: 0;
+  width: 11px;
+  content: "";
+  border-inline: 2px solid var(--comic-ink);
+  background:
+    radial-gradient(circle at 50% 21px, #d7b27d 0 2px, #40241d 2.5px 4px, transparent 4.5px) 0 0 / 100% 48px,
+    repeating-linear-gradient(145deg, rgba(235, 151, 87, 0.15) 0 6px, transparent 6px 12px),
+    linear-gradient(90deg, #4a2118, #b35a35 46%, #59281c);
+  box-shadow: 3px 0 0 rgba(5, 8, 9, 0.86), inset 1px 0 rgba(255, 195, 125, 0.28);
+}
+
+#gameShell.theme-rust-comic .world-dressing::before { left: 0; }
+#gameShell.theme-rust-comic .world-dressing::after { right: 0; transform: scaleX(-1); }
+
+#gameShell.theme-rust-comic #gameTitle,
+#gameShell.theme-rust-comic .result-header h2,
+#gameShell.theme-rust-comic .upgrade-title-group h2,
+#gameShell.theme-rust-comic .feature-header h2,
+#gameShell.theme-rust-comic .run-diagnosis__header h3,
+#gameShell.theme-rust-comic .context-tutorial__copy h2,
+#gameShell.theme-rust-comic .btn,
+#gameShell.theme-rust-comic .briefing-steps strong {
+  font-family: "Arial Black", "Arial Narrow", Arial, sans-serif;
+}
+
+#gameShell.theme-rust-comic .panel-frame {
+  border: 3px solid var(--comic-rust-hi);
+  outline: 5px solid var(--comic-ink);
+  outline-offset: 0;
+  box-shadow:
+    9px 10px 0 var(--comic-ink),
+    14px 15px 0 rgba(83, 38, 27, 0.82),
+    0 24px 42px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 4px rgba(6, 12, 13, 0.86);
+}
+
+#gameShell.theme-rust-comic .panel-frame::before,
+#gameShell.theme-rust-comic .panel-frame::after {
+  width: 28px;
+  height: 28px;
+  border-width: 5px;
+}
+
+#gameShell.theme-rust-comic .eyebrow,
+#gameShell.theme-rust-comic .ui-kicker {
+  width: max-content;
+  max-width: 100%;
+  padding: 4px 9px;
+  border: 2px solid var(--comic-ink);
+  color: #f0d59c;
+  background:
+    repeating-linear-gradient(-45deg, rgba(255, 213, 147, 0.08) 0 4px, transparent 4px 8px),
+    var(--comic-rust-dark);
+  box-shadow: 3px 3px 0 var(--comic-ink);
+  transform: rotate(-0.7deg);
+}
+
+#gameShell.theme-rust-comic .start-layout {
+  border-color: var(--comic-rust-hi);
+  background:
+    linear-gradient(90deg, transparent 0 50.7%, var(--comic-ink) 50.7% 51.7%, transparent 51.7%),
+    linear-gradient(90deg, #241713 0 51%, #1b3232 51% 100%);
+}
+
+#gameShell.theme-rust-comic .brand-block {
+  position: relative;
+  border-right: 0;
+  background:
+    linear-gradient(138deg, rgba(204, 92, 48, 0.28) 0 20%, transparent 20% 100%),
+    repeating-linear-gradient(102deg, transparent 0 55px, rgba(231, 122, 69, 0.09) 56px 58px),
+    radial-gradient(circle at 18% 72%, rgba(169, 76, 43, 0.24), transparent 34%),
+    linear-gradient(145deg, #2b1813, #101c1d 68%);
+  box-shadow: inset 12px 0 0 var(--comic-rust-dark), inset 16px 0 0 var(--comic-rust-hi), inset -5px 0 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .brand-block::before {
+  position: absolute;
+  top: 24px;
+  left: 15px;
+  width: 7px;
+  height: calc(100% - 48px);
+  content: "";
+  background:
+    radial-gradient(circle, #edc27b 0 2px, #2f1712 2.5px 4px, transparent 4.5px) 50% 8px / 100% 48px repeat-y,
+    linear-gradient(#8f402a, #ca653a 50%, #6b2f22);
+  box-shadow: 3px 0 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic #gameTitle > span {
+  color: var(--comic-bone);
+  letter-spacing: -0.055em;
+  text-shadow: 3px 3px 0 var(--comic-ink), 7px 7px 0 var(--comic-rust);
+  transform: skew(-3deg);
+}
+
+#gameShell.theme-rust-comic #gameTitle > b {
+  padding: 4px 18px 7px;
+  border: 3px solid var(--comic-ink);
+  color: #1c100c;
+  background:
+    radial-gradient(circle, rgba(72, 33, 21, 0.24) 0 1px, transparent 1.3px) 0 0 / 6px 6px,
+    repeating-linear-gradient(-45deg, rgba(255, 245, 189, 0.14) 0 5px, transparent 5px 10px),
+    linear-gradient(100deg, #dd773f, #efbd54 58%, #b65432);
+  box-shadow: 7px 7px 0 var(--comic-ink), 10px 10px 0 var(--comic-rust-dark);
+  transform: rotate(-2deg) skew(-4deg);
+}
+
+#gameShell.theme-rust-comic .briefing {
+  padding: clamp(24px, 3vw, 40px);
+  background:
+    radial-gradient(circle, rgba(229, 173, 69, 0.09) 0 1px, transparent 1.2px) 0 0 / 9px 9px,
+    repeating-linear-gradient(90deg, transparent 0 31px, rgba(116, 169, 157, 0.07) 31px 32px),
+    linear-gradient(135deg, #263f3c, #102527 72%);
+  box-shadow: inset 8px 0 0 var(--comic-ink), inset 12px 0 0 var(--comic-rust-dark);
+}
+
+#gameShell.theme-rust-comic .briefing-art {
+  height: 244px;
+  margin: 4px 6px 18px;
+  overflow: hidden;
+  border: 3px solid var(--comic-rust-hi);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(57, 125, 116, 0.3), transparent 48%),
+    repeating-linear-gradient(0deg, transparent 0 24px, rgba(229, 173, 69, 0.06) 24px 25px),
+    #0c2123;
+  box-shadow: 6px 7px 0 var(--comic-ink), inset 0 0 0 4px rgba(7, 12, 13, 0.76);
+  clip-path: polygon(0 6px, 12px 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%);
+}
+
+#gameShell.theme-rust-comic .briefing-steps {
+  gap: 9px;
+}
+
+#gameShell.theme-rust-comic .briefing-steps li {
+  min-height: 54px;
+  border: 2px solid #b35b37;
+  border-left: 10px solid var(--comic-rust-hi);
+  background:
+    repeating-linear-gradient(-45deg, rgba(229, 173, 69, 0.055) 0 5px, transparent 5px 10px),
+    linear-gradient(90deg, #372018, #0b2022 66%);
+  box-shadow: 5px 5px 0 var(--comic-ink);
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
+}
+
+#gameShell.theme-rust-comic .briefing-steps li > b {
+  color: #f1c26e;
+  font-family: "Arial Black", Arial, sans-serif;
+  text-shadow: 2px 2px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .briefing-steps strong { color: #f0ddb3; }
+
+#gameShell.theme-rust-comic .start-footer {
+  border-top: 4px solid var(--comic-ink);
+  background:
+    repeating-linear-gradient(90deg, rgba(223, 122, 69, 0.13) 0 18px, transparent 18px 38px),
+    #281812;
+}
+
+/* Opaque instrument plates replace the old glassy HUD. */
+#gameShell.theme-rust-comic .run-hud {
+  padding: 10px 20px 0;
+  background: linear-gradient(180deg, rgba(13, 7, 6, 0.86), rgba(13, 7, 6, 0.3) 72%, transparent);
+}
+
+#gameShell.theme-rust-comic .hud-chip,
+#gameShell.theme-rust-comic .timer-module,
+#gameShell.theme-rust-comic .focus-hud,
+#gameShell.theme-rust-comic .field-guide,
+#gameShell.theme-rust-comic .context-tutorial,
+#gameShell.theme-rust-comic .perk-status-rail__item {
+  border: 2px solid var(--comic-rust-hi);
+  background:
+    radial-gradient(circle, rgba(231, 186, 114, 0.11) 0 0.8px, transparent 1px) 0 0 / 7px 7px,
+    linear-gradient(112deg, #49251b, #132829 44%, #071719);
+  box-shadow: inset 0 4px 0 var(--comic-rust-dark), inset 7px 0 0 rgba(223, 122, 69, 0.24), 4px 5px 0 var(--comic-ink);
+  backdrop-filter: none;
+}
+
+#gameShell.theme-rust-comic .hud-label {
+  color: #d0ad73;
+  font-weight: 900;
+}
+
+#gameShell.theme-rust-comic .timer-module {
+  border-color: var(--comic-ochre);
+  background:
+    repeating-linear-gradient(-45deg, rgba(255, 238, 174, 0.06) 0 6px, transparent 6px 12px),
+    linear-gradient(100deg, #5c2d1c, #1d302d 35%, #111b19);
+  box-shadow: inset 0 5px 0 #814128, 5px 6px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .timer-track {
+  border: 2px solid var(--comic-ink);
+  background: #2b1712;
+  box-shadow: inset 0 0 0 2px #75402a;
+}
+
+#gameShell.theme-rust-comic .timer-track > span:first-child {
+  background: linear-gradient(90deg, #b95530, #e7ac47 62%, #f4d789);
+  box-shadow: inset 0 2px 0 rgba(255, 246, 196, 0.44);
+}
+
+#gameShell.theme-rust-comic .micro-event-banner {
+  border: 3px solid var(--comic-ochre);
+  color: #24140f;
+  background: linear-gradient(100deg, #e18442, #f0c562);
+  box-shadow: 6px 6px 0 var(--comic-ink);
+}
+
+/* Results read as a stamped field report and cargo crate. */
+#gameShell.theme-rust-comic .result-card,
+#gameShell.theme-rust-comic .upgrade-header,
+#gameShell.theme-rust-comic .collection-shell,
+#gameShell.theme-rust-comic .balance-lab,
+#gameShell.theme-rust-comic .pause-overlay > div,
+#gameShell.theme-rust-comic .mobile-ore-focus__sheet {
+  border-color: var(--comic-rust-hi);
+  background:
+    radial-gradient(circle, rgba(231, 183, 108, 0.12) 0 0.8px, transparent 1px) 0 0 / 8px 8px,
+    linear-gradient(125deg, rgba(121, 51, 31, 0.38), transparent 38%),
+    linear-gradient(155deg, #203b39, #0b1d1e 62%, #120b09);
+  box-shadow: inset 8px 0 0 var(--comic-rust-dark), inset 12px 0 0 rgba(223, 122, 69, 0.56), 7px 8px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .result-header h2 {
+  display: inline-block;
+  padding: 10px 24px 12px;
+  border: 3px solid var(--comic-ink);
+  color: #1b100d;
+  background:
+    radial-gradient(circle, rgba(82, 47, 28, 0.18) 0 1px, transparent 1.3px) 0 0 / 7px 7px,
+    linear-gradient(100deg, #dec990, #f1dfa9 60%, #caa86b);
+  box-shadow: 7px 7px 0 var(--comic-rust), 11px 11px 0 var(--comic-ink);
+  text-shadow: none;
+  transform: rotate(-1.2deg) skew(-2deg);
+}
+
+#gameShell.theme-rust-comic .banked-module {
+  border: 3px solid var(--comic-ochre);
+  background:
+    repeating-linear-gradient(-45deg, rgba(255, 223, 151, 0.06) 0 6px, transparent 6px 12px),
+    linear-gradient(105deg, #622f1e, #35251d 42%, #132727);
+  box-shadow: inset 0 0 0 4px var(--comic-ink), 6px 6px 0 var(--comic-rust-dark);
+}
+
+#gameShell.theme-rust-comic .feature-header {
+  border-bottom: 4px solid var(--comic-ink);
+  background:
+    repeating-linear-gradient(100deg, rgba(255, 211, 137, 0.07) 0 7px, transparent 7px 14px),
+    linear-gradient(90deg, #67301f, #253d39 48%, #0b1d1e);
+  box-shadow: inset 9px 0 0 var(--comic-rust-hi);
+}
+
+/* Workshop: rust is the casing, category colour remains the signal. */
+#gameShell.theme-rust-comic .upgrade-header {
+  border: 3px solid var(--comic-rust-hi);
+  box-shadow: inset 10px 0 0 var(--comic-rust-dark), inset 14px 0 0 var(--comic-rust-hi), 6px 7px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .next-breakthrough {
+  border: 2px solid var(--comic-rust-hi);
+  background:
+    repeating-linear-gradient(-45deg, rgba(238, 193, 119, 0.07) 0 5px, transparent 5px 10px),
+    linear-gradient(95deg, #56291d, #142d2d 58%, #081719);
+  box-shadow: inset 6px 0 0 var(--comic-rust-dark), 4px 5px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .upgrade-map__viewport {
+  border: 3px solid var(--comic-rust-dark);
+  outline: 2px solid var(--comic-rust-hi);
+  outline-offset: -5px;
+  background:
+    radial-gradient(circle, rgba(224, 169, 91, 0.12) 0 1px, transparent 1.25px) 0 0 / 11px 11px,
+    linear-gradient(118deg, rgba(155, 63, 36, 0.25), transparent 32%),
+    #0d2424;
+  box-shadow: inset 0 0 0 7px rgba(7, 10, 11, 0.62);
+}
+
+#gameShell.theme-rust-comic .upgrade-edge {
+  stroke: #6d7f70;
+  stroke-width: 2.2;
+  opacity: 0.48;
+}
+
+#gameShell.theme-rust-comic .upgrade-edge.is-complete,
+#gameShell.theme-rust-comic .upgrade-edge[data-state="complete"] {
+  stroke: #c2683d;
+  stroke-width: 3;
+  opacity: 0.82;
+}
+
+#gameShell.theme-rust-comic .upgrade-edge.is-focused {
+  stroke: #f0bd54;
+  stroke-width: 4;
+}
+
+#gameShell.theme-rust-comic .upgrade-node {
+  border: 3px solid var(--comic-rust-hi);
+  border-radius: 2px 9px 3px 7px;
+  background:
+    radial-gradient(circle, rgba(237, 191, 116, 0.13) 0 0.8px, transparent 1px) 0 0 / 6px 6px,
+    linear-gradient(140deg, #71341f, #222b26 42%, #071416 78%);
+  box-shadow:
+    inset 0 0 0 3px var(--comic-ink),
+    inset 0 0 0 5px color-mix(in srgb, var(--category-color) 58%, transparent),
+    5px 6px 0 var(--comic-ink),
+    8px 9px 0 var(--comic-rust-dark);
+}
+
+#gameShell.theme-rust-comic .upgrade-node:nth-child(3n + 1) { border-radius: 8px 2px 6px 3px; }
+#gameShell.theme-rust-comic .upgrade-node:nth-child(3n + 2) { border-radius: 3px 7px 2px 9px; }
+
+#gameShell.theme-rust-comic .upgrade-node__icon {
+  border: 2px solid color-mix(in srgb, var(--category-color) 76%, var(--comic-bone));
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--category-color) 20%, transparent) 0 1px, transparent 1.2px) 0 0 / 6px 6px,
+    #091718;
+  box-shadow: inset 0 -5px 0 color-mix(in srgb, var(--category-color) 42%, transparent);
+}
+
+#gameShell.theme-rust-comic .upgrade-node__level {
+  border: 2px solid var(--comic-rust-hi);
+  color: #f1d79e;
+  background: #321a14;
+  box-shadow: 3px 3px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .journal-card {
+  border-width: 3px;
+  box-shadow: inset 7px 0 0 var(--comic-rust-dark), inset 10px 0 0 var(--comic-rust-hi), 5px 6px 0 var(--comic-ink);
+}
+
+@media (max-width: 820px) {
+  #gameShell.theme-rust-comic .start-layout {
+    background: linear-gradient(#251612 0 48%, var(--comic-ink) 48% 49%, #17302f 49% 100%);
+  }
+
+  #gameShell.theme-rust-comic .brand-block {
+    border-bottom: 0;
+    box-shadow: inset 9px 0 0 var(--comic-rust-dark), inset 13px 0 0 var(--comic-rust-hi), inset 0 -5px 0 var(--comic-ink);
+  }
+
+  #gameShell.theme-rust-comic .briefing {
+    box-shadow: inset 9px 0 0 var(--comic-rust-dark), inset 13px 0 0 var(--comic-rust-hi);
+  }
+}
+
+@media (max-width: 640px) {
+  #gameShell.theme-rust-comic .screen-texture { opacity: 0.16; }
+
+  #gameShell.theme-rust-comic .world-dressing::before,
+  #gameShell.theme-rust-comic .world-dressing::after {
+    width: 5px;
+    border-inline-width: 1px;
+  }
+
+  #gameShell.theme-rust-comic .panel-frame {
+    border-width: 2px;
+    outline-width: 3px;
+    box-shadow: 4px 5px 0 var(--comic-ink), 7px 8px 0 rgba(83, 38, 27, 0.72), inset 0 0 0 2px rgba(6, 12, 13, 0.86);
+  }
+
+  #gameShell.theme-rust-comic .panel-frame::before,
+  #gameShell.theme-rust-comic .panel-frame::after {
+    width: 20px;
+    height: 20px;
+    border-width: 4px;
+  }
+
+  #gameShell.theme-rust-comic .brand-block::before { left: 8px; width: 5px; }
+
+  #gameShell.theme-rust-comic #gameTitle > span {
+    text-shadow: 2px 2px 0 var(--comic-ink), 5px 5px 0 var(--comic-rust);
+  }
+
+  #gameShell.theme-rust-comic #gameTitle > b {
+    border-width: 2px;
+    box-shadow: 4px 4px 0 var(--comic-ink), 7px 7px 0 var(--comic-rust-dark);
+  }
+
+  #gameShell.theme-rust-comic .briefing-steps li {
+    min-height: 66px;
+    border: 2px solid var(--comic-rust-hi);
+    border-top-width: 7px;
+    box-shadow: 3px 4px 0 var(--comic-ink);
+  }
+
+  #gameShell.theme-rust-comic .run-hud { padding: 7px 9px 0; }
+
+  #gameShell.theme-rust-comic .hud-chip,
+  #gameShell.theme-rust-comic .timer-module {
+    border-width: 2px;
+    box-shadow: inset 0 3px 0 var(--comic-rust-dark), 3px 4px 0 var(--comic-ink);
+  }
+
+  #gameShell.theme-rust-comic .result-header h2 {
+    padding: 8px 12px 9px;
+    border-width: 2px;
+    box-shadow: 4px 4px 0 var(--comic-rust), 7px 7px 0 var(--comic-ink);
+  }
+
+  #gameShell.theme-rust-comic .upgrade-header {
+    border-width: 2px;
+    box-shadow: inset 6px 0 0 var(--comic-rust-dark), inset 9px 0 0 var(--comic-rust-hi), 3px 4px 0 var(--comic-ink);
+  }
+
+  #gameShell.theme-rust-comic .upgrade-node {
+    border-width: 2px;
+    box-shadow: inset 0 0 0 2px var(--comic-ink), inset 0 0 0 4px color-mix(in srgb, var(--category-color) 58%, transparent), 3px 4px 0 var(--comic-ink), 5px 6px 0 var(--comic-rust-dark);
+  }
+
+  /* Keep the fixed mobile tooltip anchored to the viewport. */
+  #gameShell.theme-rust-comic .upgrade-node:hover,
+  #gameShell.theme-rust-comic .upgrade-node:focus-visible,
+  #gameShell.theme-rust-comic .upgrade-node.is-selected {
+    filter: none;
+    transform: none;
   }
 }
 
@@ -5898,5 +6586,692 @@ summary:focus-visible,
   .balance-result-cards article,
   .utility-nav__button {
     border-color: var(--cream);
+  }
+}
+
+/* Rust geocomic interface pass -----------------------------------------
+   Rust is construction, patina is function, ochre is action. Ore and
+   category colours remain untouched so the interface stays readable. */
+
+#gameShell.theme-rust-comic {
+  --comic-ink: #080d10;
+  --comic-panel: #112126;
+  --comic-shale: #1c3032;
+  --comic-line: #355754;
+  --comic-patina: #477b77;
+  --comic-patina-hi: #78a8a1;
+  --comic-rust: #945039;
+  --comic-rust-dark: #4f291f;
+  --comic-rust-hi: #c7724b;
+  --comic-bone: #d8c99e;
+  --comic-ochre: #d9a94f;
+  --teal-200: #9ac8ba;
+  --teal-300: #78b2a4;
+  --teal-500: #477f77;
+  --panel: rgba(10, 27, 30, 0.96);
+  --line: rgba(199, 114, 75, 0.28);
+  --edge: 2px solid #704332;
+  --pixel-shadow: 0 4px 0 var(--comic-ink), 0 9px 26px rgba(0, 0, 0, 0.5);
+  background:
+    radial-gradient(circle at 14% 8%, rgba(148, 80, 57, 0.16), transparent 26%),
+    radial-gradient(circle at 78% 18%, rgba(71, 123, 119, 0.13), transparent 30%),
+    linear-gradient(#0a1c20, #030a0d 74%);
+}
+
+#gameShell.theme-rust-comic .screen-texture {
+  opacity: 0.13;
+  background-image:
+    radial-gradient(circle, rgba(224, 164, 96, 0.18) 0 0.7px, transparent 0.9px),
+    repeating-linear-gradient(108deg, transparent 0 47px, rgba(215, 116, 62, 0.055) 48px 49px),
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    radial-gradient(circle at 50% 50%, transparent 45%, rgba(10, 5, 4, 0.58) 115%);
+  background-size: 6px 6px, 100% 100%, 100% 6px, 100% 100%;
+  mix-blend-mode: soft-light;
+}
+
+#gameShell.theme-rust-comic .top-rock {
+  border-bottom-color: #263f3d;
+  box-shadow: inset 0 -3px 0 rgba(148, 80, 57, 0.36);
+}
+
+#gameShell.theme-rust-comic .depth-ruler,
+#gameShell.theme-rust-comic .depth-ruler i {
+  border-color: rgba(199, 114, 75, 0.22);
+}
+
+#gameShell.theme-rust-comic .overlay-backdrop {
+  background:
+    radial-gradient(circle at 20% 18%, rgba(148, 80, 57, 0.18), transparent 31%),
+    radial-gradient(circle at 74% 44%, rgba(71, 123, 119, 0.18), transparent 38%),
+    rgba(2, 9, 11, 0.82);
+}
+
+#gameShell.theme-rust-comic .panel-frame {
+  border-color: #704332;
+  outline: 1px solid rgba(120, 168, 161, 0.2);
+  outline-offset: -5px;
+  box-shadow:
+    5px 5px 0 var(--comic-ink),
+    0 12px 30px rgba(0, 0, 0, 0.46),
+    inset 0 0 0 3px rgba(6, 13, 15, 0.72);
+}
+
+#gameShell.theme-rust-comic .panel-frame::before {
+  border-color: var(--comic-rust-hi);
+  filter: drop-shadow(2px 2px 0 var(--comic-ink));
+}
+
+#gameShell.theme-rust-comic .panel-frame::after {
+  border-color: var(--comic-patina-hi);
+  filter: drop-shadow(-2px -2px 0 var(--comic-ink));
+}
+
+#gameShell.theme-rust-comic .eyebrow,
+#gameShell.theme-rust-comic .ui-kicker {
+  color: var(--comic-rust-hi);
+}
+
+#gameShell.theme-rust-comic .eyebrow span {
+  background: var(--comic-rust-hi);
+  box-shadow: 3px 2px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic #gameTitle > span,
+#gameShell.theme-rust-comic .result-header h2,
+#gameShell.theme-rust-comic .upgrade-title-group h2,
+#gameShell.theme-rust-comic .feature-header h2,
+#gameShell.theme-rust-comic .run-diagnosis__header h3,
+#gameShell.theme-rust-comic .context-tutorial__copy h2 {
+  text-shadow: 2px 2px 0 var(--comic-ink), 5px 5px 0 var(--comic-rust-dark);
+}
+
+#gameShell.theme-rust-comic #gameTitle > b {
+  background:
+    repeating-linear-gradient(-45deg, rgba(255, 245, 189, 0.08) 0 5px, transparent 5px 10px),
+    var(--gold);
+  box-shadow: 5px 5px 0 var(--comic-rust-dark);
+}
+
+#gameShell.theme-rust-comic .start-layout {
+  background:
+    radial-gradient(circle, rgba(216, 201, 158, 0.045) 0 0.7px, transparent 0.9px) 0 0 / 7px 7px,
+    linear-gradient(112deg, rgba(148, 80, 57, 0.13), transparent 35%),
+    linear-gradient(90deg, rgba(6, 20, 24, 0.99) 0 51.5%, rgba(11, 31, 33, 0.97) 51.5% 100%);
+}
+
+#gameShell.theme-rust-comic .brand-block {
+  border-right-color: rgba(199, 114, 75, 0.38);
+  box-shadow: inset -5px 0 0 rgba(8, 13, 16, 0.46);
+}
+
+#gameShell.theme-rust-comic .briefing {
+  background:
+    radial-gradient(circle at 50% 36%, rgba(71, 123, 119, 0.2), transparent 36%),
+    repeating-linear-gradient(90deg, transparent 0 27px, rgba(199, 114, 75, 0.045) 27px 28px),
+    repeating-linear-gradient(0deg, transparent 0 27px, rgba(120, 168, 161, 0.038) 27px 28px);
+}
+
+#gameShell.theme-rust-comic .briefing-steps li {
+  border-left-color: var(--comic-rust-hi);
+  background:
+    linear-gradient(90deg, rgba(148, 80, 57, 0.12), transparent 48%),
+    rgba(5, 18, 21, 0.76);
+  box-shadow: inset 0 -1px 0 rgba(216, 201, 158, 0.09), 3px 3px 0 rgba(8, 13, 16, 0.46);
+}
+
+#gameShell.theme-rust-comic .start-footer {
+  border-top-color: rgba(199, 114, 75, 0.32);
+  background: rgba(5, 13, 14, 0.91);
+}
+
+#gameShell.theme-rust-comic .btn {
+  border-color: var(--comic-ink);
+  box-shadow: 0 4px 0 var(--comic-rust-dark), 0 7px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--comic-rust-dark), 0 10px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--comic-rust-dark), 0 3px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .btn--primary,
+#gameShell.theme-rust-comic .compact-button,
+#gameShell.theme-rust-comic .next-breakthrough__max {
+  background:
+    repeating-linear-gradient(-45deg, rgba(255, 246, 194, 0.08) 0 5px, transparent 5px 10px),
+    linear-gradient(#e5b953, #bf6938);
+}
+
+#gameShell.theme-rust-comic .btn--secondary {
+  border-color: #355b57;
+  background:
+    linear-gradient(110deg, rgba(148, 80, 57, 0.16), transparent 42%),
+    linear-gradient(#274d49, #152f31);
+}
+
+#gameShell.theme-rust-comic kbd,
+#gameShell.theme-rust-comic .mouse-key {
+  border-color: #765341;
+  color: var(--comic-bone);
+  background: #1a2b2b;
+  box-shadow: 0 2px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .hud-chip,
+#gameShell.theme-rust-comic .timer-module,
+#gameShell.theme-rust-comic .focus-hud,
+#gameShell.theme-rust-comic .field-guide,
+#gameShell.theme-rust-comic .context-tutorial,
+#gameShell.theme-rust-comic .perk-status-rail__item {
+  border-color: rgba(120, 168, 161, 0.58);
+  background:
+    linear-gradient(112deg, rgba(148, 80, 57, 0.17), transparent 43%),
+    rgba(7, 20, 22, 0.92);
+  box-shadow: 3px 4px 0 rgba(8, 13, 16, 0.9), inset 0 0 0 2px rgba(88, 48, 35, 0.28);
+}
+
+#gameShell.theme-rust-comic .hud-chip {
+  position: relative;
+}
+
+#gameShell.theme-rust-comic .hud-chip::after {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  width: 5px;
+  height: 5px;
+  content: "";
+  border: 1px solid var(--comic-ink);
+  border-radius: 50%;
+  background: #8a6650;
+  box-shadow: inset 1px 1px 0 rgba(216, 201, 158, 0.3);
+}
+
+#gameShell.theme-rust-comic .hud-chip--ore {
+  border-color: rgba(199, 114, 75, 0.72);
+}
+
+#gameShell.theme-rust-comic .timer-module {
+  border-color: rgba(217, 169, 79, 0.72);
+  box-shadow: 3px 4px 0 rgba(8, 13, 16, 0.9), inset 0 3px 0 rgba(148, 80, 57, 0.24);
+}
+
+#gameShell.theme-rust-comic .hud-glyph,
+#gameShell.theme-rust-comic .context-tutorial__marker {
+  border-color: #557b73;
+  background:
+    linear-gradient(135deg, rgba(148, 80, 57, 0.17), transparent 52%),
+    #163538;
+}
+
+#gameShell.theme-rust-comic .toast {
+  background:
+    radial-gradient(circle, rgba(216, 201, 158, 0.045) 0 0.7px, transparent 0.9px) 0 0 / 6px 6px,
+    linear-gradient(110deg, rgba(148, 80, 57, 0.17), transparent 45%),
+    rgba(7, 20, 22, 0.97);
+  box-shadow: 4px 5px 0 var(--comic-ink), 0 14px 28px rgba(0, 0, 0, 0.42);
+}
+
+#gameShell.theme-rust-comic .result-card,
+#gameShell.theme-rust-comic .upgrade-header,
+#gameShell.theme-rust-comic .collection-shell,
+#gameShell.theme-rust-comic .balance-lab,
+#gameShell.theme-rust-comic .pause-overlay > div,
+#gameShell.theme-rust-comic .mobile-ore-focus__sheet {
+  background:
+    radial-gradient(circle, rgba(216, 201, 158, 0.045) 0 0.7px, transparent 0.9px) 0 0 / 7px 7px,
+    linear-gradient(120deg, rgba(148, 80, 57, 0.13), transparent 34%),
+    linear-gradient(155deg, rgba(14, 38, 40, 0.98), rgba(6, 18, 21, 0.99));
+}
+
+#gameShell.theme-rust-comic .feature-header {
+  border-bottom-color: rgba(199, 114, 75, 0.36);
+  background:
+    linear-gradient(90deg, rgba(148, 80, 57, 0.18), transparent 62%),
+    rgba(5, 19, 21, 0.82);
+  box-shadow: inset 5px 0 0 var(--comic-rust-dark);
+}
+
+#gameShell.theme-rust-comic .banked-module,
+#gameShell.theme-rust-comic .run-diagnosis,
+#gameShell.theme-rust-comic .diagnosis-highlight {
+  border-color: rgba(112, 67, 50, 0.78);
+  background:
+    radial-gradient(circle, rgba(216, 201, 158, 0.04) 0 0.65px, transparent 0.85px) 0 0 / 6px 6px,
+    linear-gradient(125deg, rgba(148, 80, 57, 0.12), transparent 44%),
+    rgba(10, 30, 31, 0.86);
+  box-shadow: inset 0 0 0 2px rgba(8, 13, 16, 0.66), 3px 4px 0 rgba(8, 13, 16, 0.7);
+}
+
+#gameShell.theme-rust-comic .diagnosis-grade {
+  border: 2px solid var(--comic-ochre);
+  color: #f3dca5;
+  background:
+    repeating-linear-gradient(-45deg, rgba(216, 201, 158, 0.06) 0 4px, transparent 4px 8px),
+    rgba(112, 58, 35, 0.48);
+  box-shadow: 4px 4px 0 var(--comic-ink);
+  transform: rotate(-1.5deg) skew(-5deg);
+}
+
+#gameShell.theme-rust-comic .diagnosis-metrics,
+#gameShell.theme-rust-comic .diagnosis-details {
+  border-color: rgba(112, 67, 50, 0.7);
+  background-color: #4a342b;
+}
+
+#gameShell.theme-rust-comic .diagnosis-metrics div {
+  background: #10272a;
+}
+
+#gameShell.theme-rust-comic .journal-card {
+  border-color: color-mix(in srgb, var(--ore-journal) 52%, var(--comic-rust-hi));
+  background:
+    radial-gradient(circle at 16% 24%, color-mix(in srgb, var(--ore-journal) 11%, transparent), transparent 32%),
+    radial-gradient(circle, rgba(216, 201, 158, 0.045) 0 0.65px, transparent 0.85px) 0 0 / 6px 6px,
+    linear-gradient(148deg, rgba(22, 48, 48, 0.94), rgba(7, 21, 23, 0.99));
+  box-shadow: inset 0 0 0 2px var(--comic-ink), 4px 5px 0 rgba(8, 13, 16, 0.82);
+}
+
+#gameShell.theme-rust-comic .journal-card:hover,
+#gameShell.theme-rust-comic .journal-card:focus-visible {
+  border-color: color-mix(in srgb, var(--ore-journal) 78%, var(--comic-bone));
+  filter: brightness(1.08);
+}
+
+#gameShell.theme-rust-comic .journal-card__tier {
+  border-color: color-mix(in srgb, var(--ore-journal) 58%, var(--comic-rust-hi));
+  background: #171b19;
+  box-shadow: 2px 2px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .upgrade-map__viewport {
+  scrollbar-color: var(--comic-rust-hi) #081719;
+  background:
+    linear-gradient(118deg, rgba(148, 80, 57, 0.1), transparent 30%),
+    linear-gradient(90deg, rgba(7, 22, 25, 0.99), rgba(13, 34, 34, 0.98));
+}
+
+#gameShell.theme-rust-comic .upgrade-map__world {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(217, 169, 79, 0.24) 0 3px, transparent 4px 100%),
+    repeating-radial-gradient(ellipse at 50% 50%, transparent 0 115px, rgba(120, 168, 161, 0.08) 116px 118px, transparent 119px 171px),
+    conic-gradient(from -12deg at 50% 50%, rgba(199, 114, 75, 0.035) 0 1deg, transparent 1deg 50deg, rgba(120, 168, 161, 0.025) 50deg 51deg, transparent 51deg 100deg);
+}
+
+#gameShell.theme-rust-comic .upgrade-map__world::before {
+  opacity: 0.15;
+  background:
+    repeating-linear-gradient(167deg, transparent 0 31px, rgba(199, 114, 75, 0.15) 31px 32px),
+    radial-gradient(circle, rgba(216, 201, 158, 0.14) 0 0.65px, transparent 0.85px) 0 0 / 7px 7px;
+}
+
+#gameShell.theme-rust-comic .upgrade-node {
+  border-color: color-mix(in srgb, var(--category-color) 62%, var(--comic-rust-hi));
+  border-radius: 2px 8px 2px 6px;
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--category-color) 11%, transparent) 0 0.7px, transparent 0.9px) 0 0 / 6px 6px,
+    linear-gradient(145deg, color-mix(in srgb, var(--category-color) 15%, #1a3030), #071719 70%);
+  box-shadow:
+    inset 0 0 0 2px rgba(8, 13, 16, 0.86),
+    inset 0 3px 0 rgba(148, 80, 57, 0.18),
+    4px 5px 0 var(--comic-ink),
+    0 10px 19px rgba(0, 0, 0, 0.3);
+}
+
+#gameShell.theme-rust-comic .upgrade-node::after {
+  border-color: var(--comic-ink);
+  background: #846653;
+}
+
+#gameShell.theme-rust-comic .upgrade-node.is-affordable::after {
+  background: #74e69d;
+  box-shadow: 0 0 8px rgba(116, 230, 157, 0.68);
+}
+
+#gameShell.theme-rust-comic .upgrade-node.is-pending::after,
+#gameShell.theme-rust-comic .upgrade-node[data-state="pending"]::after {
+  background: var(--comic-ochre);
+  box-shadow: 0 0 8px rgba(217, 169, 79, 0.64);
+}
+
+#gameShell.theme-rust-comic .upgrade-node__icon {
+  border-color: color-mix(in srgb, var(--category-color) 52%, var(--comic-rust-hi));
+  background:
+    linear-gradient(135deg, rgba(148, 80, 57, 0.15), transparent 52%),
+    rgba(5, 16, 18, 0.84);
+}
+
+#gameShell.theme-rust-comic .upgrade-node__level {
+  border-color: color-mix(in srgb, var(--category-color) 60%, var(--comic-rust-hi));
+  color: var(--comic-bone);
+  background: #211713;
+  box-shadow: 2px 2px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .upgrade-node:hover,
+#gameShell.theme-rust-comic .upgrade-node:focus-visible,
+#gameShell.theme-rust-comic .upgrade-node.is-selected {
+  border-color: var(--gold-hi);
+  filter: brightness(1.13);
+  transform: translateY(-2px) scale(1.04);
+}
+
+#gameShell.theme-rust-comic .upgrade-node.is-selected {
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 228, 154, 0.28),
+    0 0 0 2px var(--comic-ink),
+    0 0 0 4px var(--gold-hi),
+    5px 7px 0 rgba(8, 13, 16, 0.82);
+}
+
+#gameShell.theme-rust-comic .upgrade-node.is-preview,
+#gameShell.theme-rust-comic .upgrade-node[data-state="preview"] {
+  border-style: dashed;
+  opacity: 0.62;
+  filter: saturate(0.42) brightness(0.8);
+}
+
+#gameShell.theme-rust-comic .upgrade-node.is-pending,
+#gameShell.theme-rust-comic .upgrade-node[data-state="pending"] {
+  border-style: dashed;
+  border-color: var(--comic-ochre);
+  background: linear-gradient(145deg, rgba(89, 57, 30, 0.92), rgba(8, 27, 28, 0.99));
+}
+
+#gameShell.theme-rust-comic .upgrade-node.is-maxed,
+#gameShell.theme-rust-comic .upgrade-node[data-state="maxed"] {
+  border-color: #67b783;
+  background: linear-gradient(145deg, rgba(26, 66, 55, 0.96), rgba(7, 27, 27, 0.99));
+}
+
+#gameShell.theme-rust-comic .upgrade-node[data-upgrade-id="core_bon_voyage"] {
+  border-color: var(--gold-hi);
+  background:
+    radial-gradient(circle, rgba(241, 198, 93, 0.32), rgba(34, 53, 45, 0.96) 58%, #071416),
+    radial-gradient(circle, rgba(216, 201, 158, 0.08) 0 0.7px, transparent 0.9px) 0 0 / 6px 6px;
+  box-shadow: inset 0 0 0 2px #704629, 0 0 0 3px var(--comic-ink), 0 0 22px rgba(241, 198, 93, 0.36), 4px 6px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .upgrade-node__tooltip,
+#gameShell.theme-rust-comic .ore-stock small,
+#gameShell.theme-rust-comic .ore-inventory__item small {
+  border-color: color-mix(in srgb, var(--category-color, var(--ore-color, var(--comic-patina-hi))) 55%, var(--comic-rust-hi));
+  border-left-width: 4px;
+  border-radius: 2px;
+  background:
+    radial-gradient(circle, rgba(216, 170, 104, 0.07) 0 0.6px, transparent 0.8px) 0 0 / 6px 6px,
+    linear-gradient(145deg, #172622, #0b1514);
+  box-shadow: inset 0 0 0 2px rgba(8, 13, 16, 0.72), 5px 6px 0 var(--comic-ink), 0 16px 30px rgba(0, 0, 0, 0.45);
+}
+
+#gameShell.theme-rust-comic .upgrade-node__tooltip::before {
+  background: #172622;
+}
+
+#gameShell.theme-rust-comic .search-box,
+#gameShell.theme-rust-comic .filter-btn,
+#gameShell.theme-rust-comic .icon-btn,
+#gameShell.theme-rust-comic .utility-nav__button,
+#gameShell.theme-rust-comic .ore-inventory__item,
+#gameShell.theme-rust-comic .mobile-ore-focus__toggle {
+  border-color: rgba(112, 83, 66, 0.82);
+  background:
+    linear-gradient(115deg, rgba(148, 80, 57, 0.14), transparent 45%),
+    rgba(10, 29, 31, 0.94);
+  box-shadow: inset 0 0 0 2px rgba(8, 13, 16, 0.68), 3px 4px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .filter-btn.is-active {
+  color: var(--comic-ink);
+  border-color: var(--gold-hi);
+  background:
+    repeating-linear-gradient(-45deg, rgba(255, 246, 194, 0.08) 0 4px, transparent 4px 8px),
+    var(--gold);
+  box-shadow: inset 0 2px 0 #ffe6a2, 0 3px 0 var(--comic-rust-dark);
+}
+
+#gameShell.theme-rust-comic .icon-btn:hover,
+#gameShell.theme-rust-comic .utility-nav__button:hover {
+  border-color: var(--comic-rust-hi);
+  color: var(--cream);
+  background: #203b39;
+}
+
+#gameShell.theme-rust-comic .utility-nav__button--audio.is-muted {
+  color: #819894;
+  border-color: rgba(82, 96, 89, 0.72);
+  background: rgba(17, 30, 30, 0.94);
+}
+
+@media (max-width: 640px) {
+  #gameShell.theme-rust-comic .screen-texture {
+    opacity: 0.095;
+  }
+
+  #gameShell.theme-rust-comic .panel-frame {
+    outline-offset: -4px;
+    box-shadow: 3px 4px 0 var(--comic-ink), 0 9px 20px rgba(0, 0, 0, 0.4), inset 0 0 0 2px rgba(6, 13, 15, 0.72);
+  }
+
+  #gameShell.theme-rust-comic .hud-chip::after {
+    top: 3px;
+    right: 4px;
+    width: 4px;
+    height: 4px;
+  }
+
+  #gameShell.theme-rust-comic .journal-card,
+  #gameShell.theme-rust-comic .diagnosis-highlight {
+    box-shadow: inset 0 0 0 2px var(--comic-ink), 2px 3px 0 rgba(8, 13, 16, 0.78);
+  }
+
+  /* A transformed/filtered node becomes the containing block for its fixed
+     tooltip. Keep the mobile card anchored to the viewport instead. */
+  #gameShell.theme-rust-comic .upgrade-node:hover,
+  #gameShell.theme-rust-comic .upgrade-node:focus-visible,
+  #gameShell.theme-rust-comic .upgrade-node.is-selected {
+    filter: none;
+    transform: none;
+  }
+}
+
+/* Keep the visibility pass last in the cascade. */
+#gameShell.theme-rust-comic .result-header h2 {
+  text-shadow: none;
+}
+
+#gameShell.theme-rust-comic {
+  --comic-ink: #07090a;
+  --comic-rust: #a84f31;
+  --comic-rust-dark: #54271d;
+  --comic-rust-hi: #df7a45;
+  --comic-bone: #e6d5a5;
+  --comic-ochre: #e5ad45;
+  --comic-patina: #3f7770;
+  --comic-patina-hi: #8ab7aa;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(197, 82, 43, 0.34), transparent 30%),
+    radial-gradient(circle at 86% 15%, rgba(64, 118, 111, 0.2), transparent 32%),
+    linear-gradient(145deg, #21120f, #071719 45%, #020709 100%);
+}
+
+#gameShell.theme-rust-comic .screen-texture {
+  opacity: 0.22;
+  mix-blend-mode: normal;
+}
+
+#gameShell.theme-rust-comic .panel-frame {
+  border: 3px solid var(--comic-rust-hi);
+  outline: 5px solid var(--comic-ink);
+  outline-offset: 0;
+  box-shadow: 9px 10px 0 var(--comic-ink), 14px 15px 0 rgba(83, 38, 27, 0.82), 0 24px 42px rgba(0, 0, 0, 0.55), inset 0 0 0 4px rgba(6, 12, 13, 0.86);
+}
+
+#gameShell.theme-rust-comic .panel-frame::before,
+#gameShell.theme-rust-comic .panel-frame::after {
+  width: 28px;
+  height: 28px;
+  border-width: 5px;
+}
+
+#gameShell.theme-rust-comic .eyebrow,
+#gameShell.theme-rust-comic .ui-kicker {
+  color: #f0d59c;
+  background: repeating-linear-gradient(-45deg, rgba(255, 213, 147, 0.08) 0 4px, transparent 4px 8px), var(--comic-rust-dark);
+  box-shadow: 3px 3px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .start-layout {
+  background:
+    linear-gradient(90deg, transparent 0 50.7%, var(--comic-ink) 50.7% 51.7%, transparent 51.7%),
+    linear-gradient(90deg, #241713 0 51%, #1b3232 51% 100%);
+}
+
+#gameShell.theme-rust-comic .brand-block {
+  border-right: 0;
+  background:
+    linear-gradient(138deg, rgba(204, 92, 48, 0.28) 0 20%, transparent 20% 100%),
+    repeating-linear-gradient(102deg, transparent 0 55px, rgba(231, 122, 69, 0.09) 56px 58px),
+    radial-gradient(circle at 18% 72%, rgba(169, 76, 43, 0.24), transparent 34%),
+    linear-gradient(145deg, #2b1813, #101c1d 68%);
+  box-shadow: inset 12px 0 0 var(--comic-rust-dark), inset 16px 0 0 var(--comic-rust-hi), inset -5px 0 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic #gameTitle > span {
+  color: var(--comic-bone);
+  text-shadow: 3px 3px 0 var(--comic-ink), 7px 7px 0 var(--comic-rust);
+}
+
+#gameShell.theme-rust-comic #gameTitle > b {
+  border: 3px solid var(--comic-ink);
+  color: #1c100c;
+  background: radial-gradient(circle, rgba(72, 33, 21, 0.24) 0 1px, transparent 1.3px) 0 0 / 6px 6px, repeating-linear-gradient(-45deg, rgba(255, 245, 189, 0.14) 0 5px, transparent 5px 10px), linear-gradient(100deg, #dd773f, #efbd54 58%, #b65432);
+  box-shadow: 7px 7px 0 var(--comic-ink), 10px 10px 0 var(--comic-rust-dark);
+}
+
+#gameShell.theme-rust-comic .briefing {
+  background: radial-gradient(circle, rgba(229, 173, 69, 0.09) 0 1px, transparent 1.2px) 0 0 / 9px 9px, repeating-linear-gradient(90deg, transparent 0 31px, rgba(116, 169, 157, 0.07) 31px 32px), linear-gradient(135deg, #263f3c, #102527 72%);
+  box-shadow: inset 8px 0 0 var(--comic-ink), inset 12px 0 0 var(--comic-rust-dark);
+}
+
+#gameShell.theme-rust-comic .briefing-steps li {
+  border: 2px solid #b35b37;
+  border-left: 10px solid var(--comic-rust-hi);
+  background: repeating-linear-gradient(-45deg, rgba(229, 173, 69, 0.055) 0 5px, transparent 5px 10px), linear-gradient(90deg, #372018, #0b2022 66%);
+  box-shadow: 5px 5px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .start-footer {
+  border-top: 4px solid var(--comic-ink);
+  background: repeating-linear-gradient(90deg, rgba(223, 122, 69, 0.13) 0 18px, transparent 18px 38px), #281812;
+}
+
+#gameShell.theme-rust-comic .hud-chip,
+#gameShell.theme-rust-comic .timer-module,
+#gameShell.theme-rust-comic .focus-hud,
+#gameShell.theme-rust-comic .field-guide,
+#gameShell.theme-rust-comic .context-tutorial,
+#gameShell.theme-rust-comic .perk-status-rail__item {
+  border: 2px solid var(--comic-rust-hi);
+  background: radial-gradient(circle, rgba(231, 186, 114, 0.11) 0 0.8px, transparent 1px) 0 0 / 7px 7px, linear-gradient(112deg, #49251b, #132829 44%, #071719);
+  box-shadow: inset 0 4px 0 var(--comic-rust-dark), inset 7px 0 0 rgba(223, 122, 69, 0.24), 4px 5px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .timer-module {
+  border-color: var(--comic-ochre);
+  background: repeating-linear-gradient(-45deg, rgba(255, 238, 174, 0.06) 0 6px, transparent 6px 12px), linear-gradient(100deg, #5c2d1c, #1d302d 35%, #111b19);
+  box-shadow: inset 0 5px 0 #814128, 5px 6px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .result-card,
+#gameShell.theme-rust-comic .upgrade-header,
+#gameShell.theme-rust-comic .collection-shell,
+#gameShell.theme-rust-comic .balance-lab,
+#gameShell.theme-rust-comic .pause-overlay > div,
+#gameShell.theme-rust-comic .mobile-ore-focus__sheet {
+  border-color: var(--comic-rust-hi);
+  background: radial-gradient(circle, rgba(231, 183, 108, 0.12) 0 0.8px, transparent 1px) 0 0 / 8px 8px, linear-gradient(125deg, rgba(121, 51, 31, 0.38), transparent 38%), linear-gradient(155deg, #203b39, #0b1d1e 62%, #120b09);
+  box-shadow: inset 8px 0 0 var(--comic-rust-dark), inset 12px 0 0 rgba(223, 122, 69, 0.56), 7px 8px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .feature-header {
+  border-bottom: 4px solid var(--comic-ink);
+  background: repeating-linear-gradient(100deg, rgba(255, 211, 137, 0.07) 0 7px, transparent 7px 14px), linear-gradient(90deg, #67301f, #253d39 48%, #0b1d1e);
+  box-shadow: inset 9px 0 0 var(--comic-rust-hi);
+}
+
+#gameShell.theme-rust-comic .upgrade-header {
+  border: 3px solid var(--comic-rust-hi);
+  box-shadow: inset 10px 0 0 var(--comic-rust-dark), inset 14px 0 0 var(--comic-rust-hi), 6px 7px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .next-breakthrough {
+  border: 2px solid var(--comic-rust-hi);
+  background: repeating-linear-gradient(-45deg, rgba(238, 193, 119, 0.07) 0 5px, transparent 5px 10px), linear-gradient(95deg, #56291d, #142d2d 58%, #081719);
+  box-shadow: inset 6px 0 0 var(--comic-rust-dark), 4px 5px 0 var(--comic-ink);
+}
+
+#gameShell.theme-rust-comic .upgrade-map__viewport {
+  border: 3px solid var(--comic-rust-dark);
+  outline: 2px solid var(--comic-rust-hi);
+  outline-offset: -5px;
+  background: radial-gradient(circle, rgba(224, 169, 91, 0.12) 0 1px, transparent 1.25px) 0 0 / 11px 11px, linear-gradient(118deg, rgba(155, 63, 36, 0.25), transparent 32%), #0d2424;
+  box-shadow: inset 0 0 0 7px rgba(7, 10, 11, 0.62);
+}
+
+#gameShell.theme-rust-comic .upgrade-node {
+  border: 3px solid var(--comic-rust-hi);
+  background: radial-gradient(circle, rgba(237, 191, 116, 0.13) 0 0.8px, transparent 1px) 0 0 / 6px 6px, linear-gradient(140deg, #71341f, #222b26 42%, #071416 78%);
+  box-shadow: inset 0 0 0 3px var(--comic-ink), inset 0 0 0 5px color-mix(in srgb, var(--category-color) 58%, transparent), 5px 6px 0 var(--comic-ink), 8px 9px 0 var(--comic-rust-dark);
+}
+
+#gameShell.theme-rust-comic .upgrade-node__icon {
+  border: 2px solid color-mix(in srgb, var(--category-color) 76%, var(--comic-bone));
+  background: radial-gradient(circle, color-mix(in srgb, var(--category-color) 20%, transparent) 0 1px, transparent 1.2px) 0 0 / 6px 6px, #091718;
+  box-shadow: inset 0 -5px 0 color-mix(in srgb, var(--category-color) 42%, transparent);
+}
+
+#gameShell.theme-rust-comic .upgrade-node__level {
+  border: 2px solid var(--comic-rust-hi);
+  color: #f1d79e;
+  background: #321a14;
+  box-shadow: 3px 3px 0 var(--comic-ink);
+}
+
+@media (max-width: 640px) {
+  #gameShell.theme-rust-comic .screen-texture { opacity: 0.16; }
+
+  #gameShell.theme-rust-comic .panel-frame {
+    border-width: 2px;
+    outline-width: 3px;
+    box-shadow: 4px 5px 0 var(--comic-ink), 7px 8px 0 rgba(83, 38, 27, 0.72), inset 0 0 0 2px rgba(6, 12, 13, 0.86);
+  }
+
+  #gameShell.theme-rust-comic .briefing-steps li {
+    border: 2px solid var(--comic-rust-hi);
+    border-top-width: 7px;
+    box-shadow: 3px 4px 0 var(--comic-ink);
+  }
+
+  #gameShell.theme-rust-comic .upgrade-header {
+    border-width: 2px;
+    box-shadow: inset 6px 0 0 var(--comic-rust-dark), inset 9px 0 0 var(--comic-rust-hi), 3px 4px 0 var(--comic-ink);
+  }
+
+  #gameShell.theme-rust-comic .upgrade-node {
+    border-width: 2px;
+    box-shadow: inset 0 0 0 2px var(--comic-ink), inset 0 0 0 4px color-mix(in srgb, var(--category-color) 58%, transparent), 3px 4px 0 var(--comic-ink), 5px 6px 0 var(--comic-rust-dark);
+  }
+
+  #gameShell.theme-rust-comic .upgrade-node:hover,
+  #gameShell.theme-rust-comic .upgrade-node:focus-visible,
+  #gameShell.theme-rust-comic .upgrade-node.is-selected {
+    filter: none;
+    transform: none;
   }
 }

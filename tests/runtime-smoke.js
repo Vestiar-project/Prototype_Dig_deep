@@ -488,7 +488,7 @@ assert.equal(cappedCatalogEntry.pendingReason, "capacity", "catalog diagnostics 
 assert.equal(cappedCatalogEntry.firstRankSlotsRemaining, 0);
 assert.equal(api.buyUpgrade(cappedCandidate.id), false, "the direct purchase path must enforce the four-node cap");
 const cappedWorkshopSave = JSON.parse(localData.get("depth-zero-save-v1"));
-assert.equal(cappedWorkshopSave.version, 14, "Solar Drill qualification and workshop sessions require save schema v14");
+assert.equal(cappedWorkshopSave.version, 15, "the final-seal campaign state requires save schema v15");
 assert.equal(cappedWorkshopSave.workshopInstallRun, 1);
 assert.equal(cappedWorkshopSave.workshopInstalledIds.length, 4, "the exact set of first-ranked nodes must persist");
 assert.match(elementFor("#upgradeMapStatus").textContent, /4\/4/, "the workshop tracker should explain the exhausted capacity");
@@ -638,35 +638,25 @@ assert.equal(superRockFx.shocks, 1, "super-pick rock must show one bounded fract
 assert.ok(superRockFx.shake >= 1.9, "super-pick rock must have a stronger but bounded impact");
 api.finishRun();
 
-// Ore Focus remains an in-run decision: opening its picker quietly owns the
-// pause, freezes the shift, and selecting a discovered ore resumes the run.
+// Ore Focus is selected in the workshop before a shift. In a run it is a
+// passive, bottom-centred status readout: it must neither open a picker nor
+// pause the timer on touch devices.
 api.debugResetProgress();
 api.setUpgradeLevel("sense_ore_focus", 1);
 api.grantOre("copper", 1);
 api.startRun({ seed: "runtime-run-focus-picker", sectorId: "stable_strata" });
 const runFocusHud = elementFor("#focusHud");
-const runFocusBackdrop = elementFor("#runOreFocusBackdrop");
-assert.equal(runFocusHud.classList.contains("hidden"), false, "an unlocked focus must be switchable during a shift");
-const runFocusTimeBeforeOpen = api.getSnapshot().timeLeft;
+assert.equal(runFocusHud.classList.contains("hidden"), false, "an unlocked focus must remain visible during a shift");
+assert.equal((runFocusHud.listeners.get("click") || []).length, 0, "the in-run focus must be passive status, not a control");
+const runFocusTimeBeforeReadout = api.getSnapshot().timeLeft;
 runFocusHud.click();
-assert.equal(api.getSnapshot().paused, true, "the in-run focus picker must pause its own active shift");
-assert.equal(runFocusBackdrop.classList.contains("hidden"), false);
-assert.equal(elementFor("#pauseOverlay").classList.contains("hidden"), true, "the focus pause must not show the normal pause overlay");
-assert.equal(runFocusHud.getAttribute("aria-expanded"), "true");
 api.stepRun(0.25);
-assert.equal(api.getSnapshot().timeLeft, runFocusTimeBeforeOpen, "the quiet focus pause must freeze the run timer");
-const runFocusChoiceListeners = elementFor("#runOreFocusChoices").listeners.get("click") || [];
-assert.equal(runFocusChoiceListeners.length, 1, "the in-run focus picker must install one delegated choice handler");
-const runCopperFocusTarget = {
-  dataset: { focusOre: "copper" },
-  closest(selector) { return selector === "[data-focus-ore]" ? this : null; },
-};
-runFocusChoiceListeners[0]({ target: runCopperFocusTarget });
-assert.equal(api.getSnapshot().focusedOreId, "copper", "an in-run choice must immediately change ore priority");
-assert.equal(api.getSnapshot().paused, false, "choosing an ore must release the pause owned by the picker");
-assert.equal(runFocusBackdrop.classList.contains("hidden"), true);
-assert.equal(runFocusHud.getAttribute("aria-expanded"), "false");
-assert.equal(api.getSnapshot().timeLeft, runFocusTimeBeforeOpen, "closing the picker must not charge its paused wall time");
+assert.equal(api.getSnapshot().paused, false, "reading focus must never pause a shift");
+assert.ok(api.getSnapshot().timeLeft < runFocusTimeBeforeReadout, "the passive focus readout must not freeze the timer");
+assert.equal(api.getSnapshot().focusedOreId, null, "a run HUD click must not alter workshop-selected focus");
+api.setFocusedOre("copper");
+assert.equal(api.getSnapshot().focusedOreId, "copper", "the workshop/debug selection remains the single focus source");
+assert.match(runFocusHud.title, /радиус/i, "the passive HUD must communicate the current focus bonus");
 api.finishRun();
 
 // Discovery is permanent visual knowledge, independent of the live sense
@@ -757,7 +747,7 @@ assertExpandedExplorationContinues("laser");
 api.debugResetProgress();
 api.setAllUpgrades(false);
 api.setUpgradeLevel("tools_laser_emitter", 1);
-api.setUpgradeLevel("tools_solar_drill", 1);
+api.setUpgradeLevel("core_bon_voyage", 1);
 api.setFocusedOre(null);
 api.startRun({ seed: "runtime-solar-drill-burst", sectorId: "stable_strata" });
 api.debugScheduleGlobalEvent();
@@ -784,27 +774,27 @@ assert.equal(api.debugGetTile(44, 21).kind, "air", "the Solar Drill final burst 
 assert.ok((solarSnapshot.metrics.sourceBreaks.solar || 0) > 0, "Solar Drill breaks must be attributed to the solar source");
 api.finishRun();
 
-// The final launch protocol must leave enough room to actually use the Solar
-// Drill instead of buying the ending after a single preparation shift.
+// The finale is reached by breaching the indestructible planetary seal with
+// three completed Solar Drill bursts, not by a separate qualification counter.
 api.debugResetProgress();
 api.setAllUpgrades(true);
-api.setUpgradeLevel("core_bon_voyage", 0);
-api.startRun({ seed: "runtime-solar-qualification-1", sectorId: "stable_strata" });
-api.finishRun();
-let solarQualification = api.getSnapshot().campaign;
-assert.equal(solarQualification.solarDrillShifts, 1);
-assert.equal(
-  api.getUpgradeCatalog().find((upgrade) => upgrade.id === "core_bon_voyage").unlocked,
-  false,
-  "one Solar Drill shift must not unlock the finale",
-);
-api.startRun({ seed: "runtime-solar-qualification-2", sectorId: "stable_strata" });
-api.finishRun();
-solarQualification = api.getSnapshot().campaign;
-assert.equal(solarQualification.solarDrillShifts, 2);
-const qualifiedFinale = api.getUpgradeCatalog().find((upgrade) => upgrade.id === "core_bon_voyage");
-assert.equal(qualifiedFinale.unlocked, true, "two Solar Drill shifts must qualify the finale");
-assert.equal(qualifiedFinale.available, true, "the qualified finale must enter the fresh workshop session");
+api.startRun({ seed: "runtime-final-seal-breach", sectorId: "stable_strata" });
+const finalLayerTy = global.DepthZeroWorld.FINAL_LAYER_TY;
+const finalLayerTx = Math.floor(global.DepthZeroWorld.WORLD_CONFIG.WIDTH / 2);
+api.debugSetPlayerTile(finalLayerTx, finalLayerTy - 1);
+api.stepRun(0.05);
+assert.equal(api.getSnapshot().target?.kind, "final_seal", "Solar Drill must prioritize the final layer when it is reached");
+for (let strike = 0; strike < 3; strike += 1) {
+  for (let shot = 0; shot < 5; shot += 1) assert.ok(api.attackNow(), "the Solar Drill must receive its fifth shot");
+  api.debugSetAttackCooldown(100);
+  api.stepRun(0.8);
+}
+assert.equal(api.getSnapshot().mode, "ending", "the third Solar Drill strike must open the comic finale");
+assert.equal(api.getSnapshot().campaign.ready, true, "a breached seal must complete the campaign");
+assert.equal(elementFor("#endingScreen").classList.contains("hidden"), false, "the comic must become visible immediately after the breach");
+elementFor("#endingResetProgress").click();
+assert.equal(api.getSnapshot().campaign.ready, false, "the ending reset button must clear completed campaign state");
+assert.equal(api.getSnapshot().mode, "title", "the ending reset button must return to a clean title state");
 
 // Runtime depth records are expressed in authored metres: twenty vertical
 // tiles from the surface origin must advance the record by about 100 metres.
@@ -1026,15 +1016,19 @@ assert.ok(
 );
 const worldPixelWidth = global.DepthZeroWorld.WORLD_CONFIG.WIDTH
   * global.DepthZeroWorld.WORLD_CONFIG.TILE_SIZE;
+const cameraZoom = 0.9;
 assert.deepEqual(
   api.debugGetHorizontalCameraBounds(worldPixelWidth - 640),
-  { min: 0, max: 640 },
-  "a viewport narrower than the mine must retain normal horizontal scrolling",
+  { min: 0, max: worldPixelWidth - (worldPixelWidth - 640) / cameraZoom },
+  "the zoomed-out camera must retain normal horizontal scrolling",
 );
 assert.deepEqual(
   api.debugGetHorizontalCameraBounds(worldPixelWidth + 640),
-  { min: -320, max: -320 },
-  "a viewport wider than the mine must center equal letterbox margins",
+  {
+    min: (worldPixelWidth - (worldPixelWidth + 640) / cameraZoom) * 0.5,
+    max: (worldPixelWidth - (worldPixelWidth + 640) / cameraZoom) * 0.5,
+  },
+  "a zoomed-out viewport wider than the mine must center equal letterbox margins",
 );
 placeOre(liftLandingTx - 3, liftLandingTy - 4, "copper", "skipped-upper-strata", 1);
 
@@ -2443,7 +2437,56 @@ assert.ok(Math.abs(lateBonusAfter.bonusTimeEarned - lateBonusBefore.bonusTimeEar
 assert.ok(Math.abs(lateBonusAfter.chronoOverflowRemaining - lateBonusBefore.chronoOverflowRemaining) <= 1e-6);
 api.finishRun();
 
+// Hidden geology must never masquerade as the actual haul. An amethyst-biased
+// map with only copper and coal collected stays neutral, and one incidental
+// amethyst among a hundred copper pieces is still too weak to name the report.
+let amethystBiasSeed = null;
+for (let index = 0; index < 10_000 && !amethystBiasSeed; index += 1) {
+  const candidateSeed = `runtime-amethyst-bias-${index}`;
+  const profile = global.DepthZeroWorld.createRandomGeologyProfile(
+    candidateSeed,
+    global.DepthZeroUpgrades.ORE_TYPES,
+  );
+  if (profile.trait === "ore_bias" && profile.oreBias?.id === "amethyst") {
+    amethystBiasSeed = candidateSeed;
+  }
+}
+assert.ok(amethystBiasSeed, "a deterministic amethyst-bias fixture must exist");
+api.setAllUpgrades(false);
+api.startRun({ seed: amethystBiasSeed });
+for (let index = 0; index < 2; index += 1) {
+  placeOre(70, 12, "copper", `geology-copper-${index}`, 1);
+  assert.ok(api.debugBreakTileWithSource(70, 12, "debug"));
+}
+placeOre(70, 12, "coal", "geology-coal", 1);
+assert.ok(api.debugBreakTileWithSource(70, 12, "debug"));
+api.finishRun();
+snapshot = api.getSnapshot();
+assert.match(snapshot.lastRunReport.sectorLabel, /ГЛУБИННЫЙ УКЛОН/);
+assert.doesNotMatch(
+  `${snapshot.lastRunReport.sectorLabel} ${snapshot.lastRunReport.geologyDetail}`,
+  /АМЕТИСТ/,
+  "an uncollected biased ore must not be reported as part of the haul",
+);
+
+api.startRun({ seed: amethystBiasSeed });
+for (let index = 0; index < 100; index += 1) {
+  placeOre(70, 12, "copper", `geology-major-copper-${index}`, 1);
+  assert.ok(api.debugBreakTileWithSource(70, 12, "debug"));
+}
+placeOre(70, 12, "amethyst", "geology-incidental-amethyst", 1);
+assert.ok(api.debugBreakTileWithSource(70, 12, "debug"));
+api.finishRun();
+snapshot = api.getSnapshot();
+assert.match(snapshot.lastRunReport.sectorLabel, /ГЛУБИННЫЙ УКЛОН/);
+assert.doesNotMatch(
+  `${snapshot.lastRunReport.sectorLabel} ${snapshot.lastRunReport.geologyDetail}`,
+  /АМЕТИСТ/,
+  "one incidental biased piece must not outweigh the real haul",
+);
+
 api.setAllUpgrades(true);
+api.setUpgradeLevel("core_bon_voyage", 0);
 api.startRun({ seed: "runtime-timer-cap", sectorId: "stable_strata" });
 api.grantBonusTime(100);
 snapshot = api.getSnapshot();
@@ -2531,6 +2574,7 @@ console.log(JSON.stringify({
     "triangle-aoe-snapshot",
     "bounded-terrain-base-cache",
     "random-geology-without-sector-choice",
+    "geology-report-matches-haul",
     "short-global-micro-events",
     "soft-rock-laser-ray",
     "resonant-ping",
@@ -2542,7 +2586,7 @@ console.log(JSON.stringify({
     "stress-map-outside-sense",
     "expanded-exploration-reacquisition",
     "solar-drill-delayed-burst",
-    "solar-drill-finale-qualification",
+    "solar-drill-final-seal-comic",
     "target-aware-density-pierce",
     "side-chip",
     "chrono-overdrive",

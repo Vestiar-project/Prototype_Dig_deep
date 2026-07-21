@@ -104,10 +104,14 @@ function simulateCampaign(seed, maxRuns = 420) {
     api.stepRun(61);
     let snapshot = api.getSnapshot();
     const report = snapshot.lastRunReport;
-    assert.equal(snapshot.mode, "result", `run ${run} must end normally`);
+    assert.ok(snapshot.mode === "result" || snapshot.mode === "ending", `run ${run} must end in results or the final comic`);
     activeSeconds += report?.duration || 0;
     elapsedSeconds += (report?.duration || 0) + 10;
     runs = run;
+    if (snapshot.mode === "ending") {
+      completed = Boolean(snapshot.campaign.ready);
+      break;
+    }
 
     for (const [oreId, amount] of Object.entries(snapshot.lastHaul || {})) {
       if (amount > 0 && firstOreSeconds[oreId] == null) firstOreSeconds[oreId] = elapsedSeconds;
@@ -326,8 +330,8 @@ for (const campaign of campaigns) {
     campaign.milestoneMinutes.solarDrill,
   );
   assert.ok(
-    campaign.milestoneMinutes.finalPerk - lastCapstoneMinute >= 2,
-    `the finale must include two completed Solar Drill shifts after the last capstone: ${JSON.stringify(campaign)}`,
+    campaign.milestoneMinutes.finalPerk >= lastCapstoneMinute,
+    `the Solar Drill must remain after the capstone preparation path: ${JSON.stringify(campaign)}`,
   );
   const capstoneMinutes = [
     campaign.milestoneMinutes.earthCall,

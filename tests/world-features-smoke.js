@@ -15,6 +15,8 @@ const {
   UNDERGROUND_EVENT_TYPES,
   MineWorld,
   WORLD_CONFIG,
+  FINAL_LAYER_TY,
+  FINAL_SEAL_HITS,
   createRandomGeologyProfile,
   getSectorChoices,
 } = global.DepthZeroWorld;
@@ -26,6 +28,27 @@ assert.equal(WORLD_CONFIG.HEIGHT, 180, "the mine must trade lateral sprawl for m
 assert.equal(WORLD_CONFIG.METERS_PER_TILE, 5, "one terrain row must represent five metres");
 assert.equal(WORLD_CONFIG.SPAWN_TX, WORLD_CONFIG.WIDTH / 2, "the surface landing must be centered");
 assert.equal(WORLD_CONFIG.CAVE_COUNT, 32, "cave count must preserve cave density after the final width reduction");
+
+// The final stratum is not ordinary rock: generic mining, blasts and direct
+// tile breaking must leave it intact, while only three explicit Solar Drill
+// strikes can open a single breach.
+const finalSealWorld = new MineWorld(ORE_TYPES, "final-seal-regression", { sectorId: "stable_strata" });
+const finalSealTx = Math.floor(WORLD_CONFIG.WIDTH / 2);
+const finalSealX = (finalSealTx + 0.5) * WORLD_CONFIG.TILE_SIZE;
+const finalSealY = (FINAL_LAYER_TY + 0.5) * WORLD_CONFIG.TILE_SIZE;
+const initialSeal = finalSealWorld.getTile(finalSealTx, FINAL_LAYER_TY);
+assert.equal(initialSeal?.kind, "final_seal", "the final mineable row must be a continuous planetary seal");
+assert.equal(initialSeal?.hp, FINAL_SEAL_HITS);
+assert.deepEqual(finalSealWorld.damageCircle(finalSealX, finalSealY, 1, 999_999), [], "ordinary area damage must not chip the seal");
+assert.equal(finalSealWorld.breakTile(finalSealTx, FINAL_LAYER_TY), null, "generic break calls must not bypass the Solar Drill");
+for (let hit = 1; hit < FINAL_SEAL_HITS; hit += 1) {
+  const result = finalSealWorld.strikeFinalSeal(finalSealTx, FINAL_LAYER_TY);
+  assert.equal(result?.breached, false, `seal hit ${hit} must not end the campaign early`);
+  assert.equal(result?.remainingHits, FINAL_SEAL_HITS - hit);
+}
+const breach = finalSealWorld.strikeFinalSeal(finalSealTx, FINAL_LAYER_TY);
+assert.equal(breach?.breached, true, "the final Solar Drill strike must breach the seal");
+assert.equal(finalSealWorld.getTile(finalSealTx, FINAL_LAYER_TY)?.kind, "air");
 
 const depthHardnessWorld = new MineWorld(ORE_TYPES, "depth-hardness-regression", { sectorId: "stable_strata" });
 const terrainHpAtDepth = (depthTiles) => {

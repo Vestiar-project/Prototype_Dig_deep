@@ -538,7 +538,7 @@ const senseUpgrades = [
   defineUpgrade({
     id: "sense_ore_focus",
     name: "Рудный фокус",
-    description: "Открывает выбор одного типа руды и увеличивает радиус её поиска в 2,15 раза.",
+    description: "Открывает в мастерской выбор одного типа руды перед сменой и увеличивает радиус её поиска в 2,15 раза.",
     category: "sense",
     layoutLobe: "tools",
     icon: "⌾",
@@ -627,7 +627,7 @@ const senseUpgrades = [
   defineUpgrade({
     id: "sense_second_fix",
     name: "Вторая засечка",
-    description: "Запоминает одну запасную цель и мгновенно переключается на неё после разрушения текущей. При рудном фокусе обе цели относятся только к выбранной руде.",
+    description: "Запоминает одну запасную цель и после разрушения текущей сразу продолжает маршрут к запасной отметке. При рудном фокусе обе цели относятся только к выбранной руде.",
     category: "sense",
     icon: "◎",
     maxLevel: 1,
@@ -1210,7 +1210,7 @@ const powerUpgrades = [
   defineUpgrade({
     id: "power_sample_calibration",
     name: "Калибровка по образцу",
-    description: "Эффективная плотность выбранной через рудный фокус руды уменьшается на 10,7% за уровень; смена фокуса меняет специализацию.",
+    description: "Эффективная плотность выбранной перед сменой руды уменьшается на 10,7% за уровень.",
     category: "power",
     icon: "◇",
     maxLevel: 3,
@@ -2175,8 +2175,8 @@ const toolUpgrades = [
   }),
   defineUpgrade({
     id: "tools_solar_drill",
-    name: "Солнечный бур",
-    description: "Лазер становится призмобуром: каждый пятый выстрел удерживает луч 0,7 секунды на жиле и завершает проход солнечным разрядом силой 90%.",
+    name: "Призмоконденсатор",
+    description: "Переводит лазер на призмопитание: мощность +15%, скорость заряда +10%. Модуль нужен для сборки Солнечного бура.",
     category: "tools",
     icon: "☀",
     maxLevel: 1,
@@ -2194,10 +2194,6 @@ const toolUpgrades = [
         stats.tool = "prismaticLaser";
         stats.toolTier = Math.max(stats.toolTier, 7);
       }
-      stats.solarDrillEnabled = level > 0;
-      stats.solarDrillProcEvery = 5;
-      stats.solarDrillBeamDuration = 0.7;
-      stats.solarDrillFinalBurstPower = 0.9;
       add(stats, "laserPower", 0.15 * level);
       add(stats, "laserChargeRate", 0.1 * level);
     },
@@ -2448,10 +2444,10 @@ const fortuneUpgrades = [
 
 const coreFinalUpgrade = defineUpgrade({
   id: "core_bon_voyage",
-  name: "В добрый путь",
-  description: "Все семь путей освоены. Проведите две смены с Солнечным буром, подготовьте корабль и отправляйтесь дальше.",
+  name: "Солнечный бур",
+  description: "Объединяет вершины всех путей. Каждый пятый выстрел удерживает солнечный луч 0,7 секунды; только его финальный импульс способен пробить Печать планеты на предельной глубине.",
   category: "core",
-  icon: "🚀",
+  icon: "☀",
   maxLevel: 1,
   baseCost: 24000,
   growth: 1,
@@ -2470,7 +2466,15 @@ const coreFinalUpgrade = defineUpgrade({
     star_core: 260,
   },
   apply: (stats, level) => {
-    if (level > 0) stats.bonVoyageUnlocked = true;
+    if (level > 0) {
+      stats.tool = "prismaticLaser";
+      stats.toolTier = Math.max(stats.toolTier, 7);
+      stats.bonVoyageUnlocked = true;
+      stats.solarDrillEnabled = true;
+      stats.solarDrillProcEvery = 5;
+      stats.solarDrillBeamDuration = 0.7;
+      stats.solarDrillFinalBurstPower = 0.9;
+    }
   },
 });
 

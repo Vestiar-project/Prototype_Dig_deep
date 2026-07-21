@@ -30,6 +30,8 @@ const FRONTIER_RESERVE_DEPTH_ROWS = 12;
 const DEFAULT_SEED = "deep-shift";
 const UINT32_RANGE = 0x100000000;
 const BEDROCK_HP = 1_000_000_000;
+const FINAL_SEAL_HITS = 3;
+const FINAL_LAYER_TY = WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 1;
 const DEFAULT_SECTOR_ID = "stable_strata";
 const RANDOM_SECTOR_ID = "random_strata";
 
@@ -465,6 +467,7 @@ class MineWorld {
     this._prepareLiftStations();
     this._placeStarterOre();
     this._generateUndergroundEvents();
+    this._installFinalSeal();
     this._rebuildOreIndex();
     this._revealAround(this._spawn.tx, this._spawn.ty, 6);
     return this;
@@ -1249,6 +1252,76 @@ class MineWorld {
     return nearest;
   }
 
+  findNearestFinalSeal(x, y, radius = Infinity) {
+    const centerX = asFinite(x, 0);
+    const centerY = asFinite(y, 0);
+    const searchRadius = Math.max(0, asFinite(radius, Infinity));
+    let nearest = null;
+    let nearestDistance = searchRadius + Number.EPSILON;
+    for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+      const tile = this.getTile(tx, FINAL_LAYER_TY);
+      if (tile?.kind !== "final_seal") continue;
+      const targetX = (tx + 0.5) * WORLD_CONFIG.TILE_SIZE;
+      const targetY = (FINAL_LAYER_TY + 0.5) * WORLD_CONFIG.TILE_SIZE;
+      const targetDistance = Math.hypot(targetX - centerX, targetY - centerY);
+      if (targetDistance >= nearestDistance) continue;
+      nearestDistance = targetDistance;
+      nearest = {
+        kind: "final_seal",
+        tile,
+        tx,
+        ty: FINAL_LAYER_TY,
+        x: targetX,
+        y: targetY,
+        distance: targetDistance,
+        remainingHits: Math.max(0, FINAL_SEAL_HITS - (tile.solarHits || 0)),
+      };
+    }
+    return nearest;
+  }
+
+  strikeFinalSeal(tx, ty, onBreak) {
+    const tileX = clamp(Math.floor(asFinite(tx, 0)), 0, WORLD_CONFIG.WIDTH - 1);
+    const tileY = clamp(Math.floor(asFinite(ty, FINAL_LAYER_TY)), 0, WORLD_CONFIG.HEIGHT - 1);
+    const tile = this.getTile(tileX, tileY);
+    if (tile?.kind !== "final_seal") return null;
+    tile.discovered = true;
+    tile.solarHits = Math.min(FINAL_SEAL_HITS, Math.max(0, tile.solarHits || 0) + 1);
+    tile.hp = Math.max(0, FINAL_SEAL_HITS - tile.solarHits);
+    tile.cracked = clamp(tile.solarHits / FINAL_SEAL_HITS, 0, 1);
+    if (tile.solarHits < FINAL_SEAL_HITS) {
+      return {
+        hit: true,
+        breached: false,
+        tx: tileX,
+        ty: tileY,
+        hits: tile.solarHits,
+        remainingHits: FINAL_SEAL_HITS - tile.solarHits,
+      };
+    }
+
+    const brokenTile = { ...tile, hp: 0, cracked: 1, discovered: true };
+    tile.kind = "air";
+    tile.hp = 0;
+    tile.maxHp = 0;
+    tile.terrainMaxHp = 0;
+    tile.oreId = null;
+    tile.veinId = null;
+    tile.discovered = true;
+    tile.cracked = 0;
+    if (typeof onBreak === "function") onBreak(brokenTile, tileX, tileY);
+    this._revealAround(tileX, tileY, 1);
+    return {
+      hit: true,
+      breached: true,
+      tx: tileX,
+      ty: tileY,
+      hits: FINAL_SEAL_HITS,
+      remainingHits: 0,
+      tile: brokenTile,
+    };
+  }
+
   damageCircle(x, y, radius, damage, onBreak) {
     const centerX = asFinite(x, 0);
     const centerY = asFinite(y, 0);
@@ -1686,6 +1759,15 @@ class MineWorld {
     }
 
     return tiles;
+  }
+
+  _installFinalSeal() {
+    for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+      const tile = createTile("final_seal", FINAL_SEAL_HITS, true);
+      tile.solarHits = 0;
+      this.tiles[this._index(tx, FINAL_LAYER_TY)] = tile;
+      if (this._oreRankByTile.length) this._oreRankByTile[this._index(tx, FINAL_LAYER_TY)] = -1;
+    }
   }
 
   _difficultyAt(tx, ty) {
@@ -2305,7 +2387,13 @@ class MineWorld {
   }
 
   _isDamageable(tile) {
-    return Boolean(tile && tile.kind !== "air" && tile.kind !== "bedrock" && tile.maxHp > 0);
+    return Boolean(
+      tile
+      && tile.kind !== "air"
+      && tile.kind !== "bedrock"
+      && tile.kind !== "final_seal"
+      && tile.maxHp > 0
+    );
   }
 
   _damageCandidates(candidates, damage, onBreak, options = {}) {
@@ -2346,6 +2434,8 @@ class MineWorld {
 
 window.DepthZeroWorld = Object.freeze({
   WORLD_CONFIG,
+  FINAL_LAYER_TY,
+  FINAL_SEAL_HITS,
   GEOLOGICAL_SECTORS,
   UNDERGROUND_EVENT_TYPES,
   GLOBAL_EVENT_TYPES,
