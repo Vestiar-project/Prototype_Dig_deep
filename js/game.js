@@ -816,6 +816,7 @@ function createRunMetrics() {
 const ui = {
   startScreen: $('#startScreen'),
   startRun: $('#startRun'),
+  startUpgrades: $('#startUpgrades'),
   runHud: $('#runHud'),
   timerValue: $('#timerValue'),
   timerFill: $('#timerFill'),
@@ -10393,6 +10394,7 @@ function resetAllProgress() {
 
 function bindEvents() {
   ui.startRun?.addEventListener('click', requestRunStart);
+  ui.startUpgrades?.addEventListener('click', openUpgradeScreen);
   ui.retryRun?.addEventListener('click', requestRunStart);
   ui.openUpgrades?.addEventListener('click', openUpgradeScreen);
   ui.closeUpgrades?.addEventListener('click', closeUpgradeScreen);

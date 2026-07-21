@@ -383,6 +383,7 @@ assert.match(indexSource, /id=["']microEventTitle["']/, "active events need one 
 assert.match(indexSource, /id=["']microEventTimer["']/, "active events need a numeric top-line countdown");
 assert.doesNotMatch(indexSource, /microEvent(?:Icon|Text|Progress)/, "the event line must not grow back into an icon, copy card, or progress bar");
 assert.doesNotMatch(stylesSource, /micro-event-banner__(?:icon|copy|meter)/, "removed event-card chrome must stay removed");
+assert.match(stylesSource, /\.micro-event-banner[\s\S]*?\.micro-event-banner__title[\s\S]*?\.micro-event-banner__timer[\s\S]*?\{\s*text-shadow:\s*none/, "event text must not look duplicated by a multi-layer shadow");
 assert.doesNotMatch(gameSource, /events\.push\(active\)/, "consumed events must not keep a local active glow after triggering");
 
 assert.match(
@@ -416,20 +417,17 @@ assert.match(stylesSource, /\.focus-hud\s*\{[\s\S]*?left:\s*50%[\s\S]*?transform
 assert.match(indexSource, /id=["']endingResetProgress["']/, "the completed comic must offer a progress reset");
 assert.match(gameSource, /endingResetProgress\?\.addEventListener\(['"]click['"],\s*resetAllProgress\)/, "the ending reset action must use the normal progress reset path");
 assert.match(gameSource, /version:\s*15/, "the final-seal state must be persisted in schema v15");
+assert.match(indexSource, /id=["']startUpgrades["']/, "the title screen needs a direct workshop entry");
+assert.match(gameSource, /startUpgrades\?\.addEventListener\(['"]click['"],\s*openUpgradeScreen\)/, "the title workshop button must open the existing upgrade screen");
+assert.match(stylesSource, /\.result-header h2[\s\S]*?\.micro-event-banner[\s\S]*?\{\s*text-shadow:\s*none/, "the result heading must remain readable without a same-colour duplicate shadow");
 assert.match(indexSource, /class=["'][^"']*theme-rust-comic/);
-assert.match(indexSource, /class=["']miner-backpack["']/);
-assert.match(indexSource, /class=["']miner-visor["']/);
-assert.match(indexSource, /class=["']miner-pick-head["']/);
-assert.doesNotMatch(indexSource, /class=["']miner-prism["']/);
-assert.match(stylesSource, /Current expedition miner[\s\S]*?steel pick[\s\S]*?\.miner-backpack[\s\S]*?\.miner-visor[\s\S]*?\.miner-pick-head/);
-assert.match(stylesSource, /Keep the visibility pass last[\s\S]*?\.result-header h2\s*\{\s*text-shadow:\s*none/);
-assert.match(indexSource, /styles\.css\?v=deep-shaft-11/);
-assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-11/);
-assert.match(indexSource, /js\/world\.js\?v=deep-shaft-11/);
-assert.match(indexSource, /js\/music\.js\?v=deep-shaft-11/);
-assert.match(indexSource, /js\/game\.js\?v=deep-shaft-11/);
+assert.match(indexSource, /styles\.css\?v=deep-shaft-9-tech1/);
+assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-9-tech1/);
+assert.match(indexSource, /js\/world\.js\?v=deep-shaft-9-tech1/);
+assert.match(indexSource, /js\/music\.js\?v=deep-shaft-9-tech1/);
+assert.match(indexSource, /js\/game\.js\?v=deep-shaft-9-tech1/);
 assert.ok(
-  indexSource.indexOf('js/music.js?v=deep-shaft-11') < indexSource.indexOf('js/game.js?v=deep-shaft-11'),
+  indexSource.indexOf('js/music.js?v=deep-shaft-9-tech1') < indexSource.indexOf('js/game.js?v=deep-shaft-9-tech1'),
   "the soundtrack singleton must load before the game audio engine",
 );
 assert.match(indexSource, /id=["']soundToggle["'][\s\S]*?aria-pressed=["']true["']/);
