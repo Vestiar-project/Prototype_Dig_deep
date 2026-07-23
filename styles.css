@@ -842,6 +842,16 @@ kbd,
   line-height: 1;
 }
 
+.btn-icon--play::before {
+  width: 0;
+  height: 0;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 11px solid currentColor;
+  content: "";
+  transform: translateX(1px);
+}
+
 .start-key {
   grid-column: 1 / -1;
   margin: 15px 0 0;

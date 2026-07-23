@@ -42,6 +42,7 @@ class StubElement {
     this.scrollLeft = 0;
     this.scrollTop = 0;
     this.listeners = new Map();
+    this.replaceChildrenCalls = 0;
   }
   append(...children) {
     for (const child of children) {
@@ -50,6 +51,7 @@ class StubElement {
     }
   }
   replaceChildren(...children) {
+    this.replaceChildrenCalls += 1;
     this.children = [];
     this.append(...children);
   }
@@ -200,6 +202,35 @@ assert.deepEqual(api.getSnapshot().fieldArt, {
   oreSource: "assets/field/depth-zero-ores-runtime-atlas.png",
   veinSource: "assets/field/depth-zero-vein-connectors-runtime-atlas.png",
 }, "correctly sized field atlases must activate the authored renderer");
+const fieldArtMetrics = api.debugGetFieldArtRenderMetrics();
+assert.equal(fieldArtMetrics.length, 10, "all ore types must expose field-art render metrics");
+for (const metric of fieldArtMetrics) {
+  assert.ok(metric.node, `${metric.oreId} must use an authored ore-node sprite`);
+  assert.ok(
+    metric.node.maximumSize > metric.previousNodeMaximumSize,
+    `${metric.oreId} ore pieces must be visually larger than before`,
+  );
+  assert.ok(
+    metric.veinWidth < metric.previousVeinWidth,
+    `${metric.oreId} vein connectors must be visually thinner than before`,
+  );
+  assert.ok(
+    metric.veinWidth >= 2.2 && metric.veinWidth <= 4.6,
+    `${metric.oreId} vein width must stay inside the intended readable range`,
+  );
+  assert.ok(
+    metric.node.maximumSize >= 25.75 && metric.node.maximumSize <= 29,
+    `${metric.oreId} ore-node size must stay inside the intended tile-scale range`,
+  );
+  assert.ok(
+    metric.veinWidth * 0.9 >= 1.5,
+    `${metric.oreId} vein must remain legible at the normal camera zoom`,
+  );
+  assert.ok(
+    metric.veinWidth / Math.min(metric.node.drawWidth, metric.node.drawHeight) <= 0.26,
+    `${metric.oreId} connector must remain secondary to the ore node`,
+  );
+}
 const initialUpgradeCatalog = api.getUpgradeCatalog();
 assert.equal(
   initialUpgradeCatalog.find((upgrade) => upgrade.id === "gadgets_shock_capsule").breakthrough,
@@ -336,6 +367,165 @@ assert.equal(api.debugGetVeinConnectorMask(connectorCenter.tx, connectorCenter.t
 api.debugPatchTile(connectorCenter.tx, connectorCenter.ty - 1, { discovered: true });
 api.debugPatchTile(connectorCenter.tx, connectorCenter.ty + 1, { hp: 0 });
 assert.equal(api.debugGetVeinConnectorMask(connectorCenter.tx, connectorCenter.ty), 7, "depleted ore cannot keep a lower arm");
+const visibleVeinEdges = api.debugGetVeinEdgesInBounds(
+  connectorCenter.tx - 1,
+  connectorCenter.ty - 1,
+  connectorCenter.tx + 1,
+  connectorCenter.ty + 1,
+);
+assert.equal(visibleVeinEdges.length, 3, "three live neighbours must create three unique branch edges");
+assert.equal(
+  new Set(visibleVeinEdges.map((edge) => `${edge.fromTx}:${edge.fromTy}>${edge.toTx}:${edge.toTy}`)).size,
+  visibleVeinEdges.length,
+  "each visible cardinal connection must render only once",
+);
+assert.ok(
+  visibleVeinEdges.every((edge) => Math.abs(edge.toTx - edge.fromTx) + Math.abs(edge.toTy - edge.fromTy) === 1),
+  "render-only vein edges cannot jump through rock or air",
+);
+
+const horizontalVeinPolyline = api.debugGetVeinEdgePolyline(
+  connectorCenter.tx,
+  connectorCenter.ty,
+  connectorCenter.tx + 1,
+  connectorCenter.ty,
+);
+assert.deepEqual(
+  horizontalVeinPolyline,
+  api.debugGetVeinEdgePolyline(
+    connectorCenter.tx,
+    connectorCenter.ty,
+    connectorCenter.tx + 1,
+    connectorCenter.ty,
+  ),
+  "vein bends must stay deterministic between frames",
+);
+assert.equal(horizontalVeinPolyline.length, 4, "a connector needs two visible bends");
+const veinStart = horizontalVeinPolyline[0];
+const veinEnd = horizontalVeinPolyline.at(-1);
+const veinDx = veinEnd.x - veinStart.x;
+const veinDy = veinEnd.y - veinStart.y;
+const veinLength = Math.hypot(veinDx, veinDy);
+const maximumVeinDeviation = Math.max(...horizontalVeinPolyline.slice(1, -1).map((point) => (
+  Math.abs(veinDy * point.x - veinDx * point.y + veinEnd.x * veinStart.y - veinEnd.y * veinStart.x)
+  / Math.max(0.001, veinLength)
+)));
+assert.ok(maximumVeinDeviation >= 1.5, "a vein edge must read as a broken geological line, not a straight bar");
+
+function lineAxisDistance(angle, target) {
+  let delta = (angle - target) % Math.PI;
+  if (delta > Math.PI * 0.5) delta -= Math.PI;
+  if (delta < -Math.PI * 0.5) delta += Math.PI;
+  return Math.abs(delta);
+}
+
+const copperSourceAngle = -0.52;
+const horizontalCopperTransform = api.debugGetOreNodeTransform(
+  connectorCenter.tx,
+  connectorCenter.ty,
+  "copper",
+);
+assert.deepEqual(
+  horizontalCopperTransform,
+  api.debugGetOreNodeTransform(connectorCenter.tx, connectorCenter.ty, "copper"),
+  "ore-node orientation must be deterministic between frames",
+);
+assert.equal(horizontalCopperTransform.connectorMask, 7);
+assert.equal(horizontalCopperTransform.connectionCount, 3);
+assert.ok(
+  lineAxisDistance(horizontalCopperTransform.rotation + copperSourceAngle, 0) <= 0.3,
+  "a T-shaped copper branch must follow its horizontal through-line with a small natural tilt",
+);
+
+assert.equal(
+  api.debugBreakTileWithSource(connectorCenter.tx - 1, connectorCenter.ty, "debug"),
+  true,
+  "orientation regression needs to collect a real neighbouring ore node",
+);
+const copperTransformAfterAdjacentBreak = api.debugGetOreNodeTransform(
+  connectorCenter.tx,
+  connectorCenter.ty,
+  "copper",
+);
+assert.equal(
+  copperTransformAfterAdjacentBreak.connectorMask,
+  6,
+  "collecting the left node must remove only its live connector arm",
+);
+assert.equal(
+  copperTransformAfterAdjacentBreak.rotation,
+  horizontalCopperTransform.rotation,
+  "a remaining ore node must not rotate when an adjacent node is collected",
+);
+assert.equal(
+  copperTransformAfterAdjacentBreak.mirrorX,
+  horizontalCopperTransform.mirrorX,
+  "collecting an adjacent node must not flip the remaining ore artwork",
+);
+
+const verticalConnectorCenter = { tx: 16, ty: 20 };
+for (const [dx, dy] of [[0, 0], [0, -1], [0, 1]]) {
+  api.debugPatchTile(verticalConnectorCenter.tx + dx, verticalConnectorCenter.ty + dy, {
+    kind: "stone",
+    oreId: "copper",
+    veinId: "vertical-connector-smoke",
+    hp: 5,
+    maxHp: 5,
+    discovered: true,
+  });
+}
+const verticalCopperTransform = api.debugGetOreNodeTransform(
+  verticalConnectorCenter.tx,
+  verticalConnectorCenter.ty,
+  "copper",
+);
+assert.equal(verticalCopperTransform.connectorMask, 12);
+assert.ok(
+  lineAxisDistance(verticalCopperTransform.rotation + copperSourceAngle, Math.PI * 0.5) <= 0.3,
+  "a vertical vein must rotate its elongated ore artwork vertically",
+);
+
+const cornerConnectorCenter = { tx: 22, ty: 20 };
+for (const [dx, dy] of [[0, 0], [1, 0], [0, 1]]) {
+  api.debugPatchTile(cornerConnectorCenter.tx + dx, cornerConnectorCenter.ty + dy, {
+    kind: "stone",
+    oreId: "copper",
+    veinId: "corner-connector-smoke",
+    hp: 5,
+    maxHp: 5,
+    discovered: true,
+  });
+}
+const cornerCopperTransform = api.debugGetOreNodeTransform(
+  cornerConnectorCenter.tx,
+  cornerConnectorCenter.ty,
+  "copper",
+);
+assert.equal(cornerCopperTransform.connectorMask, 10);
+assert.ok(
+  lineAxisDistance(cornerCopperTransform.rotation + copperSourceAngle, Math.PI * 0.25) <= 0.3,
+  "a corner vein must turn the elongated ore artwork onto the diagonal between its branches",
+);
+
+for (const oreId of ["copper", "iron", "silver", "gold"]) {
+  const transforms = Array.from({ length: 24 }, (_unused, index) => (
+    api.debugGetOreNodeTransform(-30 - index, -70 + index * 3, oreId)
+  ));
+  assert.ok(
+    new Set(transforms.map((transform) => transform.rotation.toFixed(3))).size >= 6,
+    `${oreId} isolated ore pieces must use several deterministic orientations`,
+  );
+  assert.deepEqual(
+    new Set(transforms.map((transform) => transform.mirrorX)),
+    new Set([true, false]),
+    `${oreId} elongated artwork must also alternate its facing`,
+  );
+}
+for (const oreId of ["coal", "amber", "amethyst", "prism_crystal", "void_ore", "star_core"]) {
+  const transform = api.debugGetOreNodeTransform(-41, -83, oreId);
+  assert.ok(Math.abs(transform.rotation) <= 0.08, `${oreId} must keep its original subtle rotation`);
+  assert.equal(transform.mirrorX, false);
+}
 
 // The field guide stays open for a new player, then becomes a small explicit
 // disclosure after the first shifts. The button must always restore it.
@@ -415,9 +605,22 @@ grantWorkshopBudget(api);
 global.innerWidth = 390;
 mobileUpgradeInteraction = false;
 api.openUpgrades();
+const mobileTreeRenderCount = elementFor('#upgradeNodes').replaceChildrenCalls;
+const mobileEdgeRenderCount = elementFor('#upgradeMapLinks').replaceChildrenCalls;
 dispatchUpgradeNodeClick('core_first_descent');
 assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'core_first_descent').level, 0, 'the narrow mobile layout must not purchase a perk by tapping its icon');
 assert.equal(elementFor('#buyMaxSelectedUpgrade').dataset.purchaseMode, 'single', 'the narrow mobile layout must expose a single-rank purchase action');
+assert.equal(elementFor('#buyMaxSelectedUpgrade').dataset.upgradeId, 'core_first_descent', 'a mobile tap must still update the selected perk panel');
+assert.equal(
+  elementFor('#upgradeNodes').replaceChildrenCalls,
+  mobileTreeRenderCount,
+  'selecting a perk must leave the existing tree nodes mounted instead of rebuilding every icon',
+);
+assert.equal(
+  elementFor('#upgradeMapLinks').replaceChildrenCalls,
+  mobileEdgeRenderCount,
+  'selecting a perk must focus the mounted connections without rebuilding the SVG graph',
+);
 global.innerWidth = 1280;
 
 api.debugResetProgress();
@@ -428,8 +631,13 @@ dispatchUpgradeNodeClick('core_first_descent');
 assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'core_first_descent').level, 0, 'mobile node tap must only select and reveal its description');
 assert.equal(elementFor('#buyMaxSelectedUpgrade').textContent, 'КУПИТЬ', 'mobile must expose an explicit single-rank purchase button');
 assert.equal(elementFor('#buyMaxSelectedUpgrade').dataset.purchaseMode, 'single');
+const mobileTreeRenderBeforePurchase = elementFor('#upgradeNodes').replaceChildrenCalls;
 elementFor('#buyMaxSelectedUpgrade').click();
 assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'core_first_descent').level, 1, 'the explicit mobile purchase button must install the selected node');
+assert.ok(
+  elementFor('#upgradeNodes').replaceChildrenCalls > mobileTreeRenderBeforePurchase,
+  'a real purchase must still synchronize levels, availability, and newly visible nodes',
+);
 
 api.startRun({ seed: 'mobile-purchase-button' });
 api.stepRun(8);

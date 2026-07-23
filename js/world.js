@@ -26,6 +26,14 @@ const WORLD_DENSITY_SCALE = (
 const FRONTIER_RESERVE_ORE_IDS = new Set(["amber", "gold"]);
 const FRONTIER_RESERVE_HALF_WIDTH = 10;
 const FRONTIER_RESERVE_DEPTH_ROWS = 12;
+const LIFT_REDISTRIBUTION_MIN_VEIN_SIZE = 6;
+const LIFT_REDISTRIBUTION_MAX_VEIN_SIZE = 9;
+const CARDINAL_DIRECTIONS = Object.freeze([
+  Object.freeze([1, 0]),
+  Object.freeze([-1, 0]),
+  Object.freeze([0, 1]),
+  Object.freeze([0, -1]),
+]);
 
 const DEFAULT_SEED = "deep-shift";
 const UINT32_RANGE = 0x100000000;
@@ -407,6 +415,9 @@ class MineWorld {
     this._oreRankByTile = new Int16Array(0);
     this._spawn = { x: 0, y: 0, tx: 0, ty: 0 };
     this._liftStations = [];
+    this._liftTargetKeys = new Set();
+    this._liftCompensationCells = [];
+    this._liftSupplyDonorConsumed = false;
     this._nextVeinId = 1;
     this._oreColumnsByRow = [];
     this._oreIndexReady = false;
@@ -458,6 +469,9 @@ class MineWorld {
     this._nextVeinId = 1;
     this._oreColumnsByRow = [];
     this._oreIndexReady = false;
+    this._liftTargetKeys = new Set();
+    this._liftCompensationCells = [];
+    this._liftSupplyDonorConsumed = false;
     this._undergroundEvents = [];
     this._undergroundEventById = new Map();
 
@@ -468,6 +482,8 @@ class MineWorld {
     this._placeStarterOre();
     this._generateUndergroundEvents();
     this._installFinalSeal();
+    this._repairDisconnectedVeins();
+    this._compensateLiftTargetsWithCopper();
     this._rebuildOreIndex();
     this._revealAround(this._spawn.tx, this._spawn.ty, 6);
     return this;
@@ -826,9 +842,10 @@ class MineWorld {
   }
 
   /**
-   * Replaces the lift's one guaranteed copper node with one phase-appropriate
-   * ore requested by the meta economy. This does not add nodes or change vein
-   * density: every landing still has exactly one short resupply target.
+   * Moves one edge cell from the redistributed copper budget onto the selected
+   * landing and retunes it to a phase-appropriate ore requested by the meta
+   * economy. Unused stations remain ordinary rock, and total ore density stays
+   * unchanged.
    */
   retuneLiftTarget(lift, preferredOreIds = []) {
     if (!lift || lift.isSurfaceSpawn || lift.source !== "shaft-lift" || !lift.target) return null;
@@ -837,7 +854,23 @@ class MineWorld {
     if (!Number.isFinite(tx) || !Number.isFinite(ty)) return null;
     const tile = this.getTile(tx, ty);
     if (!tile || tile.kind === "air" || tile.kind === "bedrock") return null;
-    const resupplyHpCap = Math.max(1, Math.round(asFinite(tile.maxHp, 1)));
+    if (tile.liftSupply && tile.oreId) {
+      const existingDefinition = this._oreDefinitions.find((candidate) => candidate.id === tile.oreId);
+      return {
+        tx,
+        ty,
+        x: (tx + 0.5) * WORLD_CONFIG.TILE_SIZE,
+        y: (ty + 0.5) * WORLD_CONFIG.TILE_SIZE,
+        oreId: tile.oreId,
+        maxHp: tile.maxHp,
+        tier: existingDefinition
+          ? Math.max(0, Math.floor(numericField(existingDefinition.source, ["tier"], 0)))
+          : 0,
+        liftSupply: true,
+      };
+    }
+    if (tile.oreId || !tile.pendingLiftSupply) return null;
+    const resupplyHpCap = Math.max(1, Math.round(asFinite(lift.target.maxHp, tile.maxHp)));
 
     const tierCap = Math.max(0, Math.floor(asFinite(lift.requiredTier, 0)));
     const allowed = this._oreDefinitions
@@ -865,6 +898,8 @@ class MineWorld {
       definition = pool[hashSeed(`${this.seed}:lift-supply:${tx}:${ty}`) % pool.length];
     }
 
+    const donor = this._findLiftCompensationDonor();
+    if (!donor) return null;
     if (!this._applyOre(tx, ty, definition, `lift-supply:${tx}:${ty}:${definition.id}`)) return null;
     // Changing copper into a denser material must not undo the deliberately
     // short landing sample prepared by _ensureLiftTarget.
@@ -872,7 +907,17 @@ class MineWorld {
     tile.hp = tile.maxHp;
     tile.discovered = true;
     tile.liftSupply = true;
+    tile.pendingLiftSupply = false;
     tile.cracked = 0;
+    if (!this._clearOreAt(donor.tx, donor.ty)) {
+      this._clearOreAt(tx, ty);
+      tile.maxHp = resupplyHpCap;
+      tile.hp = resupplyHpCap;
+      tile.pendingLiftSupply = true;
+      return null;
+    }
+    donor.consumed = true;
+    this._liftSupplyDonorConsumed = true;
     const tier = Math.max(0, Math.floor(numericField(definition.source, ["tier"], 0)));
     return {
       tx,
@@ -1864,14 +1909,12 @@ class MineWorld {
 
   _prepareLiftStations() {
     this._liftStations = [];
+    this._liftTargetKeys = new Set();
     // Five metres per tile makes closely spaced stations useful even for the
     // first 5% lift rank: the first landing is 10 m down and stations repeat
     // every 10 m instead of jumping in coarse 25 m steps.
     const firstTy = this._spawn.ty + 2;
     const lastTy = WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 4;
-    const starter = this._oreDefinitions.reduce((best, current) => (
-      !best || current.rank < best.rank ? current : best
-    ), null);
 
     for (let ty = firstTy; ty <= lastTy; ty += 2) {
       const stationHash = hashSeed(`${this.seed}:lift:${ty}`);
@@ -1883,7 +1926,7 @@ class MineWorld {
       this._setAir(tx, ty, true);
       this._revealAround(tx, ty, 2);
       const direction = stationHash & 1 ? 1 : -1;
-      const target = this._ensureLiftTarget(tx, ty, direction, starter);
+      const target = this._ensureLiftTarget(tx, ty, direction);
       if (!target) continue;
 
       const depthTiles = Math.max(0, ty - this._spawn.ty);
@@ -1905,10 +1948,36 @@ class MineWorld {
     ));
   }
 
-  _ensureLiftTarget(centerX, centerY, direction, starter) {
-    const targetX = centerX + (direction < 0 ? -2 : 2);
+  _starterReservedTileKeys() {
+    return new Set([
+      [0, 2],
+      [0, 3],
+      [0, 4],
+      [-1, 2],
+      [-1, 3],
+      [-1, 4],
+    ].map(([offsetX, offsetY]) => `${this._spawn.tx + offsetX}:${this._spawn.ty + offsetY}`));
+  }
+
+  _ensureLiftTarget(centerX, centerY, direction) {
+    const preferredSign = direction < 0 ? -1 : 1;
+    const starterReserved = this._starterReservedTileKeys();
+    const candidateOffsets = [
+      preferredSign * 2,
+      -preferredSign * 2,
+      preferredSign * 3,
+      -preferredSign * 3,
+    ];
+    let targetX = null;
     const targetY = centerY;
-    if (!this._inBounds(targetX, targetY)) return null;
+    for (const offsetX of candidateOffsets) {
+      const candidateX = centerX + offsetX;
+      if (!this._inBounds(candidateX, targetY)) continue;
+      if (starterReserved.has(`${candidateX}:${targetY}`)) continue;
+      targetX = candidateX;
+      break;
+    }
+    if (!Number.isFinite(targetX)) return null;
     let tile = this.getTile(targetX, targetY);
     if (!tile || tile.kind === "bedrock") return null;
 
@@ -1920,20 +1989,25 @@ class MineWorld {
       this.tiles[this._index(targetX, targetY)] = tile;
     }
 
-    if (starter) this._applyOre(targetX, targetY, starter);
+    if (tile.oreId) this._clearOreAt(targetX, targetY);
     tile.discovered = true;
     const easyHpCap = Math.max(3, Math.round(3 + this._difficultyAt(targetX, targetY) * 9));
     tile.maxHp = Math.min(tile.maxHp, easyHpCap);
     tile.hp = tile.maxHp;
+    tile.pendingLiftSupply = true;
+    tile.liftSupply = false;
     tile.cracked = 0;
+    const targetKey = `${targetX}:${targetY}`;
+    this._liftTargetKeys.add(targetKey);
     return {
       tx: targetX,
       ty: targetY,
       x: (targetX + 0.5) * WORLD_CONFIG.TILE_SIZE,
       y: (targetY + 0.5) * WORLD_CONFIG.TILE_SIZE,
-      oreId: tile.oreId,
+      oreId: null,
       maxHp: tile.maxHp,
-      tier: starter ? Math.max(0, Math.floor(numericField(starter.source, ["tier"], 0))) : 0,
+      tier: 0,
+      pendingSupply: true,
     };
   }
 
@@ -2201,24 +2275,315 @@ class MineWorld {
     }
   }
 
-  _placeVein(originX, originY, definition, size) {
-    const veinId = `${definition.id}:${this._nextVeinId++}`;
+  _liftRedistributionVeinSizes(nodeBudget) {
+    const budget = Math.max(0, Math.floor(Number(nodeBudget) || 0));
+    if (budget <= 0) return [];
+    if (budget < LIFT_REDISTRIBUTION_MIN_VEIN_SIZE) return [budget];
+    const minimumCount = Math.ceil(budget / LIFT_REDISTRIBUTION_MAX_VEIN_SIZE);
+    const maximumCount = Math.max(
+      minimumCount,
+      Math.floor(budget / LIFT_REDISTRIBUTION_MIN_VEIN_SIZE),
+    );
+    const veinCount = clamp(Math.round(budget / 7), minimumCount, maximumCount);
+    const sizes = Array.from(
+      { length: veinCount },
+      () => LIFT_REDISTRIBUTION_MIN_VEIN_SIZE,
+    );
+    let remaining = budget - veinCount * LIFT_REDISTRIBUTION_MIN_VEIN_SIZE;
+    while (remaining > 0) {
+      const available = sizes
+        .map((size, index) => (size < LIFT_REDISTRIBUTION_MAX_VEIN_SIZE ? index : -1))
+        .filter((index) => index >= 0);
+      const index = available[this._rng.int(0, available.length - 1)];
+      sizes[index] += 1;
+      remaining -= 1;
+    }
+    return sizes;
+  }
+
+  _compensateLiftTargetsWithCopper() {
+    this._liftCompensationCells = [];
+    this._liftSupplyDonorConsumed = false;
+    const nodeBudget = this._liftTargetKeys.size;
+    if (nodeBudget <= 0) return 0;
+    const copper = this._oreDefinitions.find((definition) => definition.id === "copper")
+      || this._oreDefinitions.reduce((best, current) => (
+        !best || current.rank < best.rank ? current : best
+      ), null);
+    if (!copper) return 0;
+
+    let placedTotal = 0;
+    const veinSizes = this._liftRedistributionVeinSizes(nodeBudget);
+    for (const veinSize of veinSizes) {
+      let completed = false;
+      const tryOrigin = (tx, ty) => {
+        const tile = this.getTile(tx, ty);
+        if (
+          !tile
+          || tile.kind === "air"
+          || tile.kind === "bedrock"
+          || tile.kind === "final_seal"
+          || tile.oreId
+          || this._liftTargetKeys.has(`${tx}:${ty}`)
+          || !this._canOreAppearAt(tx, ty, copper)
+        ) return false;
+        const progress = this._difficultyAt(tx, ty);
+        if (progress < copper.minProgress || progress > copper.maxProgress) return false;
+        const cells = [];
+        const placed = this._placeVein(tx, ty, copper, veinSize, {
+          requireEmpty: true,
+          requireFullSize: true,
+          collectCells: cells,
+        });
+        if (placed !== veinSize) return false;
+        this._liftCompensationCells.push(...cells.map((cell) => ({
+          ...cell,
+          oreId: copper.id,
+          consumed: false,
+        })));
+        placedTotal += placed;
+        completed = true;
+        return true;
+      };
+
+      const maxRandomAttempts = 240;
+      for (let attempt = 0; attempt < maxRandomAttempts && !completed; attempt += 1) {
+        const tx = this._rng.int(2, WORLD_CONFIG.WIDTH - 3);
+        const minY = Math.min(
+          WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 2,
+          this.surface[tx] + 2,
+        );
+        const ty = this._rng.int(minY, WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 2);
+        tryOrigin(tx, ty);
+      }
+
+      if (!completed) {
+        const startIndex = hashSeed(`${this.seed}:lift-redistribution:${veinSize}:${placedTotal}`)
+          % (WORLD_CONFIG.WIDTH * WORLD_CONFIG.HEIGHT);
+        for (let offset = 0;
+          offset < WORLD_CONFIG.WIDTH * WORLD_CONFIG.HEIGHT && !completed;
+          offset += 1) {
+          const index = (startIndex + offset) % (WORLD_CONFIG.WIDTH * WORLD_CONFIG.HEIGHT);
+          const tx = index % WORLD_CONFIG.WIDTH;
+          const ty = Math.floor(index / WORLD_CONFIG.WIDTH);
+          tryOrigin(tx, ty);
+        }
+      }
+    }
+    return placedTotal;
+  }
+
+  _findLiftCompensationDonor() {
+    if (this._liftSupplyDonorConsumed) return null;
+    const liveCounts = new Map();
+    for (const candidate of this._liftCompensationCells) {
+      if (candidate.consumed) continue;
+      const tile = this.getTile(candidate.tx, candidate.ty);
+      if (!tile?.oreId || tile.veinId !== candidate.veinId) continue;
+      liveCounts.set(candidate.veinId, (liveCounts.get(candidate.veinId) || 0) + 1);
+    }
+    for (let index = this._liftCompensationCells.length - 1; index >= 0; index -= 1) {
+      const candidate = this._liftCompensationCells[index];
+      if (candidate.consumed || (liveCounts.get(candidate.veinId) || 0) <= 5) continue;
+      const tile = this.getTile(candidate.tx, candidate.ty);
+      if (!tile?.oreId || tile.veinId !== candidate.veinId) continue;
+      let sameVeinNeighbours = 0;
+      for (const [offsetX, offsetY] of CARDINAL_DIRECTIONS) {
+        if (this.getTile(candidate.tx + offsetX, candidate.ty + offsetY)?.veinId === candidate.veinId) {
+          sameVeinNeighbours += 1;
+        }
+      }
+      if (sameVeinNeighbours <= 1) return candidate;
+    }
+    return null;
+  }
+
+  _repairDisconnectedVeins() {
+    const veins = new Map();
+    for (let ty = 0; ty < WORLD_CONFIG.HEIGHT; ty += 1) {
+      for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+        const tile = this.getTile(tx, ty);
+        if (!tile?.oreId || !tile.veinId || tile.kind === "air") continue;
+        if (!veins.has(tile.veinId)) veins.set(tile.veinId, {
+          oreId: tile.oreId,
+          cells: [],
+        });
+        veins.get(tile.veinId).cells.push({ tx, ty });
+      }
+    }
+
+    let repairedCells = 0;
+    for (const [veinId, vein] of veins) {
+      if (vein.cells.length <= 1) continue;
+      const definition = this._oreDefinitions.find((candidate) => candidate.id === vein.oreId);
+      if (!definition) continue;
+      const cellKeys = new Set(vein.cells.map(({ tx, ty }) => `${tx}:${ty}`));
+      const visited = new Set();
+      let componentCount = 0;
+      for (const cell of vein.cells) {
+        const startKey = `${cell.tx}:${cell.ty}`;
+        if (visited.has(startKey)) continue;
+        componentCount += 1;
+        const queue = [cell];
+        visited.add(startKey);
+        while (queue.length) {
+          const current = queue.pop();
+          for (const [offsetX, offsetY] of CARDINAL_DIRECTIONS) {
+            const key = `${current.tx + offsetX}:${current.ty + offsetY}`;
+            if (!cellKeys.has(key) || visited.has(key)) continue;
+            visited.add(key);
+            queue.push({ tx: current.tx + offsetX, ty: current.ty + offsetY });
+          }
+        }
+      }
+      if (componentCount <= 1) continue;
+
+      // A cave or a later lift chamber can cut an otherwise connected seam in
+      // several places. Moving only the orphaned pieces is not enough when the
+      // surviving component has no free rock around it, so rebuild the whole
+      // seam nearby with the same id, ore type and exact node budget.
+      const snapshots = vein.cells.map(({ tx, ty }) => ({
+        tx,
+        ty,
+        tile: { ...this.getTile(tx, ty) },
+        rank: this._oreRankByTile[this._index(tx, ty)],
+      }));
+      for (const cell of vein.cells) this._clearOreAt(cell.tx, cell.ty);
+
+      const centroidX = Math.round(
+        vein.cells.reduce((total, cell) => total + cell.tx, 0) / vein.cells.length,
+      );
+      const centroidY = Math.round(
+        vein.cells.reduce((total, cell) => total + cell.ty, 0) / vein.cells.length,
+      );
+      let completed = false;
+      const attemptedOrigins = new Set();
+      const tryOrigin = (tx, ty) => {
+        if (completed || !this._inBounds(tx, ty)) return completed;
+        const key = `${tx}:${ty}`;
+        if (attemptedOrigins.has(key)) return false;
+        attemptedOrigins.add(key);
+        const tile = this.getTile(tx, ty);
+        if (
+          !tile
+          || tile.kind === "air"
+          || tile.kind === "bedrock"
+          || tile.kind === "final_seal"
+          || tile.oreId
+          || this._liftTargetKeys.has(key)
+          || !this._canOreAppearAt(tx, ty, definition)
+        ) return false;
+        const progress = this._difficultyAt(tx, ty);
+        if (progress < definition.minProgress || progress > definition.maxProgress) return false;
+        const relocated = [];
+        const placed = this._placeVein(tx, ty, definition, vein.cells.length, {
+          veinId,
+          requireEmpty: true,
+          requireFullSize: true,
+          collectCells: relocated,
+        });
+        completed = placed === vein.cells.length;
+        return completed;
+      };
+
+      // Prefer the original geological neighbourhood. The rotating start side
+      // keeps the square-ring scan deterministic without giving every repaired
+      // seam the same directional bias.
+      const ringPhase = hashSeed(`${this.seed}:repair-ring:${veinId}`) % 4;
+      const addRingCandidates = (radius) => {
+        if (radius === 0) return [{ tx: centroidX, ty: centroidY }];
+        const candidates = [];
+        for (let offset = -radius; offset <= radius; offset += 1) {
+          candidates.push(
+            { tx: centroidX + offset, ty: centroidY - radius },
+            { tx: centroidX + radius, ty: centroidY + offset },
+            { tx: centroidX - offset, ty: centroidY + radius },
+            { tx: centroidX - radius, ty: centroidY - offset },
+          );
+        }
+        if (ringPhase > 0) {
+          const shift = Math.floor(candidates.length * ringPhase / 4);
+          return candidates.slice(shift).concat(candidates.slice(0, shift));
+        }
+        return candidates;
+      };
+
+      for (let radius = 0; radius <= 24 && !completed; radius += 1) {
+        for (const candidate of addRingCandidates(radius)) {
+          if (tryOrigin(candidate.tx, candidate.ty)) break;
+        }
+      }
+
+      // Highly cavernous seeds can leave no room near the original seam. A
+      // seed-stable full scan is the final fallback and still obeys the ore's
+      // authored depth band.
+      if (!completed) {
+        const tileCount = WORLD_CONFIG.WIDTH * WORLD_CONFIG.HEIGHT;
+        const startIndex = hashSeed(`${this.seed}:repair-global:${veinId}`) % tileCount;
+        for (let offset = 0; offset < tileCount && !completed; offset += 1) {
+          const index = (startIndex + offset) % tileCount;
+          tryOrigin(index % WORLD_CONFIG.WIDTH, Math.floor(index / WORLD_CONFIG.WIDTH));
+        }
+      }
+
+      if (!completed) {
+        for (const snapshot of snapshots) {
+          Object.assign(this.getTile(snapshot.tx, snapshot.ty), snapshot.tile);
+          this._oreRankByTile[this._index(snapshot.tx, snapshot.ty)] = snapshot.rank;
+        }
+        continue;
+      }
+      repairedCells += vein.cells.length;
+    }
+    return repairedCells;
+  }
+
+  _placeVein(originX, originY, definition, size, options = {}) {
+    const veinId = options.veinId || `${definition.id}:${this._nextVeinId++}`;
     const targetSize = Math.max(0, Math.floor(Number(size) || 0));
     const placedCells = new Set();
+    const placedCoordinates = [];
+    const queuedCells = new Set();
+    const frontier = [];
     const rankValue = Math.round(definition.rank * 10_000);
-    let tx = originX;
-    let ty = originY;
     let placed = 0;
     let attempts = 0;
-    const maxAttempts = Math.max(24, targetSize * 8);
+    const maxAttempts = Math.max(48, targetSize * 24);
+    const requireEmpty = Boolean(options.requireEmpty);
+    const requireFullSize = Boolean(options.requireFullSize);
+    const collectedCells = Array.isArray(options.collectCells) ? options.collectCells : null;
+
+    const addFrontierAround = (centerX, centerY) => {
+      for (const [offsetX, offsetY] of CARDINAL_DIRECTIONS) {
+        const candidateX = centerX + offsetX;
+        const candidateY = centerY + offsetY;
+        const key = `${candidateX}:${candidateY}`;
+        if (
+          placedCells.has(key)
+          || queuedCells.has(key)
+          || this._liftTargetKeys.has(key)
+          || !this._inBounds(candidateX, candidateY)
+        ) continue;
+        queuedCells.add(key);
+        frontier.push({ tx: candidateX, ty: candidateY });
+      }
+    };
 
     const tryPlace = (candidateX, candidateY) => {
       const key = `${candidateX}:${candidateY}`;
       if (placedCells.has(key)) return false;
+      if (this._liftTargetKeys.has(key)) return false;
 
       const tile = this.getTile(candidateX, candidateY);
-      if (!tile || tile.kind === "air" || tile.kind === "bedrock") return false;
+      if (
+        !tile
+        || tile.kind === "air"
+        || tile.kind === "bedrock"
+        || tile.kind === "final_seal"
+      ) return false;
       if (!this._canOreAppearAt(candidateX, candidateY, definition)) return false;
+      if (requireEmpty && tile.oreId !== null) return false;
+      if (tile.oreId === definition.id) return false;
 
       const index = this._index(candidateX, candidateY);
       const currentRank = this._oreRankByTile[index];
@@ -2226,56 +2591,55 @@ class MineWorld {
       if (!this._applyOre(candidateX, candidateY, definition, veinId)) return false;
 
       placedCells.add(key);
+      placedCoordinates.push({ tx: candidateX, ty: candidateY, veinId });
       placed += 1;
+      addFrontierAround(candidateX, candidateY);
       return true;
     };
 
-    while (placed < targetSize && attempts < maxAttempts) {
+    if (targetSize > 0) tryPlace(originX, originY);
+    while (placed < targetSize && frontier.length && attempts < maxAttempts) {
       attempts += 1;
-      tryPlace(tx, ty);
-
-      if (this._rng.next() < 0.28) {
-        tx += Math.sign(originX - tx);
-        ty += Math.sign(originY - ty);
-      } else if (this._rng.next() < 0.56) {
-        tx += this._rng.next() < 0.5 ? -1 : 1;
-      } else {
-        ty += this._rng.next() < 0.5 ? -1 : 1;
-      }
-      tx = clamp(tx, 1, WORLD_CONFIG.WIDTH - 2);
-      ty = clamp(ty, this.surface[tx] + 1, WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 1);
-    }
-
-    // A random walk can repeatedly revisit the same coordinate or get trapped
-    // against a cave. Finish the small vein with a bounded, deterministic scan
-    // around its origin so duplicate visits never masquerade as placed cells.
-    const maxFallbackRadius = Math.min(14, Math.max(3, Math.ceil(Math.sqrt(targetSize)) * 3));
-    const maxFallbackChecks = Math.max(80, targetSize * 32);
-    let fallbackChecks = 0;
-
-    for (let radius = 1;
-      placed < targetSize && radius <= maxFallbackRadius && fallbackChecks < maxFallbackChecks;
-      radius += 1) {
-      for (let offsetY = -radius;
-        placed < targetSize && offsetY <= radius && fallbackChecks < maxFallbackChecks;
-        offsetY += 1) {
-        const offsetX = radius - Math.abs(offsetY);
-        const candidates = offsetX === 0
-          ? [[originX, originY + offsetY]]
-          : [
-            [originX - offsetX, originY + offsetY],
-            [originX + offsetX, originY + offsetY],
-          ];
-
-        for (const [candidateX, candidateY] of candidates) {
-          if (placed >= targetSize || fallbackChecks >= maxFallbackChecks) break;
-          fallbackChecks += 1;
-          tryPlace(candidateX, candidateY);
+      const tipIndices = [];
+      for (let index = 0; index < frontier.length; index += 1) {
+        const candidate = frontier[index];
+        let contacts = 0;
+        for (const [offsetX, offsetY] of CARDINAL_DIRECTIONS) {
+          if (placedCells.has(`${candidate.tx + offsetX}:${candidate.ty + offsetY}`)) contacts += 1;
         }
+        if (contacts === 1) tipIndices.push(index);
       }
+      const pool = tipIndices.length && this._rng.next() < 0.82
+        ? tipIndices
+        : frontier.map((_candidate, index) => index);
+      const poolIndex = this._rng.int(0, pool.length - 1);
+      const frontierIndex = pool[poolIndex];
+      const [candidate] = frontier.splice(frontierIndex, 1);
+      queuedCells.delete(`${candidate.tx}:${candidate.ty}`);
+      tryPlace(candidate.tx, candidate.ty);
     }
 
+    if (requireFullSize && placed < targetSize) {
+      for (const coordinate of placedCoordinates) this._clearOreAt(coordinate.tx, coordinate.ty);
+      return 0;
+    }
+
+    if (collectedCells) collectedCells.push(...placedCoordinates);
     return placed;
+  }
+
+  _clearOreAt(tx, ty) {
+    const tile = this.getTile(tx, ty);
+    if (!tile?.oreId || tile.kind === "air" || tile.kind === "bedrock") return false;
+    this._removeOreFromIndex(tx, ty);
+    tile.oreId = null;
+    tile.veinId = null;
+    tile.maxHp = Math.max(1, Math.round(Number(tile.terrainMaxHp) || Number(tile.maxHp) || 1));
+    tile.hp = tile.maxHp;
+    tile.cracked = 0;
+    tile.liftSupply = false;
+    this._oreRankByTile[this._index(tx, ty)] = -1;
+    return true;
   }
 
   _applyOre(tx, ty, definition, veinId = null) {
@@ -2326,21 +2690,30 @@ class MineWorld {
       || copper;
     if (!copper) return;
 
-    const placeSoftOre = (offsetY, definition, hp) => {
-      const tx = this._spawn.tx;
+    const copperVeinId = `starter-copper:${hashSeed(`${this.seed}:starter-copper`).toString(36)}`;
+    const coalVeinId = `starter-coal:${hashSeed(`${this.seed}:starter-coal`).toString(36)}`;
+    const placeStarterTile = (offsetX, offsetY, definition, veinId, hp = null) => {
+      const tx = this._spawn.tx + offsetX;
       const ty = this._spawn.ty + offsetY;
       const current = this.getTile(tx, ty);
-      if (!current || current.kind === "bedrock" || !definition) return false;
+      if (!current || current.kind === "bedrock" || current.pendingLiftSupply || !definition) return false;
 
-      // Caves are generated first and can occasionally erase the intended
-      // opening seam. Rebuild these three cells as soft loam so every seed and
-      // every geological sector starts with the same small, reachable payout.
-      const tile = createTile("loam", hp, true);
-      this.tiles[this._index(tx, ty)] = tile;
-      this._oreRankByTile[this._index(tx, ty)] = -1;
-      if (!this._applyOre(tx, ty, definition)) return false;
-      tile.maxHp = hp;
-      tile.hp = hp;
+      // Caves and the first lift chamber may erase part of the compact opening
+      // seam. Rebuild only the six authored cells; the ore-node budget stays
+      // unchanged while the five copper pieces form one cardinal C-shaped vein
+      // around the guaranteed coal sample.
+      let tile = current;
+      if (tile.kind === "air" || Number.isFinite(hp)) {
+        const terrainHp = Number.isFinite(hp) ? hp : 5;
+        tile = createTile("loam", terrainHp, true);
+        this.tiles[this._index(tx, ty)] = tile;
+        this._oreRankByTile[this._index(tx, ty)] = -1;
+      }
+      if (!this._applyOre(tx, ty, definition, veinId)) return false;
+      if (Number.isFinite(hp)) {
+        tile.maxHp = hp;
+        tile.hp = hp;
+      }
       tile.discovered = true;
       tile.cracked = 0;
       return true;
@@ -2349,22 +2722,12 @@ class MineWorld {
     // The first copper is visible from the spawn chamber. Once it opens, the
     // miner is close enough to smell the coal and then the second copper. The
     // fixed HP caps keep this useful inside the initial six-second shift.
-    placeSoftOre(2, copper, 2);
-    placeSoftOre(3, coal, 4);
-    placeSoftOre(4, copper, 3);
-
-    const offsets = [
-      [-2, 4],
-      [2, 5],
-      [0, 7],
-    ];
-
-    for (const [offsetX, offsetY] of offsets) {
-      const targetX = this._spawn.tx + offsetX;
-      const targetY = this._spawn.ty + offsetY;
-      const candidate = this._nearestSolidTile(targetX, targetY, 2);
-      if (candidate) this._applyOre(candidate.tx, candidate.ty, copper);
-    }
+    placeStarterTile(0, 2, copper, copperVeinId, 2);
+    placeStarterTile(0, 3, coal, coalVeinId, 4);
+    placeStarterTile(0, 4, copper, copperVeinId, 3);
+    placeStarterTile(-1, 4, copper, copperVeinId);
+    placeStarterTile(-1, 3, copper, copperVeinId);
+    placeStarterTile(-1, 2, copper, copperVeinId);
   }
 
   _nearestSolidTile(originX, originY, radius) {

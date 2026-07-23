@@ -235,19 +235,64 @@ function oreVeins(world, oreId) {
   return veins;
 }
 
+function allOreVeins(world) {
+  const veins = new Map();
+  for (let ty = 0; ty < WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS; ty += 1) {
+    for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+      const tile = world.getTile(tx, ty);
+      if (!tile?.oreId || !tile.veinId) continue;
+      if (!veins.has(tile.veinId)) veins.set(tile.veinId, {
+        oreId: tile.oreId,
+        cells: [],
+      });
+      const vein = veins.get(tile.veinId);
+      assert.equal(vein.oreId, tile.oreId, `vein ${tile.veinId} cannot mix ore types`);
+      vein.cells.push({ tx, ty, tile });
+    }
+  }
+  return veins;
+}
+
+function cardinalReachableCount(cells) {
+  if (!cells.length) return 0;
+  const remaining = new Set(cells.map(({ tx, ty }) => `${tx}:${ty}`));
+  const first = cells[0];
+  const queue = [first];
+  remaining.delete(`${first.tx}:${first.ty}`);
+  let reachable = 0;
+  while (queue.length) {
+    const current = queue.pop();
+    reachable += 1;
+    for (const [offsetX, offsetY] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const tx = current.tx + offsetX;
+      const ty = current.ty + offsetY;
+      if (!remaining.delete(`${tx}:${ty}`)) continue;
+      queue.push({ tx, ty });
+    }
+  }
+  return reachable;
+}
+
 // Amber and gold each spend one normal generated vein on a central frontier
-// reserve. This removes long no-resource streaks without adding veins, nodes,
-// larger seams or softer ore to the narrowed field.
+// reserve. The only vein ids beyond that authored budget belong to the exact
+// copper redistribution that replaced pre-filled lift targets.
 for (let index = 0; index < 24; index += 1) {
   const world = new MineWorld(ORE_TYPES, `frontier-reserve-${index}`, { sectorId: "stable_strata" });
   const authoredVeinBudget = world._oreDefinitions.reduce(
     (total, definition) => total + world._oreVeinCount(definition),
     0,
   );
-  assert.equal(
-    world._nextVeinId - 1,
-    authoredVeinBudget,
-    `frontier seed ${index}: reserves must consume, not enlarge, the authored vein budget`,
+  const redistributedVeinBudget = new Set(
+    world._liftCompensationCells.map(({ veinId }) => veinId),
+  ).size;
+  const allocatedVeinIds = world._nextVeinId - 1;
+  assert.ok(
+    allocatedVeinIds >= authoredVeinBudget + redistributedVeinBudget,
+    `frontier seed ${index}: every live redistributed vein needs an allocated id`,
+  );
+  assert.ok(
+    allocatedVeinIds <= authoredVeinBudget + world._liftTargetKeys.size,
+    `frontier seed ${index}: failed placement ids must stay inside the redistributed node budget`,
   );
 
   for (const oreId of ["amber", "gold"]) {
@@ -346,25 +391,94 @@ const densitySamples = 32;
 let densityOreTiles = 0;
 let densityUndergroundAir = 0;
 let checkedDepthGatedOre = 0;
+let densityCopperTiles = 0;
+let densitySingletonCopperTiles = 0;
+let checkedConnectedVeins = 0;
 for (let index = 0; index < densitySamples; index += 1) {
   const world = new MineWorld(ORE_TYPES, `density-preservation-${index}`, { sectorId: "stable_strata" });
   const metrics = worldMetrics(world);
   densityOreTiles += metrics.oreTiles;
   densityUndergroundAir += metrics.undergroundAir;
   checkedDepthGatedOre += assertAuthoredVerticalOreDepth(world, `density seed ${index}`);
+
+  const stationTargetKeys = new Set(world._liftStations.map(({ target }) => `${target.tx}:${target.ty}`));
+  assert.equal(
+    world._liftTargetKeys.size,
+    stationTargetKeys.size,
+    `density seed ${index}: every unique lift target must be tracked exactly once`,
+  );
+  for (const key of stationTargetKeys) {
+    assert.ok(world._liftTargetKeys.has(key), `density seed ${index}: lift target ${key} is not reserved`);
+    const [tx, ty] = key.split(":").map(Number);
+    const tile = world.getTile(tx, ty);
+    assert.ok(tile && !["air", "bedrock"].includes(tile.kind), `density seed ${index}: ${key} must remain rock`);
+    assert.equal(tile.oreId, null, `density seed ${index}: unused lift target ${key} must not contain ore`);
+    assert.equal(tile.veinId, null, `density seed ${index}: unused lift target ${key} must not own a vein`);
+    assert.equal(tile.pendingLiftSupply, true, `density seed ${index}: ${key} must wait for selection`);
+  }
+
+  assert.equal(
+    world._liftCompensationCells.length,
+    world._liftTargetKeys.size,
+    `density seed ${index}: redistributed copper must exactly match the removed station budget`,
+  );
+  const compensationVeins = new Map();
+  for (const candidate of world._liftCompensationCells) {
+    const key = `${candidate.tx}:${candidate.ty}`;
+    assert.ok(!world._liftTargetKeys.has(key), `density seed ${index}: compensation cannot reuse ${key}`);
+    const tile = world.getTile(candidate.tx, candidate.ty);
+    assert.equal(tile?.oreId, "copper", `density seed ${index}: compensation cell ${key} must remain copper`);
+    assert.equal(tile?.veinId, candidate.veinId, `density seed ${index}: compensation identity drifted at ${key}`);
+    if (!compensationVeins.has(candidate.veinId)) compensationVeins.set(candidate.veinId, []);
+    compensationVeins.get(candidate.veinId).push(candidate);
+  }
+  for (const [veinId, cells] of compensationVeins) {
+    assert.ok(
+      cells.length >= 6 && cells.length <= 9,
+      `density seed ${index}: redistributed vein ${veinId} must contain 6-9 cells, got ${cells.length}`,
+    );
+    assert.equal(
+      cardinalReachableCount(cells),
+      cells.length,
+      `density seed ${index}: redistributed vein ${veinId} must be cardinally connected`,
+    );
+  }
+
+  for (const [veinId, vein] of allOreVeins(world)) {
+    assert.equal(
+      cardinalReachableCount(vein.cells),
+      vein.cells.length,
+      `density seed ${index}: final vein ${veinId} must be one cardinal network`,
+    );
+    checkedConnectedVeins += 1;
+    if (vein.oreId !== "copper") continue;
+    densityCopperTiles += vein.cells.length;
+    if (vein.cells.length === 1) densitySingletonCopperTiles += 1;
+  }
 }
 const sampledWorldTiles = densitySamples * WORLD_CONFIG.WIDTH * WORLD_CONFIG.HEIGHT;
 const sampledOreDensity = densityOreTiles / sampledWorldTiles;
 const sampledCaveDensity = densityUndergroundAir / sampledWorldTiles;
 assert.ok(
-  Math.abs(sampledOreDensity - 0.08) <= 0.008,
-  `ore density must stay near the former 8% field density, got ${(sampledOreDensity * 100).toFixed(2)}%`,
+  Math.abs(sampledOreDensity - 0.0848) <= 0.002,
+  `lift redistribution must preserve the 8.48% ore baseline, got ${(sampledOreDensity * 100).toFixed(2)}%`,
 );
 assert.ok(
   Math.abs(sampledCaveDensity - 0.258) <= 0.022,
   `cave density must stay near the former 25.8% field density, got ${(sampledCaveDensity * 100).toFixed(2)}%`,
 );
 assert.ok(checkedDepthGatedOre > 0, "the depth-gate audit must inspect generated T5+ ore cells");
+const averageCopperTiles = densityCopperTiles / densitySamples;
+const singletonCopperShare = densitySingletonCopperTiles / Math.max(1, densityCopperTiles);
+assert.ok(
+  averageCopperTiles >= 320 && averageCopperTiles <= 345,
+  `redistribution must preserve the copper economy, got ${averageCopperTiles.toFixed(2)} cells/world`,
+);
+assert.ok(
+  singletonCopperShare <= 0.05,
+  `at most 5% of copper may remain in singleton veins, got ${(singletonCopperShare * 100).toFixed(2)}%`,
+);
+assert.ok(checkedConnectedVeins > 0, "the multi-seed audit must inspect final vein topology");
 
 const depthProbe = new MineWorld(ORE_TYPES, "full-depth-probe", { sectorId: "stable_strata" });
 const depthSpawn = depthProbe.getSpawn();
@@ -677,17 +791,24 @@ for (let seed = 0; seed < 12; seed += 1) {
   checkedStagedEvents += 2;
 }
 
-// A lift landing retunes its existing one-node sample to the workshop's
-// requested shortage. It must not create extra ore or restore full deep-ore HP.
+// Every station starts as a reserved rock target. Selecting one station moves
+// exactly one edge node from the redistributed copper budget and retunes that
+// node to the workshop's requested shortage without changing total ore count.
 const liftSupplyWorld = new MineWorld(ORE_TYPES, "lift-resupply-probe", { sectorId: "stable_strata" });
 const liftSupplyStart = liftSupplyWorld.getLiftStart(800, 0.45, 800, { unlockedTierCap: 9 });
 assert.equal(liftSupplyStart.source, "shaft-lift");
 assert.ok(liftSupplyStart.requiredTier >= 2, "the resupply fixture must allow iron");
 const liftSupplyBeforeCount = worldMetrics(liftSupplyWorld).oreTiles;
-const liftSupplyOriginalCap = liftSupplyWorld.getTile(
+const liftSupplyTargetBefore = liftSupplyWorld.getTile(
   liftSupplyStart.target.tx,
   liftSupplyStart.target.ty,
-).maxHp;
+);
+assert.ok(liftSupplyTargetBefore && !["air", "bedrock"].includes(liftSupplyTargetBefore.kind));
+assert.equal(liftSupplyTargetBefore.oreId, null, "an unused lift target must remain ordinary rock");
+assert.equal(liftSupplyTargetBefore.veinId, null, "an unused lift target must not create a singleton vein");
+assert.equal(liftSupplyTargetBefore.pendingLiftSupply, true);
+assert.equal(liftSupplyTargetBefore.liftSupply, false);
+const liftSupplyOriginalCap = liftSupplyTargetBefore.maxHp;
 const liftSupply = liftSupplyWorld.retuneLiftTarget(liftSupplyStart, ["star_core", "iron"]);
 assert.ok(liftSupply, "a deep lift must expose one retunable resupply sample");
 assert.equal(liftSupply.oreId, "iron", "an unavailable top-tier request must fall through to the reachable shortage");
@@ -698,13 +819,31 @@ assert.deepEqual(
 );
 const liftSupplyTile = liftSupplyWorld.getTile(liftSupply.tx, liftSupply.ty);
 assert.equal(liftSupplyTile.liftSupply, true);
+assert.equal(liftSupplyTile.pendingLiftSupply, false);
 assert.equal(liftSupplyTile.discovered, true);
 assert.ok(liftSupplyTile.maxHp <= liftSupplyOriginalCap, "the landing sample must remain quick to collect");
 assert.equal(worldMetrics(liftSupplyWorld).oreTiles, liftSupplyBeforeCount, "resupply must not increase node density");
+const repeatedLiftSupply = liftSupplyWorld.retuneLiftTarget(liftSupplyStart, ["copper"]);
+assert.equal(repeatedLiftSupply?.oreId, "iron", "a selected lift target must not change on a second retune");
+assert.equal(
+  worldMetrics(liftSupplyWorld).oreTiles,
+  liftSupplyBeforeCount,
+  "an idempotent second retune must not consume another redistributed node",
+);
+const selectedLiftTargetKey = `${liftSupplyStart.target.tx}:${liftSupplyStart.target.ty}`;
+for (const station of liftSupplyWorld._liftStations) {
+  const key = `${station.target.tx}:${station.target.ty}`;
+  if (key === selectedLiftTargetKey) continue;
+  const tile = liftSupplyWorld.getTile(station.target.tx, station.target.ty);
+  assert.equal(tile?.oreId, null, `selecting one lift must not fill unused target ${key}`);
+  assert.equal(tile?.veinId, null, `unused target ${key} must remain outside the vein graph`);
+  assert.equal(tile?.pendingLiftSupply, true, `unused target ${key} must remain pending`);
+}
 
 // Every sector and seed starts with the same short, mineable economy seam:
 // copper is visible immediately, coal follows behind it, and another copper
-// tile rewards continuing down the newly opened shaft.
+// tile rewards continuing down the newly opened shaft. All five copper pieces
+// form one compact cardinal C around the coal.
 let checkedStarterSeams = 0;
 for (let seed = 1; seed <= 8; seed += 1) {
   for (const sector of GEOLOGICAL_SECTORS) {
@@ -722,6 +861,27 @@ for (let seed = 1; seed <= 8; seed += 1) {
     assert.equal(secondCopper?.maxHp, 3, "second copper must stay soft");
     assert.ok(firstCopper.discovered && coal.discovered && secondCopper.discovered);
 
+    const starterCopper = [
+      { tx: starterSpawn.tx, ty: starterSpawn.ty + 2 },
+      { tx: starterSpawn.tx, ty: starterSpawn.ty + 4 },
+      { tx: starterSpawn.tx - 1, ty: starterSpawn.ty + 2 },
+      { tx: starterSpawn.tx - 1, ty: starterSpawn.ty + 3 },
+      { tx: starterSpawn.tx - 1, ty: starterSpawn.ty + 4 },
+    ];
+    const starterVeinIds = new Set(starterCopper.map(({ tx, ty }) => {
+      const tile = starterWorld.getTile(tx, ty);
+      assert.equal(tile?.oreId, "copper", `${sector.id} starter C is missing copper at ${tx}:${ty}`);
+      assert.equal(tile?.discovered, true, `${sector.id} starter copper must be visible at ${tx}:${ty}`);
+      return tile.veinId;
+    }));
+    assert.equal(starterVeinIds.size, 1, `${sector.id} starter copper must share one vein id`);
+    assert.equal(
+      cardinalReachableCount(starterCopper),
+      starterCopper.length,
+      `${sector.id} starter copper must be a cardinally connected C-shaped vein`,
+    );
+    assert.notEqual(coal.veinId, firstCopper.veinId, "the coal sample must keep a separate vein identity");
+
     const starterRoute = starterWorld.findLeastResistanceStep(
       starterSpawn,
       { tx: starterSpawn.tx, ty: starterSpawn.ty + 4 },
@@ -732,9 +892,8 @@ for (let seed = 1; seed <= 8; seed += 1) {
   }
 }
 
-// The three additional guaranteed copper probes must lead into the shaft,
-// never recreate the former shallow left/right farming strip. Record the
-// requested locations without depending on incidental caves in one seed.
+// Re-running the authored placement must preserve the same compact C instead
+// of searching outward for incidental solid tiles.
 const starterFanWorld = new MineWorld(ORE_TYPES, "starter-descending-fan", { sectorId: "stable_strata" });
 const starterFanSpawn = starterFanWorld.getSpawn();
 const starterFanRequests = [];
@@ -749,12 +908,23 @@ starterFanWorld._nearestSolidTile = (tx, ty, radius) => {
 };
 starterFanWorld._placeStarterOre();
 starterFanWorld._nearestSolidTile = originalNearestSolidTile;
-assert.deepEqual(starterFanRequests, [
-  { dx: -2, dy: 4, radius: 2 },
-  { dx: 2, dy: 5, radius: 2 },
-  { dx: 0, dy: 7, radius: 2 },
-]);
-assert.ok(starterFanRequests.every((request) => request.dy >= 4 && Math.abs(request.dx) <= 2));
+assert.deepEqual(starterFanRequests, [], "starter placement must no longer scatter probes via nearest-rock search");
+const starterFanCopper = [
+  [0, 2],
+  [0, 4],
+  [-1, 2],
+  [-1, 3],
+  [-1, 4],
+].map(([dx, dy]) => ({
+  tx: starterFanSpawn.tx + dx,
+  ty: starterFanSpawn.ty + dy,
+}));
+assert.equal(cardinalReachableCount(starterFanCopper), 5);
+assert.equal(
+  new Set(starterFanCopper.map(({ tx, ty }) => starterFanWorld.getTile(tx, ty)?.veinId)).size,
+  1,
+  "the repeated starter placement must retain one shared copper vein id",
+);
 
 // A direct diagonal must not squeeze through the seam between two intact
 // blocks. The public route finder must instead choose one of the orthogonal
