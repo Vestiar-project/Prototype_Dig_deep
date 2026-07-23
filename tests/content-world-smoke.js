@@ -441,15 +441,22 @@ assert.match(gameSource, /endingResetProgress\?\.addEventListener\(['"]click['"]
 assert.match(gameSource, /version:\s*15/, "the final-seal state must be persisted in schema v15");
 assert.match(indexSource, /id=["']startUpgrades["']/, "the title screen needs a direct workshop entry");
 assert.match(gameSource, /startUpgrades\?\.addEventListener\(['"]click['"],\s*openUpgradeScreen\)/, "the title workshop button must open the existing upgrade screen");
+assert.match(gameSource, /function selectUpgradeInPlace\(id\)[\s\S]*?renderNextBreakthrough\(\);[\s\S]*?return true;/, "perk selection must update the mounted tree in place");
+assert.match(gameSource, /path\.dataset\.fromUpgrade\s*=\s*parentId;[\s\S]*?path\.dataset\.toUpgrade\s*=\s*child\.id;/, "mounted edges need stable endpoints for in-place focus updates");
+assert.doesNotMatch(
+  gameSource,
+  /const node = event\.target\.closest\(['"]\[data-upgrade-id\]['"]\);[\s\S]{0,260}?renderUpgrades\(\);/,
+  "a simple perk click must not rebuild the full tree",
+);
 assert.match(stylesSource, /\.result-header h2[\s\S]*?\.micro-event-banner[\s\S]*?\{\s*text-shadow:\s*none/, "the result heading must remain readable without a same-colour duplicate shadow");
 assert.match(indexSource, /class=["'][^"']*theme-rust-comic/);
-assert.match(indexSource, /styles\.css\?v=deep-shaft-9-nopin1/);
-assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-9-nopin1/);
-assert.match(indexSource, /js\/world\.js\?v=deep-shaft-9-nopin1/);
-assert.match(indexSource, /js\/music\.js\?v=deep-shaft-9-nopin1/);
-assert.match(indexSource, /js\/game\.js\?v=deep-shaft-9-nopin1/);
+assert.match(indexSource, /styles\.css\?v=deep-shaft-9-sense1/);
+assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-9-sense1/);
+assert.match(indexSource, /js\/world\.js\?v=deep-shaft-9-sense1/);
+assert.match(indexSource, /js\/music\.js\?v=deep-shaft-9-sense1/);
+assert.match(indexSource, /js\/game\.js\?v=deep-shaft-9-sense1/);
 assert.ok(
-  indexSource.indexOf('js/music.js?v=deep-shaft-9-nopin1') < indexSource.indexOf('js/game.js?v=deep-shaft-9-nopin1'),
+  indexSource.indexOf('js/music.js?v=deep-shaft-9-sense1') < indexSource.indexOf('js/game.js?v=deep-shaft-9-sense1'),
   "the soundtrack singleton must load before the game audio engine",
 );
 assert.match(indexSource, /id=["']soundToggle["'][\s\S]*?aria-pressed=["']true["']/);
@@ -472,10 +479,19 @@ for (const ore of ORE_TYPES) {
 const oreRenderer = gameSource.match(/function drawOreInTile\([\s\S]*?\n\}\n\nfunction drawCracks/);
 assert.ok(oreRenderer, "the ore renderer must remain available to the canvas pass");
 assert.match(oreRenderer[0], /ORE_RENDER_STYLES\[ore\.id\]/, "ore material profiles must drive the live renderer");
-assert.match(oreRenderer[0], /drawRuntimeVeinConnectors\(/, "the authored vein atlas must connect matching ore nodes");
+assert.doesNotMatch(oreRenderer[0], /drawRuntimeVein/, "connectors need their own global pass below every ore node");
+assert.match(gameSource, /function drawVisibleVeinNetwork\(/, "the authored vein atlas must connect matching ore nodes");
+assert.match(gameSource, /function buildVeinEdgePolyline\(/, "veins must use deterministic broken-line geometry");
+assert.match(
+  gameSource,
+  /drawTile\(entry, now, 'terrain', oreVisualStates\);[\s\S]*drawVisibleVeinNetwork\(visible, oreVisualStates\);[\s\S]*drawTile\(entry, now, 'overlay', oreVisualStates\);/,
+  "veins must render as one network before every ore node",
+);
 assert.doesNotMatch(oreRenderer[0], /verticalOreEdgeOffset|horizontalOreEdgeOffset/, "old random line offsets must not return");
 assert.doesNotMatch(oreRenderer[0], /ctx\.lineTo\(/, "old procedural vein strokes must stay removed");
 assert.match(gameSource, /tile\.oreId !== oreId[\s\S]*tile\.veinId !== veinId/, "connectors must require both ore and vein identity");
+assert.match(gameSource, /for \(const \[offsetX, offsetY\] of \[\[1, 0\], \[0, 1\]\]\)/, "each cardinal edge must draw exactly once");
+assert.match(gameSource, /FIELD_ORE_NODE_MIN_SIZE \+ tier \* FIELD_ORE_NODE_TIER_STEP/);
 assert.match(oreRenderer[0], /const glowTier = clamp\(\(ore\.tier \|\| 0\) - 2/, "zero-based T4+ ore should receive geological glow");
 assert.match(oreRenderer[0], /globalCompositeOperation = 'lighter'/, "high-tier glow must remain a local additive pass");
 assert.doesNotMatch(oreRenderer[0], /fillRect\(0, 0, (?:width|state\.viewport)/, "ore glow must never become a full-screen wash");
@@ -522,15 +538,68 @@ assert.equal(
 
 let checkedRoutes = 0;
 let checkedVeins = 0;
+const countLiveOreTiles = (world) => {
+  let count = 0;
+  world.forEachOreTileInBounds(
+    0,
+    0,
+    WORLD_CONFIG.WIDTH - 1,
+    WORLD_CONFIG.HEIGHT - 1,
+    () => {
+      count += 1;
+    },
+  );
+  return count;
+};
+const cardinallyReachableCount = (coordinateKeys) => {
+  const remaining = new Set(coordinateKeys);
+  const first = remaining.values().next().value;
+  if (!first) return 0;
+  const queue = [first];
+  remaining.delete(first);
+  let reachable = 0;
+  while (queue.length) {
+    const coordinate = queue.pop();
+    reachable += 1;
+    const [tx, ty] = coordinate.split(":").map(Number);
+    for (const [offsetX, offsetY] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const neighbour = `${tx + offsetX}:${ty + offsetY}`;
+      if (!remaining.delete(neighbour)) continue;
+      queue.push(neighbour);
+    }
+  }
+  return reachable;
+};
 for (let seed = 1; seed <= 50; seed += 1) {
   const world = new MineWorld(ORE_TYPES, `stress-${seed}`);
   const lift = world.getLiftStart(120, 0.35, 120, { unlockedTierCap: 9 });
   assert.ok(lift && Number.isFinite(lift.x) && Number.isFinite(lift.y));
   assert.ok(lift.depthTiles <= 42 + 1e-9);
   assert.ok(world.getTile(lift.tx, lift.ty)?.kind === "air", "lift landing must be open");
-  assert.ok(lift.target && world.getTile(lift.target.tx, lift.target.ty)?.oreId, "lift needs a guaranteed ore target");
+  assert.ok(lift.target, "lift needs an authored supply target");
+  const pendingTarget = world.getTile(lift.target.tx, lift.target.ty);
+  assert.ok(
+    pendingTarget && !["air", "bedrock"].includes(pendingTarget.kind),
+    "an unused lift target must remain mineable rock",
+  );
+  assert.equal(pendingTarget.oreId, null, "unused lift stations must not pre-place copper");
+  assert.equal(pendingTarget.veinId, null, "unused lift stations must not create singleton veins");
+  assert.equal(pendingTarget.pendingLiftSupply, true, "the selected target must wait for an explicit retune");
 
-  const beforeHp = world.getTile(lift.target.tx, lift.target.ty).hp;
+  const oreTilesBeforeRetune = countLiveOreTiles(world);
+  const supply = world.retuneLiftTarget(lift, ["copper"]);
+  assert.ok(supply, "selecting a lift must move one redistributed ore node onto its target");
+  assert.equal(supply.oreId, "copper");
+  assert.equal(supply.liftSupply, true);
+  const selectedTarget = world.getTile(lift.target.tx, lift.target.ty);
+  assert.equal(selectedTarget.pendingLiftSupply, false);
+  assert.equal(selectedTarget.liftSupply, true);
+  assert.equal(countLiveOreTiles(world), oreTilesBeforeRetune, "lift supply must be an exact one-node swap");
+  const repeatedSupply = world.retuneLiftTarget(lift, ["iron"]);
+  assert.equal(repeatedSupply?.oreId, "copper", "retuning one landing twice must be idempotent");
+  assert.equal(countLiveOreTiles(world), oreTilesBeforeRetune, "repeated retuning must not consume another donor");
+
+  const beforeHp = selectedTarget.hp;
   const route = world.findLeastResistanceStep(lift, lift.target, {
     moveSpeed: 100,
     digPowerPerSecond: 8,
@@ -563,8 +632,13 @@ for (let seed = 1; seed <= 50; seed += 1) {
     }
   }
   assert.ok(oreTiles > 0);
-  for (const vein of veins.values()) {
+  for (const [veinId, vein] of veins) {
     assert.ok(vein.cells.size > 0, "every generated vein must own at least one unique cell");
+    assert.equal(
+      cardinallyReachableCount(vein.cells),
+      vein.cells.size,
+      `vein ${veinId} must be one cardinally connected network`,
+    );
     checkedVeins += 1;
   }
 
@@ -586,9 +660,9 @@ for (let seed = 1; seed <= 50; seed += 1) {
   assert.equal(indexedAfterBreak, oreTiles - 1, "broken ore must leave the live index immediately");
 }
 
-// Force the random walk to stay on its origin. The deterministic fallback must
-// still place the requested number of unique cells, and _applyOre must never be
-// called twice for the same cell merely to inflate the returned count.
+// Force deterministic frontier selection. The cardinal vein grower must still
+// place the requested number of unique connected cells, and _applyOre must
+// never be called twice for the same cell merely to inflate the returned count.
 const duplicateWorld = new MineWorld(ORE_TYPES, "duplicate-walk-probe");
 const richestDefinition = duplicateWorld._oreDefinitions.reduce((richest, definition) => (
   !richest || definition.rank > richest.rank ? definition : richest
@@ -637,14 +711,22 @@ duplicateWorld._rng.next = originalNext;
 duplicateWorld._applyOre = originalApplyOre;
 
 let actualProbeCells = 0;
+const actualProbeCoordinates = new Set();
 for (let ty = 0; ty < WORLD_CONFIG.HEIGHT; ty += 1) {
   for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
-    if (duplicateWorld.getTile(tx, ty)?.veinId === expectedVeinId) actualProbeCells += 1;
+    if (duplicateWorld.getTile(tx, ty)?.veinId !== expectedVeinId) continue;
+    actualProbeCells += 1;
+    actualProbeCoordinates.add(`${tx}:${ty}`);
   }
 }
-assert.equal(uniquePlaced, requestedSize, "fallback must complete a stalled random-walk vein");
+assert.equal(uniquePlaced, requestedSize, "cardinal growth must complete the requested vein");
 assert.equal(actualProbeCells, uniquePlaced, "reported vein size must equal its unique world cells");
 assert.equal(probeApplyCalls, uniquePlaced, "duplicate visits must not reapply or recount the same cell");
+assert.equal(
+  cardinallyReachableCount(actualProbeCoordinates),
+  actualProbeCells,
+  "a newly placed procedural vein must form one cardinal network",
+);
 
 const deterministicA = new MineWorld(ORE_TYPES, "determinism-probe");
 const deterministicB = new MineWorld(ORE_TYPES, "determinism-probe");
