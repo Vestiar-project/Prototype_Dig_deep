@@ -18,17 +18,22 @@ assert.ok(oreRenderer, "ore renderer missing");
 assert.doesNotMatch(oreRenderer[0], /verticalOreEdgeOffset|horizontalOreEdgeOffset/);
 assert.doesNotMatch(oreRenderer[0], /ctx\.lineTo\(/, "legacy procedural vein strokes returned");
 assert.match(oreRenderer[0], /drawRuntimeOreNode\(/, "approved ore nodes must remain active");
-assert.match(oreRenderer[0], /drawRuntimeVeinConnectors\(/, "authored connectors must render below the ore node");
+assert.doesNotMatch(oreRenderer[0], /drawRuntimeVein/, "veins need one shared pass, not a per-node cross");
+assert.match(gameSource, /function drawRuntimeVeinEdge\(/, "authored connector material must follow each edge");
+assert.match(gameSource, /function collectVisibleVeinEdges\(/, "visible ore neighbours must form a render-only graph");
+assert.match(gameSource, /function buildVeinEdgePolyline\(/, "connector edges must bend deterministically");
 assert.ok(
-  oreRenderer[0].indexOf("drawRuntimeVeinConnectors(") < oreRenderer[0].indexOf("drawRuntimeOreNode("),
-  "the approved ore node must cover the connector junction",
+  gameSource.indexOf("drawVisibleVeinNetwork(visible, oreVisualStates);")
+    < gameSource.indexOf("for (const entry of visible) drawTile(entry, now, 'overlay', oreVisualStates);"),
+  "all connector branches must render before the approved ore nodes",
 );
 assert.match(gameSource, /FIELD_VEIN_ATLAS_SOURCE = 'assets\/field\/depth-zero-vein-connectors-runtime-atlas\.png'/);
 assert.match(gameSource, /tile\.oreId !== oreId[\s\S]*tile\.veinId !== veinId/);
 assert.match(gameSource, /cachedVisualState[\s\S]*cachedVisualState\.visible/);
 assert.match(gameSource, /for \(const entry of visible\) drawTile\(entry, now, 'terrain'/);
+assert.match(gameSource, /drawVisibleVeinNetwork\(visible, oreVisualStates\)/);
 assert.match(gameSource, /for \(const entry of visible\) drawTile\(entry, now, 'overlay'/);
-assert.match(indexSource, /deep-shaft-9-nopin1/, "browser cache key was not advanced");
+assert.match(indexSource, /deep-shaft-9-sense1/, "browser cache key was not advanced");
 
 assert.equal(runtimeAtlas.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
 assert.equal(runtimeAtlas.readUInt32BE(16), 2560);
