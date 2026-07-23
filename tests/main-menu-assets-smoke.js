@@ -62,8 +62,16 @@ assert.ok(html.includes('class="menu-hero-art"'), "responsive hero picture is mi
 assert.ok(html.includes('media="(max-width: 1199px)"'), "mobile hero source is missing");
 assert.ok(html.includes('class="brand-command"'), "mobile command block is missing");
 assert.ok(!html.includes('class="briefing-art"'), "separate rocket panel must stay removed");
-assert.ok(html.includes("deep-shaft-9-nopin1"), "no-pin cache version was not updated");
+assert.ok(html.includes("deep-shaft-9-sense1"), "sense-render cache version was not updated");
 assert.ok(html.includes("СПРАВКА"), "the tertiary help action is missing");
+const startRunMarkup = html.match(/<button id="startRun"[\s\S]*?<\/button>/u)?.[0] || "";
+assert.match(startRunMarkup, /class="btn-icon btn-icon--play"[^>]*><\/span>/u, "Dig must use the font-independent play icon");
+assert.doesNotMatch(startRunMarkup, /\u25b6/u, "Dig must not fall back to an emoji-capable play glyph");
+assert.match(
+  css,
+  /\.btn-icon--play::before\s*\{[\s\S]*?border-left:\s*11px solid currentColor/u,
+  "the play icon must be drawn as CSS geometry rather than a platform font glyph",
+);
 assert.ok(
   html.indexOf('id="startRun"') < html.indexOf('id="startUpgrades"')
     && html.indexOf('id="startUpgrades"') < html.indexOf('id="replayTutorial"'),
