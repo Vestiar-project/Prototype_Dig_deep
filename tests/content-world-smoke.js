@@ -415,6 +415,11 @@ assert.match(indexSource, /покупка только кнопкой «КУПИ
 assert.match(stylesSource, /max-width:\s*640px[\s\S]*?filter:\s*none[\s\S]*?width:\s*calc\(100vw[^;]+[\s\S]*?opacity:\s*1[\s\S]*?visibility:\s*visible/, "the selected mobile perk sheet must escape the filtered 62px node and use viewport width");
 assert.match(stylesSource, /font-size:\s*clamp\(11px,\s*3vw,\s*13px\)[\s\S]*?font-weight:\s*400/, "mobile perk descriptions must remain larger and normal-weight");
 assert.match(stylesSource, /next-breakthrough__max[\s\S]*?min-height:\s*44px[\s\S]*?border:\s*2px solid #ffe2a0[\s\S]*?background:\s*linear-gradient\(#ffd875,\s*#d98b35\)/, "the mobile purchase action must remain a large high-contrast CTA");
+assert.doesNotMatch(indexSource, /pinSelectedUpgrade|ЗАКРЕПИТЬ|СНЯТЬ ЦЕЛЬ|СМЕНИТЬ ЦЕЛЬ/u, "perk target pinning must be absent from the workshop UI");
+assert.doesNotMatch(gameSource, /save\.pinnedUpgradeId|ui\.pinSelectedUpgrade|classList\.toggle\(['"]is-pinned/, "perk target pinning must have no runtime behavior");
+assert.doesNotMatch(stylesSource, /next-breakthrough__pin|upgrade-node\.is-pinned/, "removed pin controls must leave no visual state behind");
+assert.match(gameSource, /delete merged\.pinnedUpgradeId;/, "legacy saves must discard the removed pin field on load");
+assert.match(indexSource, /ВЫБРАННЫЙ УЗЕЛ/u, "the remaining purchase panel must describe the current selection, not a persistent goal");
 assert.match(stylesSource, /@media \(hover: none\) and \(pointer: coarse\)[\s\S]*?upgrade-footer__desktop-hint[\s\S]*?display:\s*none[\s\S]*?upgrade-footer__mobile-hint[\s\S]*?display:\s*block/, "desktop and mobile workshop instructions must never be shown as one mixed control scheme");
 assert.match(indexSource, /id=["']mobileOreFocusToggle["'][\s\S]*?aria-controls=["']mobileOreFocusSheet["']/, "touch workshops need a stable focus control outside the capped toolbar");
 assert.match(indexSource, /id=["']mobileOreFocusChoices["']/, "the touch focus sheet needs explicit discovered-ore choices");
@@ -438,13 +443,13 @@ assert.match(indexSource, /id=["']startUpgrades["']/, "the title screen needs a 
 assert.match(gameSource, /startUpgrades\?\.addEventListener\(['"]click['"],\s*openUpgradeScreen\)/, "the title workshop button must open the existing upgrade screen");
 assert.match(stylesSource, /\.result-header h2[\s\S]*?\.micro-event-banner[\s\S]*?\{\s*text-shadow:\s*none/, "the result heading must remain readable without a same-colour duplicate shadow");
 assert.match(indexSource, /class=["'][^"']*theme-rust-comic/);
-assert.match(indexSource, /styles\.css\?v=deep-shaft-9-character1/);
-assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-9-character1/);
-assert.match(indexSource, /js\/world\.js\?v=deep-shaft-9-character1/);
-assert.match(indexSource, /js\/music\.js\?v=deep-shaft-9-character1/);
-assert.match(indexSource, /js\/game\.js\?v=deep-shaft-9-character1/);
+assert.match(indexSource, /styles\.css\?v=deep-shaft-9-nopin1/);
+assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-9-nopin1/);
+assert.match(indexSource, /js\/world\.js\?v=deep-shaft-9-nopin1/);
+assert.match(indexSource, /js\/music\.js\?v=deep-shaft-9-nopin1/);
+assert.match(indexSource, /js\/game\.js\?v=deep-shaft-9-nopin1/);
 assert.ok(
-  indexSource.indexOf('js/music.js?v=deep-shaft-9-character1') < indexSource.indexOf('js/game.js?v=deep-shaft-9-character1'),
+  indexSource.indexOf('js/music.js?v=deep-shaft-9-nopin1') < indexSource.indexOf('js/game.js?v=deep-shaft-9-nopin1'),
   "the soundtrack singleton must load before the game audio engine",
 );
 assert.match(indexSource, /id=["']soundToggle["'][\s\S]*?aria-pressed=["']true["']/);
@@ -467,13 +472,15 @@ for (const ore of ORE_TYPES) {
 const oreRenderer = gameSource.match(/function drawOreInTile\([\s\S]*?\n\}\n\nfunction drawCracks/);
 assert.ok(oreRenderer, "the ore renderer must remain available to the canvas pass");
 assert.match(oreRenderer[0], /ORE_RENDER_STYLES\[ore\.id\]/, "ore material profiles must drive the live renderer");
-assert.match(oreRenderer[0], /hasMatchingOre\(tx - 1, ty, ore\.id\)/, "veins must keep their left-edge connection");
-assert.match(oreRenderer[0], /hasMatchingOre\(tx \+ 1, ty, ore\.id\)/, "veins must keep their right-edge connection");
+assert.match(oreRenderer[0], /drawRuntimeVeinConnectors\(/, "the authored vein atlas must connect matching ore nodes");
+assert.doesNotMatch(oreRenderer[0], /verticalOreEdgeOffset|horizontalOreEdgeOffset/, "old random line offsets must not return");
+assert.doesNotMatch(oreRenderer[0], /ctx\.lineTo\(/, "old procedural vein strokes must stay removed");
+assert.match(gameSource, /tile\.oreId !== oreId[\s\S]*tile\.veinId !== veinId/, "connectors must require both ore and vein identity");
 assert.match(oreRenderer[0], /const glowTier = clamp\(\(ore\.tier \|\| 0\) - 2/, "zero-based T4+ ore should receive geological glow");
 assert.match(oreRenderer[0], /globalCompositeOperation = 'lighter'/, "high-tier glow must remain a local additive pass");
 assert.doesNotMatch(oreRenderer[0], /fillRect\(0, 0, (?:width|state\.viewport)/, "ore glow must never become a full-screen wash");
 
-const terrainRenderer = gameSource.match(/function terrainDepthFactor\([\s\S]*?\n\}\n\nfunction hasMatchingOre/);
+const terrainRenderer = gameSource.match(/function terrainDepthFactor\([\s\S]*?\n\}\n\nfunction drawBackground/);
 assert.ok(terrainRenderer, "depth landmarks must stay grouped in the terrain render pass");
 for (const marker of ["rootSeed", "fossilSeed", "supportSeed", "cableSeed", "crystalSeed"]) {
   assert.match(terrainRenderer[0], new RegExp(`\\b${marker}\\b`), `${marker} landmark must remain deterministic`);

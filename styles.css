@@ -2966,11 +2966,10 @@ button.upgrade-node { font: inherit; }
 
 .next-breakthrough__actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(74px, auto));
+  grid-template-columns: minmax(92px, auto);
   gap: 4px;
 }
 
-.next-breakthrough__pin,
 .next-breakthrough__max {
   min-width: 74px;
   min-height: 32px;
@@ -2984,8 +2983,6 @@ button.upgrade-node { font: inherit; }
   letter-spacing: 0.07em;
 }
 
-.next-breakthrough__pin:hover,
-.next-breakthrough__pin.is-pinned,
 .next-breakthrough__max:hover:not(:disabled) {
   border-color: var(--gold-hi);
   color: var(--gold-hi);
@@ -2997,13 +2994,7 @@ button.upgrade-node { font: inherit; }
   color: var(--gold-hi);
 }
 
-.next-breakthrough__max:disabled,
-.next-breakthrough__pin:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.upgrade-node.is-pinned:not(.is-selected) {
-  outline: 2px solid rgba(242, 196, 91, 0.72);
-  outline-offset: 4px;
-}
+.next-breakthrough__max:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .diagnosis-advice {
   display: grid;
@@ -3073,7 +3064,6 @@ button.upgrade-node { font: inherit; }
   .next-breakthrough__copy strong { font-size: 8px; }
   .next-breakthrough__copy > span { font-size: 6px; }
   .next-breakthrough__actions { grid-template-columns: 1fr; gap: 2px; }
-  .next-breakthrough__pin,
   .next-breakthrough__max { min-width: 68px; min-height: 32px; padding: 4px 5px; font-size: 7px; }
 }
 
@@ -4226,7 +4216,7 @@ button.upgrade-node { font: inherit; }
 
   .next-breakthrough__actions {
     width: 100%;
-    grid-template-columns: minmax(88px, 1.7fr) minmax(52px, 0.85fr);
+    grid-template-columns: minmax(88px, 1fr);
     align-items: center;
     gap: 5px;
   }
@@ -4274,15 +4264,6 @@ button.upgrade-node { font: inherit; }
     box-shadow: inset 0 1px 0 rgba(255, 220, 140, 0.08);
   }
 
-  .next-breakthrough__pin {
-    min-width: 0;
-    min-height: 44px;
-    padding: 4px;
-    border-color: #395e5b;
-    color: #789791;
-    background: #09242a;
-    font-size: 6px;
-  }
 }
 
 /* Rust geocomic visibility pass ----------------------------------------
@@ -4740,6 +4721,541 @@ button.upgrade-node { font: inherit; }
   #gameShell.theme-rust-comic .upgrade-node.is-selected {
     filter: none;
     transform: none;
+  }
+}
+
+/* Production main-menu art pack.
+   The #startScreen scope intentionally outranks the later generic rust-theme
+   passes while leaving every other overlay on its existing fallback. */
+#gameShell.theme-rust-comic #startScreen.has-menu-art {
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 68% 38%, rgba(16, 101, 104, 0.19), transparent 42%),
+    linear-gradient(135deg, #061418, #020809 72%);
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .overlay-backdrop {
+  background:
+    radial-gradient(circle at 52% 42%, rgba(32, 118, 117, 0.2), transparent 48%),
+    rgba(1, 6, 8, 0.83);
+  backdrop-filter: blur(3px);
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .start-layout {
+  position: relative;
+  width: min(1580px, calc(100vw - 36px));
+  height: min(860px, calc(100dvh - 36px));
+  min-height: 620px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) 48px;
+  overflow: hidden;
+  background: #081417;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .brand-block {
+  position: relative;
+  display: block;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: #071216;
+  box-shadow: none;
+  text-align: left;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .brand-block::before {
+  display: none;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .menu-hero {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .menu-hero::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(2, 8, 11, 0.7) 0, rgba(2, 8, 11, 0.35) 34%, transparent 59%),
+    linear-gradient(0deg, rgba(2, 7, 9, 0.72) 0, transparent 36%);
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .menu-hero-art,
+#gameShell.theme-rust-comic #startScreen.has-menu-art .menu-hero-art > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .menu-hero-art {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .menu-hero-art > img {
+  object-fit: cover;
+  object-position: 50% 50%;
+  user-select: none;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .brand-visual {
+  position: absolute;
+  z-index: 2;
+  top: clamp(34px, 6.5%, 58px);
+  left: clamp(38px, 5.5%, 68px);
+  width: min(52%, 560px);
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art #gameTitle {
+  margin: clamp(17px, 2.5vh, 28px) 0 0;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art #gameTitle > span {
+  font-size: clamp(58px, 5.2vw, 91px);
+  line-height: 0.82;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art #gameTitle > b {
+  margin-top: 13px;
+  font-size: clamp(28px, 2.5vw, 43px);
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .brand-command {
+  position: absolute;
+  z-index: 3;
+  top: clamp(320px, 55%, 470px);
+  bottom: auto;
+  left: clamp(38px, 5.5%, 68px);
+  width: min(470px, calc(50% - 90px));
+  transform: translateY(-50%);
+  text-align: center;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .game-intro {
+  color: #b9c7bf;
+  font-size: clamp(12px, 1vw, 16px);
+  font-weight: 700;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.82);
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .start-actions {
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto auto auto;
+  gap: 9px 11px;
+  justify-items: stretch;
+  margin-top: 18px;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art #startRun {
+  min-height: 74px;
+  min-width: 0;
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art #replayTutorial {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art #startUpgrades {
+  grid-column: 1;
+  grid-row: 2;
+  border-color: #f2b84f;
+  color: #20120b;
+  background:
+    repeating-linear-gradient(-45deg, rgba(255, 244, 190, 0.14) 0 5px, transparent 5px 10px),
+    linear-gradient(105deg, #d66a32, #efb84f 72%, #bb4c2d);
+  box-shadow: inset 0 0 0 2px rgba(77, 32, 19, 0.42), 0 4px 0 #522519, 0 7px 0 #02090d;
+  text-shadow: none;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art #startUpgrades > span {
+  color: #f4d693;
+  background: #2c1711;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .start-tutorial-button {
+  width: 100%;
+  min-height: 56px;
+  justify-content: center;
+  padding: 7px 9px;
+  border-color: #538d87;
+  background: rgba(7, 32, 36, 0.93);
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .start-tutorial-button > span {
+  width: 25px;
+  height: 25px;
+  flex: 0 0 25px;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .start-key {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  margin: 5px 0 0;
+  color: #8ca29b;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .briefing {
+  position: absolute;
+  z-index: 4;
+  right: clamp(30px, 3.2%, 50px);
+  bottom: clamp(70px, 8.8%, 86px);
+  left: clamp(500px, 35%, 570px);
+  display: block;
+  min-width: 0;
+  padding: 0;
+  overflow: visible;
+  background: none;
+  box-shadow: none;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-art {
+  display: none;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-art > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: 50% 50%;
+  pointer-events: none;
+  user-select: none;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(9px, 1vw, 14px);
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps li {
+  min-height: clamp(64px, 7.5vh, 76px);
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 10px;
+  padding: 9px 11px;
+  border: 2px solid rgba(207, 99, 51, 0.86);
+  border-left-width: 8px;
+  background:
+    repeating-linear-gradient(-45deg, rgba(229, 173, 69, 0.055) 0 5px, transparent 5px 10px),
+    linear-gradient(100deg, rgba(54, 29, 21, 0.94), rgba(7, 28, 30, 0.88) 68%);
+  box-shadow: 5px 6px 0 rgba(2, 8, 10, 0.78);
+  backdrop-filter: blur(3px);
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps li > b {
+  font-size: clamp(20px, 1.8vw, 27px);
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps li span {
+  font-size: clamp(9px, 0.78vw, 11px);
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps strong {
+  margin-bottom: 2px;
+  font-size: clamp(12px, 0.95vw, 15px);
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .start-footer {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  min-height: 48px;
+  grid-column: 1 / -1;
+  padding-inline: 24px;
+  border-top: 4px solid var(--comic-ink);
+  background: linear-gradient(90deg, #2a1913, #122526 52%, #251610);
+}
+
+@media (min-width: 1200px) and (max-height: 700px) {
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .start-layout {
+    width: min(1280px, calc(100vw - 24px));
+    height: calc(100dvh - 24px);
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr) 42px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .brand-visual {
+    top: 28px;
+    left: 42px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art #gameTitle {
+    margin-top: 13px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art #gameTitle > span {
+    font-size: clamp(50px, 5vw, 72px);
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art #gameTitle > b {
+    font-size: clamp(24px, 2.2vw, 34px);
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .brand-command {
+    top: 52%;
+    bottom: auto;
+    left: 42px;
+    width: min(430px, calc(50% - 58px));
+    transform: translateY(-50%);
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .briefing {
+    right: 24px;
+    bottom: 56px;
+    left: 365px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps {
+    gap: 7px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps li {
+    min-height: 52px;
+    padding-block: 7px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art #startRun {
+    min-height: 64px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .start-tutorial-button {
+    min-height: 50px;
+  }
+}
+
+@media (max-width: 1199px) {
+  #gameShell.theme-rust-comic #startScreen.has-menu-art {
+    display: block;
+    padding: 8px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: #031013;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .overlay-backdrop {
+    position: fixed;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .start-layout {
+    width: min(560px, 100%);
+    height: auto;
+    min-height: calc(100dvh - 16px);
+    max-height: none;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    margin: 0 auto 70px;
+    overflow: visible;
+    background: #09191b;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .brand-block {
+    display: block;
+    overflow: visible;
+    background: #081719;
+    box-shadow: inset 0 -5px 0 var(--comic-ink);
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .menu-hero {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .menu-hero::after {
+    background:
+      linear-gradient(180deg, rgba(2, 9, 12, 0.45), transparent 26%),
+      linear-gradient(0deg, rgba(3, 12, 14, 0.18), transparent 20%);
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .menu-hero-art > img {
+    object-position: 50% 52%;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .brand-visual {
+    top: 4.2%;
+    right: 6%;
+    left: 6%;
+    width: auto;
+    text-align: center;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .brand-visual .eyebrow {
+    width: max-content;
+    max-width: 100%;
+    justify-content: center;
+    margin-inline: auto;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art #gameTitle {
+    justify-items: center;
+    margin: clamp(14px, 3.3vw, 22px) 0 0;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art #gameTitle > span {
+    font-size: clamp(47px, 13vw, 76px);
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art #gameTitle > b {
+    margin-left: 17%;
+    font-size: clamp(25px, 7vw, 38px);
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .brand-command {
+    position: relative;
+    top: auto;
+    bottom: auto;
+    left: auto;
+    width: auto;
+    transform: none;
+    padding: 23px 24px 28px;
+    border-top: 4px solid var(--comic-ink);
+    background:
+      radial-gradient(circle, rgba(230, 173, 69, 0.065) 0 0.8px, transparent 1px) 0 0 / 9px 9px,
+      linear-gradient(145deg, #17302f, #09191b 72%);
+    text-align: center;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .game-intro {
+    font-size: clamp(11px, 2.8vw, 14px);
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .start-actions {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art #startRun {
+    min-height: 66px;
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-content: center;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art #replayTutorial {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art #startUpgrades {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .start-tutorial-button {
+    justify-content: center;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .start-key {
+    display: none;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .briefing {
+    position: relative;
+    z-index: auto;
+    inset: auto;
+    display: block;
+    padding: 21px 20px 25px;
+    overflow: visible;
+    background:
+      radial-gradient(circle, rgba(229, 173, 69, 0.07) 0 0.8px, transparent 1px) 0 0 / 9px 9px,
+      linear-gradient(145deg, #15302f, #08191b 75%);
+    box-shadow: inset 0 7px 0 var(--comic-ink);
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-art {
+    display: none;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps li {
+    display: grid;
+    min-height: 68px;
+    grid-template-columns: 58px minmax(0, 1fr);
+    justify-items: stretch;
+    gap: 13px;
+    padding: 10px 13px;
+    border: 2px solid var(--comic-rust-hi);
+    border-left-width: 9px;
+    text-align: left;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps li > b {
+    font-size: 24px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps li span {
+    font-size: 10px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps strong {
+    font-size: 13px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .start-footer {
+    display: flex;
+    min-height: 48px;
+    padding: 0 15px;
+    font-size: 7px;
+  }
+}
+
+@media (max-width: 430px) {
+  #gameShell.theme-rust-comic #startScreen.has-menu-art {
+    padding: 5px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .start-layout {
+    width: 100%;
+    min-height: calc(100dvh - 10px);
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .brand-command {
+    padding: 20px 16px 23px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .start-actions {
+    gap: 8px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .start-tutorial-button {
+    min-height: 44px;
+    padding-inline: 7px;
+    font-size: 8px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .start-tutorial-button > span {
+    width: 23px;
+    height: 23px;
+    flex-basis: 23px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .briefing {
+    padding: 18px 14px 22px;
+  }
+
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .start-footer > span:first-child {
+    display: inline-flex;
   }
 }
 

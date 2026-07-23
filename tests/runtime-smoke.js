@@ -131,6 +131,16 @@ global.Image = class StubImage {
   }
   set src(value) {
     this._src = String(value);
+    if (this._src.endsWith("depth-zero-terrain-runtime-atlas.png")) {
+      this.naturalWidth = 1536;
+      this.naturalHeight = 1024;
+    } else if (this._src.endsWith("depth-zero-ores-runtime-atlas.png")) {
+      this.naturalWidth = 1774;
+      this.naturalHeight = 887;
+    } else if (this._src.endsWith("depth-zero-vein-connectors-runtime-atlas.png")) {
+      this.naturalWidth = 2560;
+      this.naturalHeight = 1024;
+    }
     requestedImageSources.push(this._src);
     this.onload?.();
   }
@@ -173,8 +183,23 @@ assert.equal(api.debugGetMinerSpriteVariant({ toolTier: 1, laserUnlocked: false,
 assert.equal(api.debugGetMinerSpriteVariant({ toolTier: 5, laserUnlocked: false, solarDrillEnabled: false }).id, "v05_super_pick");
 assert.equal(api.debugGetMinerSpriteVariant({ toolTier: 7, laserUnlocked: true, solarDrillEnabled: false }).id, "v06_mining_laser");
 assert.equal(api.debugGetMinerSpriteVariant({ toolTier: 7, laserUnlocked: true, solarDrillEnabled: true }).id, "v07_solar_drill");
-assert.equal(requestedImageSources.length, 5, "only the active equipment tier should preload");
-assert.ok(requestedImageSources.every((source) => source.startsWith("assets/characters/miner/miner_v01_worn_pick_")));
+assert.equal(requestedImageSources.length, 8, "field atlases and only the active equipment tier should preload");
+assert.deepEqual(requestedImageSources.slice(0, 3), [
+  "assets/field/depth-zero-terrain-runtime-atlas.png",
+  "assets/field/depth-zero-ores-runtime-atlas.png",
+  "assets/field/depth-zero-vein-connectors-runtime-atlas.png",
+]);
+assert.ok(
+  requestedImageSources.slice(3).every((source) => source.startsWith("assets/characters/miner/miner_v01_worn_pick_")),
+);
+assert.deepEqual(api.getSnapshot().fieldArt, {
+  terrainReady: true,
+  oreReady: true,
+  veinReady: true,
+  terrainSource: "assets/field/depth-zero-terrain-runtime-atlas.png",
+  oreSource: "assets/field/depth-zero-ores-runtime-atlas.png",
+  veinSource: "assets/field/depth-zero-vein-connectors-runtime-atlas.png",
+}, "correctly sized field atlases must activate the authored renderer");
 const initialUpgradeCatalog = api.getUpgradeCatalog();
 assert.equal(
   initialUpgradeCatalog.find((upgrade) => upgrade.id === "gadgets_shock_capsule").breakthrough,
@@ -227,7 +252,7 @@ assert.deepEqual(api.getTerrainBaseCacheStats(), {
 const originalCreateElement = document.createElement;
 document.createElement = (tagName) => {
   const element = new StubElement(tagName);
-  if (String(tagName).toLowerCase() === "canvas") element.getContext = () => context;
+  if (String(tagName).toLowerCase() === "canvas") element.getContext = () => Object.create(context);
   return element;
 };
 try {
@@ -284,6 +309,33 @@ assert.deepEqual(api.getTerrainBaseCacheStats(), {
   bypasses: 0,
   limit: 1800,
 }, "starting another world must release all cached canvases");
+
+// Authored vein arms use a four-bit cardinal topology. They must never join a
+// different material/vein or advertise a hidden/depleted neighbour.
+const connectorCenter = { tx: 10, ty: 20 };
+const connectorOffsets = [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1]];
+for (const [dx, dy] of connectorOffsets) {
+  api.debugPatchTile(connectorCenter.tx + dx, connectorCenter.ty + dy, {
+    kind: "stone",
+    oreId: "copper",
+    veinId: "connector-smoke",
+    hp: 5,
+    maxHp: 5,
+    discovered: true,
+  });
+}
+assert.equal(api.debugGetVeinConnectorMask(connectorCenter.tx, connectorCenter.ty), 15);
+api.debugPatchTile(connectorCenter.tx - 1, connectorCenter.ty, { oreId: "coal" });
+assert.equal(api.debugGetVeinConnectorMask(connectorCenter.tx, connectorCenter.ty), 14, "another ore cannot form the left arm");
+api.debugPatchTile(connectorCenter.tx - 1, connectorCenter.ty, { oreId: "copper" });
+api.debugPatchTile(connectorCenter.tx + 1, connectorCenter.ty, { veinId: "another-vein" });
+assert.equal(api.debugGetVeinConnectorMask(connectorCenter.tx, connectorCenter.ty), 13, "another vein cannot form the right arm");
+api.debugPatchTile(connectorCenter.tx + 1, connectorCenter.ty, { veinId: "connector-smoke" });
+api.debugPatchTile(connectorCenter.tx, connectorCenter.ty - 1, { discovered: false });
+assert.equal(api.debugGetVeinConnectorMask(connectorCenter.tx, connectorCenter.ty), 11, "hidden ore cannot leak through an upper arm");
+api.debugPatchTile(connectorCenter.tx, connectorCenter.ty - 1, { discovered: true });
+api.debugPatchTile(connectorCenter.tx, connectorCenter.ty + 1, { hp: 0 });
+assert.equal(api.debugGetVeinConnectorMask(connectorCenter.tx, connectorCenter.ty), 7, "depleted ore cannot keep a lower arm");
 
 // The field guide stays open for a new player, then becomes a small explicit
 // disclosure after the first shifts. The button must always restore it.
@@ -460,8 +512,8 @@ api.finishRun();
 mobileUpgradeInteraction = false;
 api.debugResetProgress();
 
-// Completing an unpinned node must advance the persistent workshop guide;
-// otherwise "Next breakthrough" gets stuck on the finished root forever.
+// Completing the selected node must advance the workshop purchase panel;
+// otherwise it gets stuck on the finished root forever.
 api.debugResetProgress();
 api.grantOre("copper", 20);
 api.openUpgrades();
@@ -469,13 +521,14 @@ const breakthroughBeforeRoot = elementFor("#nextBreakthroughName").textContent;
 assert.match(breakthroughBeforeRoot, /0\/1/, "fresh guide should point at the root purchase");
 assert.equal(api.buyUpgrade("core_first_descent"), true);
 const breakthroughAfterRoot = elementFor("#nextBreakthroughName").textContent;
-assert.notEqual(breakthroughAfterRoot, breakthroughBeforeRoot, "guide should advance after completing an unpinned node");
+assert.notEqual(breakthroughAfterRoot, breakthroughBeforeRoot, "the selection panel should advance after completing its node");
 assert.doesNotMatch(breakthroughAfterRoot, /1\/1/, "guide should describe an incomplete next node");
 assert.equal(elementFor("#upgradeMapStatus").textContent, "", "live status must not keep a stale available-node count while every child is pending");
 const pendingChild = api.getUpgradeCatalog().find((upgrade) => upgrade.id === "time_extra_breath");
 assert.equal(pendingChild.unlocked, true, "a child should become visible as soon as its prerequisite is installed");
 assert.equal(pendingChild.available, false, "a newly unlocked child should wait for the next completed shift");
 const savedPendingWorkshop = JSON.parse(localData.get("depth-zero-save-v1"));
+assert.equal(Object.hasOwn(savedPendingWorkshop, "pinnedUpgradeId"), false, "removed perk pin state must not be saved");
 assert.equal(savedPendingWorkshop.workshopEligibilityRun, 0, "the workshop generation should be persisted");
 assert.equal(savedPendingWorkshop.workshopEligibleIds.includes("time_extra_breath"), false, "reload data must not bypass a pending child");
 assert.equal(api.buyUpgrade("time_extra_breath"), false, "the workshop gate should prevent same-shift dependency cascades");

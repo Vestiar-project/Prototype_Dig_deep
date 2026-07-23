@@ -78,6 +78,54 @@ const WORKSHOP_BREAKTHROUGH_CAP = 4;
 const WORKSHOP_LEVEL_CAP = 35;
 const UPGRADE_ICON_DIRECTORY = 'assets/icons/upgrades';
 const MINER_SPRITE_DIRECTORY = 'assets/characters/miner';
+const FIELD_TERRAIN_ATLAS_SOURCE = 'assets/field/depth-zero-terrain-runtime-atlas.png';
+const FIELD_ORE_ATLAS_SOURCE = 'assets/field/depth-zero-ores-runtime-atlas.png';
+const FIELD_VEIN_ATLAS_SOURCE = 'assets/field/depth-zero-vein-connectors-runtime-atlas.png';
+const FIELD_TERRAIN_ATLAS_SIZE = Object.freeze({ width: 1536, height: 1024, cellSize: 512 });
+const FIELD_TERRAIN_ATLAS_LAYOUT = Object.freeze({
+  loam: Object.freeze({ x: 0, y: 0, width: 512, height: 512 }),
+  dirt: Object.freeze({ x: 512, y: 0, width: 512, height: 512 }),
+  stone: Object.freeze({ x: 1024, y: 0, width: 512, height: 512 }),
+  deepstone: Object.freeze({ x: 0, y: 512, width: 512, height: 512 }),
+  bedrock: Object.freeze({ x: 512, y: 512, width: 512, height: 512 }),
+  final_seal: Object.freeze({ x: 1024, y: 512, width: 512, height: 512 }),
+});
+const FIELD_ORE_ATLAS_SIZE = Object.freeze({ width: 1774, height: 887 });
+const FIELD_ORE_ATLAS_LAYOUT = Object.freeze({
+  copper: Object.freeze({ x: 69, y: 154, width: 286, height: 258 }),
+  coal: Object.freeze({ x: 355, y: 149, width: 355, height: 246 }),
+  iron: Object.freeze({ x: 710, y: 170, width: 335, height: 225 }),
+  amber: Object.freeze({ x: 1130, y: 135, width: 289, height: 290 }),
+  silver: Object.freeze({ x: 1419, y: 159, width: 302, height: 239 }),
+  gold: Object.freeze({ x: 68, y: 517, width: 264, height: 239 }),
+  amethyst: Object.freeze({ x: 460, y: 495, width: 234, height: 244 }),
+  prism_crystal: Object.freeze({ x: 790, y: 508, width: 219, height: 229 }),
+  void_ore: Object.freeze({ x: 1113, y: 513, width: 306, height: 224 }),
+  star_core: Object.freeze({ x: 1419, y: 489, width: 273, height: 283 }),
+});
+const FIELD_VEIN_ATLAS_SIZE = Object.freeze({ width: 2560, height: 1024, cellSize: 512 });
+const FIELD_VEIN_ATLAS_LAYOUT = Object.freeze({
+  copper: Object.freeze({ x: 0, y: 0, width: 512, height: 512, portWidthRatio: 0.18 }),
+  coal: Object.freeze({ x: 512, y: 0, width: 512, height: 512, portWidthRatio: 0.22 }),
+  iron: Object.freeze({ x: 1024, y: 0, width: 512, height: 512, portWidthRatio: 0.20 }),
+  amber: Object.freeze({ x: 1536, y: 0, width: 512, height: 512, portWidthRatio: 0.17 }),
+  silver: Object.freeze({ x: 2048, y: 0, width: 512, height: 512, portWidthRatio: 0.11 }),
+  gold: Object.freeze({ x: 0, y: 512, width: 512, height: 512, portWidthRatio: 0.20 }),
+  amethyst: Object.freeze({ x: 512, y: 512, width: 512, height: 512, portWidthRatio: 0.18 }),
+  prism_crystal: Object.freeze({ x: 1024, y: 512, width: 512, height: 512, portWidthRatio: 0.18 }),
+  void_ore: Object.freeze({ x: 1536, y: 512, width: 512, height: 512, portWidthRatio: 0.23 }),
+  star_core: Object.freeze({ x: 2048, y: 512, width: 512, height: 512, portWidthRatio: 0.20 }),
+});
+const FIELD_ART_RUNTIME = {
+  requested: false,
+  terrainImage: null,
+  terrainReady: false,
+  oreImage: null,
+  oreReady: false,
+  veinImage: null,
+  veinReady: false,
+};
+const FIELD_VEIN_SPRITE_CACHE = new Map();
 const MINER_SPRITE_CANVAS_SIZE = 512;
 const MINER_SPRITE_PIVOT_X = 193;
 const MINER_SPRITE_PIVOT_Y = 450;
@@ -258,7 +306,6 @@ const DEFAULT_SAVE = Object.freeze({
   bestRunReport: null,
   preferredSectorId: null,
   balanceHistory: [],
-  pinnedUpgradeId: null,
   pendingShowcases: {},
   runsSinceEvent: 0,
   totalEvents: 0,
@@ -286,7 +333,6 @@ function createDefaultSave() {
     bestRunReport: null,
     preferredSectorId: null,
     balanceHistory: [],
-    pinnedUpgradeId: null,
     pendingShowcases: {},
     workshopEligibleIds: [],
     workshopInstalledIds: [],
@@ -470,7 +516,6 @@ function loadSave() {
       bestRunReport: migrateRunReportDepth(stored.bestRunReport),
       preferredSectorId: typeof stored.preferredSectorId === 'string' ? stored.preferredSectorId : null,
       balanceHistory: Array.isArray(stored.balanceHistory) ? stored.balanceHistory.slice(-12) : [],
-      pinnedUpgradeId: typeof stored.pinnedUpgradeId === 'string' ? stored.pinnedUpgradeId : null,
       pendingShowcases: stored.pendingShowcases && typeof stored.pendingShowcases === 'object'
         ? { ...stored.pendingShowcases }
         : {},
@@ -505,6 +550,7 @@ function loadSave() {
     delete merged.currency;
     delete merged.lifetimeOre;
     delete merged.activeMiningSeconds;
+    delete merged.pinnedUpgradeId;
     return merged;
   } catch {
     return createDefaultSave();
@@ -867,7 +913,6 @@ const ui = {
   nextBreakthrough: $('#nextBreakthrough'),
   nextBreakthroughName: $('#nextBreakthroughName'),
   nextBreakthroughNeed: $('#nextBreakthroughNeed'),
-  pinSelectedUpgrade: $('#pinSelectedUpgrade'),
   buyMaxSelectedUpgrade: $('#buyMaxSelectedUpgrade'),
   oreInventory: $('#oreInventory'),
   oreFocusPanel: $('#oreFocusPanel'),
@@ -1892,7 +1937,7 @@ function renderRunReport(report) {
     ui.reportDetails.innerHTML = `
       <summary>ПОДРОБНЫЕ ДАННЫЕ <span aria-hidden="true">⌄</span></summary>
       <div class="diagnosis-details__body">
-        <div class="diagnosis-advice"><span aria-hidden="true">◎</span><div><small>СЛЕДУЮЩИЙ ШАГ · ГЛАВНАЯ ПОТЕРЯ: ${advice.sink.label.toUpperCase()} ${Math.round(advice.sink.share * 100)}%</small><strong>${escapeHtml(advice.text)}</strong><p>Закрепите нужный узел в мастерской — панель покажет недостающую руду после каждой смены.</p></div></div>
+        <div class="diagnosis-advice"><span aria-hidden="true">◎</span><div><small>СЛЕДУЮЩИЙ ШАГ · ГЛАВНАЯ ПОТЕРЯ: ${advice.sink.label.toUpperCase()} ${Math.round(advice.sink.share * 100)}%</small><strong>${escapeHtml(advice.text)}</strong><p>В мастерской выберите нужный узел — панель сразу покажет его цену и недостающую руду.</p></div></div>
         <div class="diagnosis-timeline" aria-label="Распределение времени смены">
           <span><small>КОПКА</small><i style="--share:${share(report.miningSeconds)}"></i><b>${share(report.miningSeconds)}</b></span>
           <span><small>ДВИЖЕНИЕ</small><i style="--share:${share(report.movementSeconds)}"></i><b>${share(report.movementSeconds)}</b></span>
@@ -3397,11 +3442,9 @@ function buyUpgrade(id, options = {}) {
   stats = normalizeStats(calculateMetaStats(save.levels));
   preloadMinerVariant(stats);
   if (!stats.oreFocusUnlocked) save.focusedOreId = null;
-  // Once an unpinned node is finished, keep the "next breakthrough" panel
-  // useful by advancing selection to the next available incomplete node.
-  if (level >= definition.maxLevel && save.pinnedUpgradeId !== definition.id) {
-    state.selectedUpgradeId = null;
-  }
+  // Once a node is finished, advance the selection to another incomplete
+  // module instead of keeping the purchase panel on a completed one.
+  if (level >= definition.maxLevel) state.selectedUpgradeId = null;
   persistSave();
   sound.tone(330, 0.12, 'triangle', 0.04, 210);
   flash('#68e0c1', 0.18);
@@ -3629,12 +3672,9 @@ function recipeMarkup(recipe, compact = false) {
 function renderNextBreakthrough() {
   if (!ui.nextBreakthrough) return;
   const mobileControls = usesMobileUpgradeControls();
-  const pinned = save.pinnedUpgradeId ? upgradeById.get(save.pinnedUpgradeId) : null;
-  if (save.pinnedUpgradeId && !pinned) save.pinnedUpgradeId = null;
   const selected = state.selectedUpgradeId ? upgradeById.get(state.selectedUpgradeId) : null;
   const visible = getVisibleUpgradeDefinitions();
-  const definition = (mobileControls ? selected : pinned)
-    || (mobileControls ? pinned : selected)
+  const definition = selected
     || visible.find(upgradeIsPurchaseEligible)
     || visible.find(upgradeIsAvailable)
     || null;
@@ -3645,7 +3685,7 @@ function renderNextBreakthrough() {
   const pendingReason = pending ? upgradePurchaseBlockReason(definition) : null;
   const ready = Boolean(definition && !complete && purchaseEligible
     && canAffordRecipe(save.inventory, getUpgradeRecipe(definition, level)));
-  let need = 'Нажмите на модуль в дереве, чтобы следить за его ценой.';
+  let need = 'Нажмите на модуль в дереве, чтобы увидеть его цену.';
   if (definition) {
     if (complete) {
       need = 'Модуль полностью установлен.';
@@ -3676,19 +3716,6 @@ function renderNextBreakthrough() {
   ui.nextBreakthrough.classList.toggle('is-ready', ready);
   ui.nextBreakthrough.classList.toggle('is-complete', complete);
   ui.nextBreakthrough.classList.toggle('is-pending', pending);
-  const selectedDiffers = Boolean(pinned && selected && selected.id !== pinned.id);
-  if (ui.pinSelectedUpgrade) {
-    ui.pinSelectedUpgrade.disabled = !selected && !pinned;
-    ui.pinSelectedUpgrade.classList.toggle('is-pinned', Boolean(pinned));
-    ui.pinSelectedUpgrade.textContent = selectedDiffers ? 'СМЕНИТЬ ЦЕЛЬ' : pinned ? 'СНЯТЬ ЦЕЛЬ' : 'ЗАКРЕПИТЬ';
-    ui.pinSelectedUpgrade.title = selectedDiffers
-      ? `Закрепить «${selected.name}» вместо «${pinned.name}»`
-      : pinned
-        ? `Перестать следить за «${pinned.name}»`
-        : selected
-          ? `Следить за «${selected.name}» между сменами`
-          : 'Сначала выберите узел дерева';
-  }
   if (ui.buyMaxSelectedUpgrade) {
     ui.buyMaxSelectedUpgrade.disabled = !definition || complete || !purchaseEligible || !ready;
     ui.buyMaxSelectedUpgrade.dataset.upgradeId = definition?.id || '';
@@ -3818,7 +3845,6 @@ function renderUpgrades() {
       owned ? 'is-owned' : '',
       atMax ? 'is-maxed' : '',
       state.selectedUpgradeId === definition.id ? 'is-selected' : '',
-      save.pinnedUpgradeId === definition.id ? 'is-pinned' : '',
       !searchMatch || !categoryMatch ? 'is-dimmed' : '',
       newlyVisible.includes(definition.id) ? 'is-new' : '',
     ].filter(Boolean).join(' ');
@@ -7933,16 +7959,16 @@ const GEO_COMIC_COLORS = Object.freeze({
 // Ore identity is carried by silhouette and material as well as colour. Keep
 // this table render-only: it must never influence deposit generation or yield.
 const ORE_RENDER_STYLES = Object.freeze({
-  copper: Object.freeze({ material: 'hammered-ribbon', veinWidth: 7, highlightWidth: 1.5, cap: 'round', nodeWidth: 17, nodeHeight: 11 }),
-  coal: Object.freeze({ material: 'fractured-lump', veinWidth: 9, highlightWidth: 0, cap: 'square', nodeWidth: 16, nodeHeight: 14 }),
-  iron: Object.freeze({ material: 'banded-metal', veinWidth: 9, highlightWidth: 2, cap: 'square', nodeWidth: 18, nodeHeight: 13 }),
-  amber: Object.freeze({ material: 'resin-drop', veinWidth: 7, highlightWidth: 2, cap: 'round', nodeWidth: 13, nodeHeight: 17 }),
-  silver: Object.freeze({ material: 'needle-thread', veinWidth: 5, highlightWidth: 2, cap: 'square', nodeWidth: 20, nodeHeight: 9 }),
-  gold: Object.freeze({ material: 'nugget-cluster', veinWidth: 8, highlightWidth: 2, cap: 'round', nodeWidth: 18, nodeHeight: 14 }),
-  amethyst: Object.freeze({ material: 'shard-cluster', veinWidth: 7, highlightWidth: 2, cap: 'square', nodeWidth: 16, nodeHeight: 19 }),
-  prism_crystal: Object.freeze({ material: 'prismatic-facet', veinWidth: 6, highlightWidth: 2, cap: 'square', nodeWidth: 17, nodeHeight: 20 }),
-  void_ore: Object.freeze({ material: 'hollow-lens', veinWidth: 10, highlightWidth: 2, cap: 'round', nodeWidth: 20, nodeHeight: 15 }),
-  star_core: Object.freeze({ material: 'molten-star', veinWidth: 9, highlightWidth: 3, cap: 'round', nodeWidth: 19, nodeHeight: 19 }),
+  copper: Object.freeze({ material: 'hammered-ribbon', nodeWidth: 17, nodeHeight: 11 }),
+  coal: Object.freeze({ material: 'fractured-lump', nodeWidth: 16, nodeHeight: 14 }),
+  iron: Object.freeze({ material: 'banded-metal', nodeWidth: 18, nodeHeight: 13 }),
+  amber: Object.freeze({ material: 'resin-drop', nodeWidth: 13, nodeHeight: 17 }),
+  silver: Object.freeze({ material: 'needle-thread', nodeWidth: 20, nodeHeight: 9 }),
+  gold: Object.freeze({ material: 'nugget-cluster', nodeWidth: 18, nodeHeight: 14 }),
+  amethyst: Object.freeze({ material: 'shard-cluster', nodeWidth: 16, nodeHeight: 19 }),
+  prism_crystal: Object.freeze({ material: 'prismatic-facet', nodeWidth: 17, nodeHeight: 20 }),
+  void_ore: Object.freeze({ material: 'hollow-lens', nodeWidth: 20, nodeHeight: 15 }),
+  star_core: Object.freeze({ material: 'molten-star', nodeWidth: 19, nodeHeight: 19 }),
 });
 
 // Only the deterministic substrate of a solid tile is cached. Depth tint,
@@ -7972,6 +7998,59 @@ function resetTerrainBaseCache() {
   terrainBaseCacheCounters.bypasses = 0;
 }
 
+function resetVeinSpriteCache() {
+  FIELD_VEIN_SPRITE_CACHE.clear();
+}
+
+function runtimeImageHasSize(image, expected) {
+  return Boolean(
+    image
+    && image.naturalWidth === expected.width
+    && image.naturalHeight === expected.height
+  );
+}
+
+function requestFieldArtAssets() {
+  if (FIELD_ART_RUNTIME.requested || typeof window.Image !== 'function') return;
+  FIELD_ART_RUNTIME.requested = true;
+
+  const terrainImage = new window.Image();
+  FIELD_ART_RUNTIME.terrainImage = terrainImage;
+  terrainImage.decoding = 'async';
+  terrainImage.onload = () => {
+    FIELD_ART_RUNTIME.terrainReady = runtimeImageHasSize(terrainImage, FIELD_TERRAIN_ATLAS_SIZE);
+    if (FIELD_ART_RUNTIME.terrainReady) resetTerrainBaseCache();
+  };
+  terrainImage.onerror = () => {
+    FIELD_ART_RUNTIME.terrainReady = false;
+  };
+  terrainImage.src = FIELD_TERRAIN_ATLAS_SOURCE;
+
+  const oreImage = new window.Image();
+  FIELD_ART_RUNTIME.oreImage = oreImage;
+  oreImage.decoding = 'async';
+  oreImage.onload = () => {
+    FIELD_ART_RUNTIME.oreReady = runtimeImageHasSize(oreImage, FIELD_ORE_ATLAS_SIZE);
+  };
+  oreImage.onerror = () => {
+    FIELD_ART_RUNTIME.oreReady = false;
+  };
+  oreImage.src = FIELD_ORE_ATLAS_SOURCE;
+
+  const veinImage = new window.Image();
+  FIELD_ART_RUNTIME.veinImage = veinImage;
+  veinImage.decoding = 'async';
+  veinImage.onload = () => {
+    FIELD_ART_RUNTIME.veinReady = runtimeImageHasSize(veinImage, FIELD_VEIN_ATLAS_SIZE);
+    resetVeinSpriteCache();
+  };
+  veinImage.onerror = () => {
+    FIELD_ART_RUNTIME.veinReady = false;
+    resetVeinSpriteCache();
+  };
+  veinImage.src = FIELD_VEIN_ATLAS_SOURCE;
+}
+
 function createTerrainBaseSurface() {
   try {
     if (typeof document?.createElement !== 'function') return null;
@@ -7992,10 +8071,110 @@ function terrainBaseCacheKey(tx, ty, kind, baseIndex, openMask) {
   return `${tx}:${ty}:${kind}:${baseIndex}:${openMask}`;
 }
 
+function positiveModulo(value, divisor) {
+  return ((value % divisor) + divisor) % divisor;
+}
+
+function mirroredAtlasAxisSegments(start, length, span) {
+  const segments = [];
+  let consumed = 0;
+  while (consumed < length) {
+    const phase = positiveModulo(start + consumed, span * 2);
+    const flipped = phase >= span;
+    const distanceIntoHalf = flipped ? phase - span : phase;
+    const sliceSize = Math.min(length - consumed, span - distanceIntoHalf);
+    segments.push({
+      destinationOffset: consumed,
+      sourceOffset: flipped ? span - distanceIntoHalf - sliceSize : distanceIntoHalf,
+      size: sliceSize,
+      flipped,
+    });
+    consumed += sliceSize;
+  }
+  return segments;
+}
+
+function drawMirroredAtlasRegion(renderContext, image, region, sourceX, sourceY, destinationX, destinationY, width, height) {
+  const horizontalSegments = mirroredAtlasAxisSegments(sourceX, width, region.width);
+  const verticalSegments = mirroredAtlasAxisSegments(sourceY, height, region.height);
+  for (const vertical of verticalSegments) {
+    for (const horizontal of horizontalSegments) {
+      const destinationLeft = destinationX + horizontal.destinationOffset;
+      const destinationTop = destinationY + vertical.destinationOffset;
+      renderContext.save();
+      try {
+        renderContext.translate(
+          destinationLeft + (horizontal.flipped ? horizontal.size : 0),
+          destinationTop + (vertical.flipped ? vertical.size : 0),
+        );
+        renderContext.scale(horizontal.flipped ? -1 : 1, vertical.flipped ? -1 : 1);
+        renderContext.drawImage(
+          image,
+          region.x + horizontal.sourceOffset,
+          region.y + vertical.sourceOffset,
+          horizontal.size,
+          vertical.size,
+          0,
+          0,
+          horizontal.size,
+          vertical.size,
+        );
+      } finally {
+        renderContext.restore();
+      }
+    }
+  }
+}
+
+function drawRuntimeTerrainTexture(renderContext, x, y, tx, ty, kind) {
+  const region = FIELD_TERRAIN_ATLAS_LAYOUT[kind] || FIELD_TERRAIN_ATLAS_LAYOUT.stone;
+  if (
+    !FIELD_ART_RUNTIME.terrainReady
+    || !FIELD_ART_RUNTIME.terrainImage
+    || !region
+    || renderContext === ctx
+    || typeof renderContext.drawImage !== 'function'
+  ) return false;
+
+  const sourceX = tx * TILE_SIZE;
+  // The final seal has one authored energy seam. Lock that seam to the middle
+  // of its one-tile layer while the horizontal sample still flows across the
+  // complete world. Ordinary materials remain continuous in both axes.
+  const sourceY = kind === 'final_seal'
+    ? Math.round(region.height * 0.5 - TILE_SIZE * 0.5)
+    : ty * TILE_SIZE;
+
+  try {
+    renderContext.save();
+    renderContext.globalCompositeOperation = 'source-atop';
+    renderContext.globalAlpha = 0.96;
+    renderContext.imageSmoothingEnabled = true;
+    drawMirroredAtlasRegion(
+      renderContext,
+      FIELD_ART_RUNTIME.terrainImage,
+      region,
+      sourceX,
+      sourceY,
+      x,
+      y,
+      TILE_SIZE + 1,
+      TILE_SIZE + 1,
+    );
+    renderContext.restore();
+    return true;
+  } catch (_error) {
+    try { renderContext.restore(); } catch (_restoreError) { /* procedural fallback below */ }
+    return false;
+  }
+}
+
 function drawTerrainBaseDirect(renderContext, x, y, tx, ty, kind, palette, baseIndex, openMask) {
   drawChippedTerrainCell(x, y, tx, ty, openMask, palette.base[baseIndex], renderContext);
-  drawVoxelMassTexture(x, y, tx, ty, palette, openMask, renderContext);
-  drawTerrainStrata(x, y, tx, ty, kind, palette, openMask, renderContext);
+  const runtimeTextureDrawn = drawRuntimeTerrainTexture(renderContext, x, y, tx, ty, kind);
+  if (!runtimeTextureDrawn) {
+    drawVoxelMassTexture(x, y, tx, ty, palette, openMask, renderContext);
+    drawTerrainStrata(x, y, tx, ty, kind, palette, openMask, renderContext);
+  }
   drawExposedVoxelFaces(x, y, tx, ty, palette, openMask, renderContext);
 }
 
@@ -8407,19 +8586,6 @@ function drawCaveLandmark(x, y, tx, ty, surface) {
   ctx.restore();
 }
 
-function hasMatchingOre(tx, ty, oreId) {
-  const tile = state.world?.getTile(tx, ty);
-  return Boolean(tile && tile.kind !== 'air' && tile.oreId === oreId);
-}
-
-function verticalOreEdgeOffset(boundaryTx, ty) {
-  return 6 + Math.floor(tileNoise(boundaryTx, ty, 71) * 17);
-}
-
-function horizontalOreEdgeOffset(tx, boundaryTy) {
-  return 6 + Math.floor(tileNoise(tx, boundaryTy, 72) * 17);
-}
-
 function drawBackground(now) {
   const { width, height } = state.viewport;
   const gradient = ctx.createLinearGradient(0, 0, 0, height);
@@ -8489,7 +8655,22 @@ function drawWorld(now) {
     state.viewport.width / CAMERA_ZOOM,
     state.viewport.height / CAMERA_ZOOM,
   );
-  for (const entry of visible) drawTile(entry, now);
+  // Resolve every visible ore before painting. Connector visibility therefore
+  // never depends on whether its neighbour happened to be earlier or later in
+  // the row-major draw order.
+  const oreVisualStates = new Map();
+  for (const entry of visible) {
+    if (!entry.tile?.oreId) continue;
+    oreVisualStates.set(
+      oreVisualStateKey(entry.tx, entry.ty),
+      getOreVisualState(entry.tile, entry.tx, entry.ty, entry.x, entry.y),
+    );
+  }
+
+  // Terrain first, ore/connectors/cracks second. A neighbouring terrain cell
+  // can no longer paint over the half-pixel seam where two authored arms meet.
+  for (const entry of visible) drawTile(entry, now, 'terrain', oreVisualStates);
+  for (const entry of visible) drawTile(entry, now, 'overlay', oreVisualStates);
 
   drawSenseField(now);
   drawRuntimeFields(now);
@@ -8678,9 +8859,12 @@ function getOreVisualState(tile, tx, ty, x = tx * TILE_SIZE, y = ty * TILE_SIZE)
   };
 }
 
-function drawTile({ tile, tx, ty, x, y }, now) {
+function drawTile({ tile, tx, ty, x, y }, now, phase = 'all', oreVisualStates = null) {
   if (!tile) return;
+  const drawTerrain = phase !== 'overlay';
+  const drawOverlay = phase !== 'terrain';
   if (tile.kind === 'air') {
+    if (!drawTerrain) return;
     const surface = state.world.surface?.[tx] ?? WORLD_CONFIG.SURFACE_BASE;
     if (ty < surface) {
       const sky = clamp(1 - ty / Math.max(1, surface), 0, 1);
@@ -8701,28 +8885,30 @@ function drawTile({ tile, tx, ty, x, y }, now) {
     return;
   }
 
-  const palette = TERRAIN_PALETTES[tile.kind] || TERRAIN_PALETTES.stone;
-  const depthTone = terrainDepthFactor(tx, ty);
-  const macroNoise = terrainMassNoise(tx + ty * 0.58, ty - tx * 0.16, 2);
-  const baseIndex = clamp(
-    Math.round((palette.base.length - 1) * (0.36 + macroNoise * 0.32) - depthTone * 1.5),
-    0,
-    palette.base.length - 1,
-  );
-  const openMask = getOpenTerrainMask(tx, ty);
-  drawTerrainBaseLayer(x, y, tx, ty, tile.kind, palette, baseIndex, openMask);
-  drawTerrainDepthTone(x, y, tx, ty, openMask);
-  drawTerrainEdgeLandmark(x, y, tx, ty, palette, openMask);
+  if (drawTerrain) {
+    const palette = TERRAIN_PALETTES[tile.kind] || TERRAIN_PALETTES.stone;
+    const depthTone = terrainDepthFactor(tx, ty);
+    const macroNoise = terrainMassNoise(tx + ty * 0.58, ty - tx * 0.16, 2);
+    const baseIndex = clamp(
+      Math.round((palette.base.length - 1) * (0.36 + macroNoise * 0.32) - depthTone * 1.5),
+      0,
+      palette.base.length - 1,
+    );
+    const openMask = getOpenTerrainMask(tx, ty);
+    drawTerrainBaseLayer(x, y, tx, ty, tile.kind, palette, baseIndex, openMask);
+    drawTerrainDepthTone(x, y, tx, ty, openMask);
+    drawTerrainEdgeLandmark(x, y, tx, ty, palette, openMask);
 
-  if (tile.kind === 'final_seal') {
+    if (tile.kind === 'final_seal') {
     const pulse = REDUCED_MOTION ? 0.72 : 0.62 + Math.sin(now * 0.004 + tx * 0.3) * 0.1;
     const hitProgress = clamp((tile.solarHits || 0) / 3, 0, 1);
+    const authoredSeamAlpha = FIELD_ART_RUNTIME.terrainReady ? 0.32 : 1;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = 0.28 + pulse * 0.2;
+    ctx.globalAlpha = (0.28 + pulse * 0.2) * authoredSeamAlpha;
     ctx.fillStyle = '#f5c95d';
     ctx.fillRect(x, y + 12, TILE_SIZE + 1, 4);
-    ctx.globalAlpha = 0.2 + hitProgress * 0.48;
+    ctx.globalAlpha = (0.2 + hitProgress * 0.48) * authoredSeamAlpha;
     ctx.fillStyle = '#fff3a5';
     ctx.fillRect(x, y + 10, TILE_SIZE + 1, 8);
     ctx.restore();
@@ -8754,15 +8940,17 @@ function drawTile({ tile, tx, ty, x, y }, now) {
       ctx.stroke();
     }
     ctx.restore();
+    }
   }
 
-  if (tile.oreId) {
+  if (drawOverlay && tile.oreId) {
     const ore = oreById.get(tile.oreId);
     // Discovery is permanent. The old renderer let a known node fade back to
     // grey after its short sonar persistence expired; long-range tools made
     // that bug much more visible because the miner no longer stood on the vein.
-    const visualState = getOreVisualState(tile, tx, ty, x, y);
-    drawOreInTile(x, y, tx, ty, ore, visualState.visible, now);
+    const visualState = oreVisualStates?.get(oreVisualStateKey(tx, ty))
+      || getOreVisualState(tile, tx, ty, x, y);
+    drawOreInTile(x, y, tx, ty, ore, visualState.visible, now, oreVisualStates);
     const veinState = tile.veinId ? state.veinRuntime.get(tile.veinId) : null;
     if (veinState?.rich || veinState?.motherlode) {
       const motherlode = Boolean(veinState.motherlode);
@@ -8788,7 +8976,7 @@ function drawTile({ tile, tx, ty, x, y }, now) {
     }
   }
 
-  if (tile.cracked > 0.02 && tile.kind !== 'bedrock') drawCracks(x, y, tx, ty, tile.cracked);
+  if (drawOverlay && tile.cracked > 0.02 && tile.kind !== 'bedrock') drawCracks(x, y, tx, ty, tile.cracked);
 }
 
 function traceOreNodeSilhouette(oreId, width, height, noise, branchNoise) {
@@ -9040,106 +9228,238 @@ function drawOreMaterialDetails(ore, width, height, noise, branchNoise, revealed
   }
 }
 
-function drawOreInTile(x, y, tx, ty, ore, revealed, now) {
+function drawRuntimeOreNode(centerX, centerY, ore, revealed, noise, branchNoise) {
+  const region = FIELD_ORE_ATLAS_LAYOUT[ore?.id];
+  if (
+    !revealed
+    || !FIELD_ART_RUNTIME.oreReady
+    || !FIELD_ART_RUNTIME.oreImage
+    || !region
+    || typeof ctx.drawImage !== 'function'
+  ) return false;
+
+  const tier = clamp(Number(ore.tier) || 0, 0, 9);
+  const maximumSize = clamp(24 + tier * 0.35, 24, 27.25);
+  const aspectRatio = region.width / Math.max(1, region.height);
+  const drawWidth = aspectRatio >= 1 ? maximumSize : maximumSize * aspectRatio;
+  const drawHeight = aspectRatio >= 1 ? maximumSize / aspectRatio : maximumSize;
+  const rotation = (noise - branchNoise) * 0.08;
+
+  try {
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(rotation);
+    ctx.globalAlpha = revealed ? 0.98 : 0.11;
+    if (!revealed && 'filter' in ctx) ctx.filter = 'grayscale(1) brightness(0.45)';
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(
+      FIELD_ART_RUNTIME.oreImage,
+      region.x,
+      region.y,
+      region.width,
+      region.height,
+      -drawWidth * 0.5,
+      -drawHeight * 0.5,
+      drawWidth,
+      drawHeight,
+    );
+    ctx.restore();
+    return true;
+  } catch (_error) {
+    try { ctx.restore(); } catch (_restoreError) { /* procedural fallback below */ }
+    return false;
+  }
+}
+
+function getRuntimeVeinSprite(oreId) {
+  const region = FIELD_VEIN_ATLAS_LAYOUT[oreId];
+  if (
+    !FIELD_ART_RUNTIME.veinReady
+    || !FIELD_ART_RUNTIME.veinImage
+    || !region
+  ) return null;
+
+  if (FIELD_VEIN_SPRITE_CACHE.has(oreId)) return FIELD_VEIN_SPRITE_CACHE.get(oreId);
+
+  // Isolate each atlas cell in browsers that support an offscreen canvas.
+  // That keeps bilinear filtering from borrowing pixels from the neighbouring
+  // material. Headless/minimal DOMs safely fall back to a direct source crop.
+  let sprite = null;
+  try {
+    if (typeof document?.createElement === 'function') {
+      const surface = document.createElement('canvas');
+      surface.width = region.width;
+      surface.height = region.height;
+      const surfaceContext = typeof surface.getContext === 'function'
+        ? surface.getContext('2d', { alpha: true })
+        : null;
+      if (surfaceContext && typeof surfaceContext.drawImage === 'function') {
+        surfaceContext.clearRect(0, 0, region.width, region.height);
+        surfaceContext.drawImage(
+          FIELD_ART_RUNTIME.veinImage,
+          region.x,
+          region.y,
+          region.width,
+          region.height,
+          0,
+          0,
+          region.width,
+          region.height,
+        );
+        sprite = Object.freeze({
+          image: surface,
+          x: 0,
+          y: 0,
+          width: region.width,
+          height: region.height,
+        });
+      }
+    }
+  } catch (_error) {
+    sprite = null;
+  }
+
+  if (!sprite) {
+    sprite = Object.freeze({
+      image: FIELD_ART_RUNTIME.veinImage,
+      x: region.x,
+      y: region.y,
+      width: region.width,
+      height: region.height,
+    });
+  }
+  FIELD_VEIN_SPRITE_CACHE.set(oreId, sprite);
+  return sprite;
+}
+
+function oreVisualStateKey(tx, ty) {
+  return `${tx}:${ty}`;
+}
+
+function veinTileIsLiveAndKnown(tx, ty, oreId, veinId, oreVisualStates = null) {
+  if (!state.world || !veinId) return false;
+  const tile = state.world.getTile(tx, ty);
+  if (
+    !tile
+    || tile.kind === 'air'
+    || tile.kind === 'bedrock'
+    || !(tile.hp > 0)
+    || tile.oreId !== oreId
+    || tile.veinId !== veinId
+  ) return false;
+
+  const cachedVisualState = oreVisualStates?.get(oreVisualStateKey(tx, ty));
+  if (cachedVisualState) return Boolean(cachedVisualState.visible);
+  const isLockedTarget = Boolean(
+    (state.target?.tx === tx && state.target?.ty === ty)
+    || (state.backupTarget?.tx === tx && state.backupTarget?.ty === ty)
+  );
+  const sensedUntil = Number(tile.sensedUntil) || 0;
+  return Boolean(tile.discovered || (sensedUntil > 0 && sensedUntil >= state.elapsed) || isLockedTarget);
+}
+
+function getVeinConnectorMask(tx, ty, oreId, veinId, oreVisualStates = null) {
+  if (!veinTileIsLiveAndKnown(tx, ty, oreId, veinId, oreVisualStates)) return 0;
+  let mask = 0;
+  if (veinTileIsLiveAndKnown(tx - 1, ty, oreId, veinId, oreVisualStates)) mask |= 1;
+  if (veinTileIsLiveAndKnown(tx + 1, ty, oreId, veinId, oreVisualStates)) mask |= 2;
+  if (veinTileIsLiveAndKnown(tx, ty - 1, oreId, veinId, oreVisualStates)) mask |= 4;
+  if (veinTileIsLiveAndKnown(tx, ty + 1, oreId, veinId, oreVisualStates)) mask |= 8;
+  return mask;
+}
+
+function addVeinConnectorArmClip(direction, x, y, edgeHalfWidth, nodeCoverRadius) {
+  const left = x - 0.5;
+  const right = x + TILE_SIZE + 0.5;
+  const top = y - 0.5;
+  const bottom = y + TILE_SIZE + 0.5;
+  const centerX = x + TILE_SIZE * 0.5;
+  const centerY = y + TILE_SIZE * 0.5;
+  if (direction === 'left') {
+    ctx.moveTo(left, centerY - edgeHalfWidth);
+    ctx.lineTo(centerX + nodeCoverRadius, centerY - nodeCoverRadius);
+    ctx.lineTo(centerX + nodeCoverRadius, centerY + nodeCoverRadius);
+    ctx.lineTo(left, centerY + edgeHalfWidth);
+  } else if (direction === 'right') {
+    ctx.moveTo(right, centerY - edgeHalfWidth);
+    ctx.lineTo(right, centerY + edgeHalfWidth);
+    ctx.lineTo(centerX - nodeCoverRadius, centerY + nodeCoverRadius);
+    ctx.lineTo(centerX - nodeCoverRadius, centerY - nodeCoverRadius);
+  } else if (direction === 'up') {
+    ctx.moveTo(centerX - edgeHalfWidth, top);
+    ctx.lineTo(centerX + edgeHalfWidth, top);
+    ctx.lineTo(centerX + nodeCoverRadius, centerY + nodeCoverRadius);
+    ctx.lineTo(centerX - nodeCoverRadius, centerY + nodeCoverRadius);
+  } else if (direction === 'down') {
+    ctx.moveTo(centerX - edgeHalfWidth, bottom);
+    ctx.lineTo(centerX - nodeCoverRadius, centerY - nodeCoverRadius);
+    ctx.lineTo(centerX + nodeCoverRadius, centerY - nodeCoverRadius);
+    ctx.lineTo(centerX + edgeHalfWidth, bottom);
+  }
+  ctx.closePath();
+}
+
+function drawRuntimeVeinConnectors(x, y, tx, ty, ore, revealed, oreVisualStates = null) {
+  if (!revealed || !ore || typeof ctx.drawImage !== 'function') return false;
+  const tile = state.world?.getTile(tx, ty);
+  const veinId = tile?.veinId;
+  if (!veinId || tile.oreId !== ore.id) return false;
+
+  const connectorMask = getVeinConnectorMask(tx, ty, ore.id, veinId, oreVisualStates);
+  if (!connectorMask) return false;
+
+  const sprite = getRuntimeVeinSprite(ore.id);
+  if (!sprite) return false;
+
+  const region = FIELD_VEIN_ATLAS_LAYOUT[ore.id];
+  const edgeHalfWidth = (region?.portWidthRatio || 0.2) * TILE_SIZE * 0.5 + 0.6;
+  const nodeCoverRadius = TILE_SIZE * 0.22;
+  try {
+    ctx.save();
+    ctx.beginPath();
+    if (connectorMask & 1) addVeinConnectorArmClip('left', x, y, edgeHalfWidth, nodeCoverRadius);
+    if (connectorMask & 2) addVeinConnectorArmClip('right', x, y, edgeHalfWidth, nodeCoverRadius);
+    if (connectorMask & 4) addVeinConnectorArmClip('up', x, y, edgeHalfWidth, nodeCoverRadius);
+    if (connectorMask & 8) addVeinConnectorArmClip('down', x, y, edgeHalfWidth, nodeCoverRadius);
+    ctx.clip();
+    ctx.globalAlpha = 0.94;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(
+      sprite.image,
+      sprite.x,
+      sprite.y,
+      sprite.width,
+      sprite.height,
+      x - 0.5,
+      y - 0.5,
+      TILE_SIZE + 1,
+      TILE_SIZE + 1,
+    );
+    ctx.restore();
+    return true;
+  } catch (_error) {
+    try { ctx.restore(); } catch (_restoreError) { /* keep the ore-node fallback alive */ }
+    return false;
+  }
+}
+
+function drawOreInTile(x, y, tx, ty, ore, revealed, now, oreVisualStates = null) {
   if (!ore) return;
   const style = ORE_RENDER_STYLES[ore.id] || ORE_RENDER_STYLES.iron;
   const noise = tileNoise(tx, ty, 13);
   const branchNoise = tileNoise(tx, ty, 14);
   const pulse = 0.82 + Math.sin(now * 0.004 + tx * 0.7 + ty) * 0.18;
-  const centerX = Math.round(x + 9 + noise * 10);
-  const centerY = Math.round(y + 9 + tileNoise(tx, ty, 15) * 10);
-  const joinsLeft = hasMatchingOre(tx - 1, ty, ore.id);
-  const joinsRight = hasMatchingOre(tx + 1, ty, ore.id);
-  const joinsTop = hasMatchingOre(tx, ty - 1, ore.id);
-  const joinsBottom = hasMatchingOre(tx, ty + 1, ore.id);
+  // Keep the largest authored sprite inside its logical 28 px cell so the
+  // next row/column cannot paint over a protruding edge.
+  const centerX = x + 13.7 + noise * 0.6;
+  const centerY = y + 13.7 + tileNoise(tx, ty, 15) * 0.6;
 
   ctx.save();
-  ctx.lineCap = style.cap;
-  ctx.lineJoin = ore.id === 'coal' ? 'miter' : 'round';
-  ctx.beginPath();
-
-  let connectionCount = 0;
-  if (joinsLeft) {
-    const edgeY = y + verticalOreEdgeOffset(tx, ty);
-    ctx.moveTo(centerX, centerY);
-    ctx.lineTo(x + 7, Math.round(centerY + (edgeY - centerY) * 0.55));
-    ctx.lineTo(x, edgeY);
-    connectionCount += 1;
-  }
-  if (joinsRight) {
-    const edgeY = y + verticalOreEdgeOffset(tx + 1, ty);
-    ctx.moveTo(centerX, centerY);
-    ctx.lineTo(x + TILE_SIZE - 7, Math.round(centerY + (edgeY - centerY) * 0.55));
-    ctx.lineTo(x + TILE_SIZE, edgeY);
-    connectionCount += 1;
-  }
-  if (joinsTop) {
-    const edgeX = x + horizontalOreEdgeOffset(tx, ty);
-    ctx.moveTo(centerX, centerY);
-    ctx.lineTo(Math.round(centerX + (edgeX - centerX) * 0.55), y + 7);
-    ctx.lineTo(edgeX, y);
-    connectionCount += 1;
-  }
-  if (joinsBottom) {
-    const edgeX = x + horizontalOreEdgeOffset(tx, ty + 1);
-    ctx.moveTo(centerX, centerY);
-    ctx.lineTo(Math.round(centerX + (edgeX - centerX) * 0.55), y + TILE_SIZE - 7);
-    ctx.lineTo(edgeX, y + TILE_SIZE);
-    connectionCount += 1;
-  }
-
-  // Edge coordinates are shared by adjacent tiles, so a deposit remains one
-  // uninterrupted vein even though each tile has a different material glyph.
-  if (connectionCount === 0) {
-    const forkX = branchNoise > 0.5 ? 1 : -1;
-    const verticalMaterial = ore.id === 'amber' || ore.id === 'amethyst' || ore.id === 'prism_crystal';
-    if (verticalMaterial) {
-      ctx.moveTo(centerX - 3, centerY + 10);
-      ctx.lineTo(centerX, centerY);
-      ctx.lineTo(centerX + forkX * 4, centerY - 10);
-    } else {
-      ctx.moveTo(centerX - forkX * 9, centerY + 5);
-      ctx.lineTo(centerX, centerY);
-      ctx.lineTo(centerX + forkX * 10, centerY - 4 + Math.floor(noise * 4));
-    }
-    if (ore.id === 'silver') {
-      ctx.moveTo(centerX - 3, centerY - 7);
-      ctx.lineTo(centerX + 3, centerY + 7);
-    }
-  }
-
+  // The authored node covers the connector hub. Only the matching cardinal
+  // arms are exposed, so a one-way vein can never look like a four-way fork.
+  drawRuntimeVeinConnectors(x, y, tx, ty, ore, revealed, oreVisualStates);
   // Content tiers are zero-based, so T4 starts at ore.tier === 3 (amber).
   const glowTier = clamp((ore.tier || 0) - 2, 0, 7);
-  if (revealed && glowTier > 0) {
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = (0.035 + glowTier * 0.012) * pulse;
-    ctx.strokeStyle = ore.color;
-    ctx.lineWidth = style.veinWidth + 7 + glowTier;
-    ctx.stroke();
-    ctx.globalCompositeOperation = 'source-over';
-  }
-
-  ctx.globalAlpha = revealed ? 0.78 : 0.075;
-  ctx.strokeStyle = GEO_COMIC_COLORS.ink;
-  ctx.lineWidth = style.veinWidth + 5;
-  ctx.stroke();
-  ctx.globalAlpha = revealed ? 0.88 + pulse * 0.1 : 0.13;
-  ctx.strokeStyle = ore.color;
-  ctx.lineWidth = style.veinWidth;
-  ctx.stroke();
-  if (revealed && style.highlightWidth > 0) {
-    ctx.globalAlpha = 0.28 + pulse * 0.22;
-    ctx.strokeStyle = ore.accent || '#fff';
-    ctx.lineWidth = style.highlightWidth;
-    ctx.stroke();
-  }
-  if (ore.id === 'void_ore') {
-    ctx.globalAlpha = revealed ? 0.72 : 0.06;
-    ctx.strokeStyle = '#070811';
-    ctx.lineWidth = 4;
-    ctx.stroke();
-  }
-
   if (revealed && glowTier > 0) {
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = (0.025 + glowTier * 0.01) * pulse;
@@ -9154,20 +9474,22 @@ function drawOreInTile(x, y, tx, ty, ore, revealed, now) {
     ctx.globalCompositeOperation = 'source-over';
   }
 
-  const nodeWidth = style.nodeWidth + Math.floor(noise * 2);
-  const nodeHeight = style.nodeHeight + Math.floor(branchNoise * 2);
-  ctx.save();
-  ctx.translate(centerX, centerY);
-  traceOreNodeSilhouette(ore.id, nodeWidth, nodeHeight, noise, branchNoise);
-  ctx.globalAlpha = revealed ? 0.92 : 0.075;
-  ctx.strokeStyle = GEO_COMIC_COLORS.ink;
-  ctx.lineWidth = ore.id === 'silver' ? 3 : 5;
-  ctx.stroke();
-  ctx.globalAlpha = revealed ? 1 : 0.13;
-  ctx.fillStyle = ore.color;
-  ctx.fill();
-  drawOreMaterialDetails(ore, nodeWidth, nodeHeight, noise, branchNoise, revealed);
-  ctx.restore();
+  if (!drawRuntimeOreNode(centerX, centerY, ore, revealed, noise, branchNoise)) {
+    const nodeWidth = style.nodeWidth + Math.floor(noise * 2);
+    const nodeHeight = style.nodeHeight + Math.floor(branchNoise * 2);
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    traceOreNodeSilhouette(ore.id, nodeWidth, nodeHeight, noise, branchNoise);
+    ctx.globalAlpha = revealed ? 0.92 : 0.075;
+    ctx.strokeStyle = GEO_COMIC_COLORS.ink;
+    ctx.lineWidth = ore.id === 'silver' ? 3 : 5;
+    ctx.stroke();
+    ctx.globalAlpha = revealed ? 1 : 0.13;
+    ctx.fillStyle = ore.color;
+    ctx.fill();
+    drawOreMaterialDetails(ore, nodeWidth, nodeHeight, noise, branchNoise, revealed);
+    ctx.restore();
+  }
   ctx.restore();
 }
 
@@ -10626,7 +10948,7 @@ function bindEvents() {
       renderUpgrades();
     }
   });
-  const previewUpgradeGoal = (event) => {
+  const previewUpgradeSelection = (event) => {
     const node = event.target.closest?.('[data-upgrade-id]');
     const id = node?.dataset.upgradeId;
     if (!id || !state.visibleUpgradeIds.has(id) || state.selectedUpgradeId === id) return;
@@ -10636,21 +10958,8 @@ function bindEvents() {
     });
     renderNextBreakthrough();
   };
-  ui.upgradeGrid?.addEventListener('pointerover', previewUpgradeGoal);
-  ui.upgradeGrid?.addEventListener('focusin', previewUpgradeGoal);
-  ui.pinSelectedUpgrade?.addEventListener('click', () => {
-    const selected = state.selectedUpgradeId ? upgradeById.get(state.selectedUpgradeId) : null;
-    const pinned = save.pinnedUpgradeId ? upgradeById.get(save.pinnedUpgradeId) : null;
-    if (pinned && (!selected || selected.id === pinned.id)) {
-      save.pinnedUpgradeId = null;
-      toast('ЦЕЛЬ СНЯТА', 'info');
-    } else if (selected) {
-      save.pinnedUpgradeId = selected.id;
-      toast(`ЦЕЛЬ: ${selected.name.toUpperCase()}`, 'success');
-    }
-    persistSave();
-    renderUpgrades();
-  });
+  ui.upgradeGrid?.addEventListener('pointerover', previewUpgradeSelection);
+  ui.upgradeGrid?.addEventListener('focusin', previewUpgradeSelection);
   ui.buyMaxSelectedUpgrade?.addEventListener('click', () => {
     const id = ui.buyMaxSelectedUpgrade.dataset.upgradeId;
     if (!id || !upgradeById.has(id)) return;
@@ -10759,6 +11068,7 @@ function bindEvents() {
 function initialize() {
   resizeCanvas();
   newWorld(20260716);
+  requestFieldArtAssets();
   preloadMinerVariant(stats);
   bindEvents();
   showTitle();
@@ -10870,6 +11180,14 @@ window.__DEPTH_ZERO__ = {
     lastRunReport: save.lastRunReport ? { ...save.lastRunReport } : null,
     balanceReport: state.balanceReport ? { ...state.balanceReport } : null,
     terrainBaseCache: getTerrainBaseCacheStats(),
+    fieldArt: {
+      terrainReady: FIELD_ART_RUNTIME.terrainReady,
+      oreReady: FIELD_ART_RUNTIME.oreReady,
+      veinReady: FIELD_ART_RUNTIME.veinReady,
+      terrainSource: FIELD_TERRAIN_ATLAS_SOURCE,
+      oreSource: FIELD_ORE_ATLAS_SOURCE,
+      veinSource: FIELD_VEIN_ATLAS_SOURCE,
+    },
   }),
   getStats: () => ({ ...stats }),
   debugGetMinerSpriteVariant: (overrides = {}) => ({
@@ -11090,6 +11408,13 @@ window.__DEPTH_ZERO__ = {
     const tile = state.world?.getTile(tileX, tileY);
     if (!tile?.oreId) return null;
     return { ...getOreVisualState(tile, tileX, tileY) };
+  },
+  debugGetVeinConnectorMask: (tx, ty) => {
+    const tileX = Math.floor(tx);
+    const tileY = Math.floor(ty);
+    const tile = state.world?.getTile(tileX, tileY);
+    if (!tile?.oreId || !tile.veinId) return 0;
+    return getVeinConnectorMask(tileX, tileY, tile.oreId, tile.veinId);
   },
   debugFindExplorationTarget: () => {
     if (state.mode !== 'run' || !state.player) return null;

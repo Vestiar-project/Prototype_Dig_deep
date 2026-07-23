@@ -9,7 +9,19 @@
     />
     <meta name="theme-color" content="#2b1713" />
     <title>ГЛУБИНА: НУЛЬ</title>
-    <link rel="stylesheet" href="styles.css?v=deep-shaft-9-character1" />
+    <link
+      rel="preload"
+      as="image"
+      href="assets/main-menu/main-menu-hero-desktop.png"
+      media="(min-width: 1200px)"
+    />
+    <link
+      rel="preload"
+      as="image"
+      href="assets/main-menu/main-menu-hero-mobile.png"
+      media="(max-width: 1199px)"
+    />
+    <link rel="stylesheet" href="styles.css?v=deep-shaft-9-nopin1" />
   </head>
   <body>
     <a class="skip-link" href="#gameCanvas">К игровому полю</a>
@@ -190,50 +202,58 @@
 
       <section
         id="startScreen"
-        class="overlay start-screen"
+        class="overlay start-screen has-menu-art"
         aria-labelledby="gameTitle"
         aria-describedby="gameIntro"
       >
         <div class="overlay-backdrop" aria-hidden="true"></div>
         <div class="start-layout panel-frame">
           <div class="brand-block">
-            <p class="eyebrow"><span></span> ЭКСПЕДИЦИЯ <span data-total-runs>0</span> <span></span></p>
-            <h1 id="gameTitle">
-              <span>ГЛУБИНА</span>
-              <b>НУЛЬ</b>
-            </h1>
-            <p id="gameIntro" class="game-intro">
-              Шесть секунд. Одна кирка.<br />Бесконечная порода под ногами.
-            </p>
-            <div class="start-actions">
-              <button id="startRun" class="btn btn--primary btn--large" type="button" autofocus>
-                <span class="btn-icon" aria-hidden="true">▶</span>
-                <span><small>НАЧАТЬ СМЕНУ</small>КОПАТЬ</span>
-              </button>
-              <button id="replayTutorial" class="start-tutorial-button" type="button">
-                <span aria-hidden="true">?</span> КАК ИГРАТЬ
-              </button>
-              <button id="startUpgrades" class="start-tutorial-button" type="button">
-                <span aria-hidden="true">◆</span> УЛУЧШЕНИЯ
-              </button>
-              <p class="start-key"><kbd>Enter</kbd> начать забег</p>
+            <div class="menu-hero">
+              <picture class="menu-hero-art" aria-hidden="true">
+                <source
+                  media="(max-width: 1199px)"
+                  srcset="assets/main-menu/main-menu-hero-mobile.png"
+                />
+                <img
+                  src="assets/main-menu/main-menu-hero-desktop.png"
+                  alt=""
+                  width="1600"
+                  height="1200"
+                  fetchpriority="high"
+                  decoding="async"
+                />
+              </picture>
+              <div class="brand-visual">
+                <p class="eyebrow"><span></span> ЭКСПЕДИЦИЯ <span data-total-runs>0</span> <span></span></p>
+                <h1 id="gameTitle">
+                  <span>ГЛУБИНА</span>
+                  <b>НУЛЬ</b>
+                </h1>
+              </div>
+            </div>
+
+            <div class="brand-command">
+              <p id="gameIntro" class="game-intro">
+                Шесть секунд. Одна кирка.<br />Бесконечная порода под ногами.
+              </p>
+              <div class="start-actions">
+                <button id="startRun" class="btn btn--primary btn--large" type="button" autofocus>
+                  <span class="btn-icon" aria-hidden="true">▶</span>
+                  <span><small>НАЧАТЬ СМЕНУ</small>КОПАТЬ</span>
+                </button>
+                <button id="startUpgrades" class="start-tutorial-button" type="button">
+                  <span aria-hidden="true">◆</span> УЛУЧШЕНИЯ
+                </button>
+                <button id="replayTutorial" class="start-tutorial-button" type="button">
+                  <span aria-hidden="true">?</span> СПРАВКА
+                </button>
+                <p class="start-key"><kbd>Enter</kbd> начать забег</p>
+              </div>
             </div>
           </div>
 
           <div class="briefing" aria-label="Краткий инструктаж">
-            <div class="briefing-art" aria-hidden="true">
-              <div class="signal-ring signal-ring--outer"></div>
-              <div class="signal-ring signal-ring--inner"></div>
-              <div class="miner-mark">
-                <span class="miner-lamp"></span>
-                <span class="miner-head"></span>
-                <span class="miner-body"></span>
-                <span class="miner-pick"></span>
-              </div>
-              <span class="ore-mark ore-mark--a"></span>
-              <span class="ore-mark ore-mark--b"></span>
-              <span class="ore-mark ore-mark--c"></span>
-            </div>
             <ol class="briefing-steps">
               <li><b>01</b><span><strong>ЧУЙ</strong>Находи жилы вокруг себя.</span></li>
               <li><b>02</b><span><strong>КОПАЙ</strong>Шахтёр работает сам.</span></li>
@@ -435,13 +455,12 @@
             <aside id="nextBreakthrough" class="next-breakthrough" aria-live="polite">
               <span class="next-breakthrough__mark" aria-hidden="true">◎</span>
               <span class="next-breakthrough__copy">
-                <small>СЛЕДУЮЩИЙ ПРОРЫВ</small>
+                <small>ВЫБРАННЫЙ УЗЕЛ</small>
                 <strong id="nextBreakthroughName">ВЫБЕРИТЕ УЗЕЛ</strong>
-                <span id="nextBreakthroughNeed">Нажмите на модуль в дереве, чтобы следить за его ценой.</span>
+                <span id="nextBreakthroughNeed">Нажмите на модуль в дереве, чтобы увидеть его цену.</span>
               </span>
               <span class="next-breakthrough__actions">
                 <button id="buyMaxSelectedUpgrade" class="next-breakthrough__max" type="button">КУПИТЬ MAX</button>
-                <button id="pinSelectedUpgrade" class="next-breakthrough__pin" type="button">ЗАКРЕПИТЬ</button>
               </span>
             </aside>
 
@@ -740,9 +759,9 @@
     <noscript>
       <div class="noscript-message">Включите JavaScript, чтобы спуститься в шахту.</div>
     </noscript>
-    <script defer src="js/upgrades.js?v=deep-shaft-9-character1"></script>
-    <script defer src="js/world.js?v=deep-shaft-9-character1"></script>
-    <script defer src="js/music.js?v=deep-shaft-9-character1"></script>
-    <script defer src="js/game.js?v=deep-shaft-9-character1"></script>
+    <script defer src="js/upgrades.js?v=deep-shaft-9-nopin1"></script>
+    <script defer src="js/world.js?v=deep-shaft-9-nopin1"></script>
+    <script defer src="js/music.js?v=deep-shaft-9-nopin1"></script>
+    <script defer src="js/game.js?v=deep-shaft-9-nopin1"></script>
   </body>
 </html>

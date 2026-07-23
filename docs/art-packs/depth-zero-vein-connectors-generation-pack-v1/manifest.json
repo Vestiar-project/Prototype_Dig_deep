@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "assetId": "depth-zero-vein-connectors-v1",
+  "purpose": "Four-arm modular overlays drawn below the approved ore nodes",
+  "output": {
+    "format": "png",
+    "background": "transparent-alpha",
+    "preferredWidth": 2560,
+    "preferredHeight": 1024,
+    "columns": 5,
+    "rows": 2,
+    "normalizedCell": true
+  },
+  "geometry": {
+    "nodeCoverRadiusRatio": 0.22,
+    "straightEdgeApproachRatio": 0.15,
+    "edgePorts": {
+      "left": [0.0, 0.5],
+      "right": [1.0, 0.5],
+      "top": [0.5, 0.0],
+      "bottom": [0.5, 1.0]
+    },
+    "transparentBoundaryExceptPorts": true,
+    "openPortEnds": true,
+    "centralNodeIncluded": false
+  },
+  "cells": [
+    { "id": "copper", "column": 0, "row": 0, "portWidthRatio": 0.18 },
+    { "id": "coal", "column": 1, "row": 0, "portWidthRatio": 0.22 },
+    { "id": "iron", "column": 2, "row": 0, "portWidthRatio": 0.20 },
+    { "id": "amber", "column": 3, "row": 0, "portWidthRatio": 0.17 },
+    { "id": "silver", "column": 4, "row": 0, "portWidthRatio": 0.11 },
+    { "id": "gold", "column": 0, "row": 1, "portWidthRatio": 0.20 },
+    { "id": "amethyst", "column": 1, "row": 1, "portWidthRatio": 0.18 },
+    { "id": "prism_crystal", "column": 2, "row": 1, "portWidthRatio": 0.18 },
+    { "id": "void_ore", "column": 3, "row": 1, "portWidthRatio": 0.23 },
+    { "id": "star_core", "column": 4, "row": 1, "portWidthRatio": 0.20 }
+  ],
+  "runtimeContract": {
+    "drawBelowOreNode": true,
+    "armVisibilitySource": "four-neighbor adjacency bitmask with matching oreId and veinId",
+    "possibleTopologies": 16,
+    "changesWorldGeneration": false,
+    "changesOreNodeCount": false,
+    "changesBalance": false
+  }
+}
