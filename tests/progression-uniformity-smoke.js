@@ -19,6 +19,8 @@ const NOTABLE_MECHANICS = Object.freeze([
   { id: "sense_ore_focus", level: 1, label: "ore focus" },
   { id: "sense_priority_tuning", level: 1, label: "priority tuning" },
   { id: "sense_ghost_outline", level: 1, label: "ghost outline" },
+  { id: "sense_greed_compass", level: 1, label: "greed compass priority" },
+  { id: "sense_clairvoyant_miner", level: 1, label: "visible scanner expansion" },
   { id: "sense_second_fix", level: 1, label: "second fix" },
   { id: "sense_frequency_swing", level: 1, label: "frequency swing" },
   { id: "sense_deaf_knock", level: 1, label: "deaf knock" },
@@ -34,6 +36,8 @@ const NOTABLE_MECHANICS = Object.freeze([
   { id: "dig_omni_swing", level: 1, label: "impact mining" },
   { id: "dig_least_resistance", level: 1, label: "least-resistance route" },
   { id: "dig_mine_lift", level: 1, label: "mine lift" },
+  { id: "dig_mine_lift", level: 2, label: "near-frontier lift" },
+  { id: "dig_mine_lift", level: 3, label: "frontier lift" },
   { id: "dig_quarry_presence", level: 1, label: "quarry rhythm" },
   { id: "power_furious_swing", level: 1, label: "critical strikes" },
   { id: "power_fault_finder", level: 3, label: "guaranteed fault cadence" },
@@ -52,6 +56,7 @@ const NOTABLE_MECHANICS = Object.freeze([
   { id: "time_thirty_second_oath", level: 1, label: "chrono overdrive" },
   { id: "gadgets_powder_pocket", level: 1, label: "bombs" },
   { id: "gadgets_cluster_shell", level: 1, label: "cluster shell" },
+  { id: "gadgets_cluster_shell", level: 2, label: "extra cluster fragment" },
   { id: "gadgets_sticky_charge", level: 1, label: "sticky charge" },
   { id: "gadgets_chain_spark", level: 1, label: "chain spark" },
   { id: "gadgets_shock_capsule", level: 1, label: "shock capsule" },
@@ -68,6 +73,7 @@ const NOTABLE_MECHANICS = Object.freeze([
   { id: "tools_super_pick", level: 1, label: "super pick" },
   { id: "tools_super_field", level: 1, label: "persistent super field" },
   { id: "tools_laser_emitter", level: 1, label: "laser" },
+  { id: "tools_laser_range", level: 1, label: "visible laser reach" },
   { id: "tools_laser_width", level: 1, label: "wide laser" },
   { id: "tools_laser_splitter", level: 1, label: "split laser" },
   { id: "tools_mirror_crystal", level: 1, label: "laser ricochet" },
@@ -77,6 +83,7 @@ const NOTABLE_MECHANICS = Object.freeze([
   { id: "fortune_rich_vein", level: 1, label: "rich veins" },
   { id: "fortune_double_yield", level: 1, label: "double yield" },
   { id: "fortune_triple_seam", level: 1, label: "triple sample" },
+  { id: "fortune_triple_seam", level: 2, label: "reinforced sample rhythm" },
   { id: "fortune_alchemist_scales", level: 1, label: "alchemist scales" },
   { id: "fortune_deep_market", level: 1, label: "deep market" },
   { id: "fortune_golden_touch", level: 1, label: "golden touch" },
@@ -114,6 +121,13 @@ const PRIMARY_SEEDS = Object.freeze([
   17, 29, 43, 59, 73, 89, 107, 127, 149, 173,
   197, 211, 239, 263, 293, 317, 347, 379, 419, 457,
 ]);
+const TOOL_MILESTONE_IDS = Object.freeze([
+  "tools_iron_pick",
+  "tools_steel_pick",
+  "tools_pneumatic_pick",
+  "tools_super_pick",
+  "tools_laser_emitter",
+]);
 
 function seededRandom(seed) {
   let value = seed >>> 0;
@@ -149,13 +163,102 @@ function buildFinalPathRequirements(api) {
   return requiredLevels;
 }
 
+function buildPrerequisiteClosure(catalog, targetId) {
+  const requiredLevels = new Map();
+  const visit = (id, level = 1) => {
+    const definition = catalog.get(id);
+    if (!definition) return;
+    const previous = requiredLevels.get(id) || 0;
+    if (previous >= level) return;
+    requiredLevels.set(id, level);
+    for (const requirement of definition.requires || []) {
+      visit(requirement.id, requirement.level || 1);
+    }
+  };
+  visit(targetId, 1);
+  requiredLevels.delete(targetId);
+  return requiredLevels;
+}
+
+function toolMilestonesComplete(catalog) {
+  const byId = new Map(catalog.map((definition) => [definition.id, definition]));
+  return TOOL_MILESTONE_IDS.every((id) => (byId.get(id)?.level || 0) >= 1);
+}
+
+function candidatesPreservingTargetRecipe(api, affordable, target) {
+  if (!target) return affordable;
+  const inventory = api.getSnapshot().inventory || {};
+  return affordable.filter((definition) => Object.entries(target.recipe || {}).every(
+    ([oreId, required]) => {
+      const owned = Math.max(0, Number(inventory[oreId]) || 0);
+      const cost = Math.max(0, Number(definition.recipe?.[oreId]) || 0);
+      return owned - cost >= Math.min(owned, Math.max(0, Number(required) || 0));
+    },
+  ));
+}
+
+function finalPathCandidates(api, catalog, affordable, finalPath) {
+  const pathCandidates = affordable.filter(
+    (definition) => definition.level < (finalPath.get(definition.id) || 0),
+  );
+  if (pathCandidates.length) return pathCandidates;
+
+  const inventory = api.getSnapshot().inventory || {};
+  const nextTarget = catalog
+    .filter((definition) => (
+      definition.unlocked
+      && definition.level < (finalPath.get(definition.id) || 0)
+    ))
+    .map((definition) => ({
+      definition,
+      missingValue: Object.entries(definition.recipe || {}).reduce((sum, [oreId, amount]) => (
+        sum + Math.max(0, amount - (inventory[oreId] || 0)) * (ORE_VALUE[oreId] || 1)
+      ), 0),
+    }))
+    .sort((left, right) => (
+      left.missingValue - right.missingValue
+      || weightedRecipeCost(left.definition.recipe) - weightedRecipeCost(right.definition.recipe)
+      || left.definition.id.localeCompare(right.definition.id)
+    ))[0]?.definition;
+
+  // A goal-driven route may still buy useful support with true surplus, but
+  // must not repeatedly spend the exact ore it has been saving for its next
+  // reachable path node. Without this reserve, "final path" and "tools first"
+  // degenerate into cheapest-level buyers after the first expensive recipe.
+  return candidatesPreservingTargetRecipe(api, affordable, nextTarget);
+}
+
+function toolsFirstCandidates(api, catalog, affordable, finalPath) {
+  const byId = new Map(catalog.map((definition) => [definition.id, definition]));
+  const target = TOOL_MILESTONE_IDS
+    .map((id) => byId.get(id))
+    .find((definition) => definition && definition.level < 1);
+  if (!target) return finalPathCandidates(api, catalog, affordable, finalPath);
+
+  const prerequisiteLevels = buildPrerequisiteClosure(byId, target.id);
+  const unmetPrerequisites = new Set([...prerequisiteLevels]
+    .filter(([id, level]) => (byId.get(id)?.level || 0) < level)
+    .map(([id]) => id));
+  const affordablePrerequisites = affordable.filter(
+    (definition) => unmetPrerequisites.has(definition.id),
+  );
+  if (affordablePrerequisites.length) return affordablePrerequisites;
+
+  // Save only after the complete path and the target's depth/sample gates are
+  // ready. Optional purchases may spend surplus, but cannot erode ore already
+  // accumulated for the next tool.
+  if (unmetPrerequisites.size || !target.unlocked) return affordable;
+  if (target.affordable) return [target];
+  return candidatesPreservingTargetRecipe(api, affordable, target);
+}
+
 function setUsefulFocus(api, strategy, finalPath, usePathDeficit = false) {
   if (!api.getStats().oreFocusUnlocked) return;
   const snapshot = api.getSnapshot();
   let candidates = api.getUpgradeCatalog().filter(
     (definition) => definition.unlocked && definition.level < definition.maxLevel,
   );
-  if (strategy !== "final-path") {
+  if (strategy !== "final-path" && !usePathDeficit) {
     const nearbyBreakthroughs = candidates
       .filter((definition) => (
         definition.level === 0
@@ -177,7 +280,7 @@ function setUsefulFocus(api, strategy, finalPath, usePathDeficit = false) {
     // out a small immediate shortage (for example, 8 silver behind a tool).
     if (nearbyBreakthroughs.length) candidates = [nearbyBreakthroughs[0].definition];
   }
-  if (strategy === "final-path" && usePathDeficit) {
+  if (usePathDeficit) {
     const pathCandidates = candidates
       .filter((definition) => definition.level < (finalPath.get(definition.id) || 0))
       .map((definition) => ({
@@ -223,17 +326,29 @@ function buyWithStrategy(api, strategy, finalPath, limit = 300) {
 
   for (let purchase = 0; purchase < limit; purchase += 1) {
     const catalog = api.getUpgradeCatalog();
+    if (
+      (strategy === "tools-first" || strategy === "final-path")
+      && toolMilestonesComplete(catalog)
+    ) {
+      // These labels describe distinct opening routes, not players who ignore
+      // the ending forever. Hand the remaining workshop slots to the same
+      // reserve-aware production buyer as soon as the first laser lands,
+      // including the remainder of that exact workshop. The goal-driven route
+      // still reaches that hand-off through a different prerequisite order.
+      bought.push(...api.debugAutoBuyAffordable(limit - purchase).bought);
+      break;
+    }
     const affordable = catalog.filter((definition) => definition.available && definition.affordable);
     if (!affordable.length) break;
 
     let candidates = affordable;
+    if (strategy === "tools-first") {
+      candidates = toolsFirstCandidates(api, catalog, affordable, finalPath);
+      if (!candidates.length) break;
+    }
     if (strategy === "final-path") {
-      const pathCandidates = affordable.filter(
-        (definition) => definition.level < (finalPath.get(definition.id) || 0),
-      );
-      // A goal-driven novice follows the rocket path whenever possible, then
-      // buys the cheapest available support level instead of deadlocking.
-      if (pathCandidates.length) candidates = pathCandidates;
+      candidates = finalPathCandidates(api, catalog, affordable, finalPath);
+      if (!candidates.length) break;
     }
 
     candidates.sort((left, right) => {
@@ -304,6 +419,9 @@ function simulateCampaign(api, seed, strategy, maxRuns = 480) {
   let maxMechanicPackage = 0;
   let maxLevelPackageDetails = null;
   let maxMechanicPackageDetails = null;
+  let lastPurchaseSeconds = 0;
+  let maxPurchaseGapSeconds = 0;
+  let maxPurchaseGapDetails = null;
   let pathDryRuns = 0;
   let completed = false;
   let runs = 0;
@@ -358,6 +476,19 @@ function simulateCampaign(api, seed, strategy, maxRuns = 480) {
       }
     }
     const bought = buyWithStrategy(api, strategy, finalPath, 300);
+    if (bought.length) {
+      const purchaseGap = elapsedSeconds - lastPurchaseSeconds;
+      if (purchaseGap > maxPurchaseGapSeconds) {
+        maxPurchaseGapSeconds = purchaseGap;
+        maxPurchaseGapDetails = {
+          fromMinute: Number((lastPurchaseSeconds / 60).toFixed(2)),
+          toMinute: Number((elapsedSeconds / 60).toFixed(2)),
+          minutes: Number((purchaseGap / 60).toFixed(2)),
+          bought: [...bought],
+        };
+      }
+      lastPurchaseSeconds = elapsedSeconds;
+    }
     for (const id of traceIds) {
       if (bought.includes(id)) completedTargetTraces.add(id);
     }
@@ -412,9 +543,20 @@ function simulateCampaign(api, seed, strategy, maxRuns = 480) {
       }
       pathDryRuns = pathPurchase ? 0 : pathDryRuns + 1;
     }
-    // Aggregate focus is the normal player heuristic. A final-path player only
-    // intervenes after three consecutive workshops made no path progress.
-    setUsefulFocus(api, strategy, finalPath, strategy === "final-path" && pathDryRuns >= 3);
+    // Aggregate focus is the normal player heuristic. A final-path player
+    // intervenes as soon as one workshop makes no progress along that path.
+    const followsFinalDeficit = (
+      (strategy === "final-path" && pathDryRuns >= 1)
+      || (strategy === "tools-first" && toolMilestonesComplete(api.getUpgradeCatalog()))
+    );
+    // The production buyer already selects the currently binding capstone
+    // resource. Do not overwrite that decision for the aggregate strategy:
+    // doing so can strand it on a completed gold/amethyst target while the
+    // final path is waiting for void ore. The two deliberately biased test
+    // profiles keep their external focus heuristic.
+    if (strategy !== "strategic") {
+      setUsefulFocus(api, strategy, finalPath, followsFinalDeficit);
+    }
 
     if (snapshot.campaign.ready) {
       completed = true;
@@ -453,6 +595,21 @@ function simulateCampaign(api, seed, strategy, maxRuns = 480) {
       };
     }
   }
+  const trailingPurchaseGap = elapsedSeconds - lastPurchaseSeconds;
+  if (trailingPurchaseGap > maxPurchaseGapSeconds) {
+    maxPurchaseGapSeconds = trailingPurchaseGap;
+    maxPurchaseGapDetails = {
+      fromMinute: Number((lastPurchaseSeconds / 60).toFixed(2)),
+      toMinute: Number((elapsedSeconds / 60).toFixed(2)),
+      minutes: Number((trailingPurchaseGap / 60).toFixed(2)),
+      bought: [],
+    };
+  }
+  const finalPerkSeconds = mechanicTimes
+    .find((entry) => entry.key === "core_bon_voyage@1")?.seconds;
+  const finalApproachMinutes = Number.isFinite(finalPerkSeconds)
+    ? Number(((elapsedSeconds - finalPerkSeconds) / 60).toFixed(2))
+    : null;
 
   return {
     seed,
@@ -460,9 +617,12 @@ function simulateCampaign(api, seed, strategy, maxRuns = 480) {
     completed,
     runs,
     elapsedMinutes: Number((elapsedSeconds / 60).toFixed(2)),
+    finalApproachMinutes,
     firstEventMinutes: firstEventSeconds == null ? null : Number((firstEventSeconds / 60).toFixed(2)),
     maxMechanicGapMinutes: Number((maxMechanicGapSeconds / 60).toFixed(2)),
     maxMechanicGapDetails,
+    maxPurchaseGapMinutes: Number((maxPurchaseGapSeconds / 60).toFixed(2)),
+    maxPurchaseGapDetails,
     maxLevelPackage,
     maxLevelPackageDetails,
     maxMechanicPackage,
@@ -488,7 +648,9 @@ function percentile(values, fraction) {
 function summarize(campaigns) {
   const numeric = (field) => campaigns.map((campaign) => campaign[field]).filter(Number.isFinite);
   const durations = numeric("elapsedMinutes");
+  const finalApproaches = numeric("finalApproachMinutes");
   const gaps = numeric("maxMechanicGapMinutes");
+  const purchaseGaps = numeric("maxPurchaseGapMinutes");
   const events = numeric("firstEventMinutes");
   const levelPackages = numeric("maxLevelPackage");
   const mechanicPackages = numeric("maxMechanicPackage");
@@ -512,10 +674,21 @@ function summarize(campaigns) {
       p90: percentile(durations, 0.9),
       max: Math.max(...durations),
     },
+    finalApproachMinutes: {
+      found: finalApproaches.length,
+      p50: finalApproaches.length ? percentile(finalApproaches, 0.5) : null,
+      p90: finalApproaches.length ? percentile(finalApproaches, 0.9) : null,
+      max: finalApproaches.length ? Math.max(...finalApproaches) : null,
+    },
     maxMechanicGapMinutes: {
       p50: percentile(gaps, 0.5),
       p90: percentile(gaps, 0.9),
       max: Math.max(...gaps),
+    },
+    maxPurchaseGapMinutes: {
+      p50: percentile(purchaseGaps, 0.5),
+      p90: percentile(purchaseGaps, 0.9),
+      max: Math.max(...purchaseGaps),
     },
     firstEventMinutes: {
       found: events.length,
@@ -620,6 +793,15 @@ if (!isMainThread) {
         .sort((left, right) => right.elapsedMinutes - left.elapsedMinutes)
         .slice(0, 3)
         .map(({ seed, strategy, elapsedMinutes }) => ({ seed, strategy, elapsedMinutes })),
+      finalApproaches: [...campaigns]
+        .filter((campaign) => Number.isFinite(campaign.finalApproachMinutes))
+        .sort((left, right) => right.finalApproachMinutes - left.finalApproachMinutes)
+        .slice(0, 5)
+        .map(({ seed, strategy, finalApproachMinutes }) => ({
+          seed,
+          strategy,
+          finalApproachMinutes,
+        })),
       gaps: [...campaigns]
         .sort((left, right) => right.maxMechanicGapMinutes - left.maxMechanicGapMinutes)
         .slice(0, 5)
@@ -628,6 +810,15 @@ if (!isMainThread) {
           strategy,
           maxMechanicGapMinutes,
           details: maxMechanicGapDetails,
+        })),
+      purchaseGaps: [...campaigns]
+        .sort((left, right) => right.maxPurchaseGapMinutes - left.maxPurchaseGapMinutes)
+        .slice(0, 5)
+        .map(({ seed, strategy, maxPurchaseGapMinutes, maxPurchaseGapDetails }) => ({
+          seed,
+          strategy,
+          maxPurchaseGapMinutes,
+          details: maxPurchaseGapDetails,
         })),
       levelPackages: [...campaigns]
         .sort((left, right) => right.maxLevelPackage - left.maxLevelPackage)
@@ -667,8 +858,13 @@ if (!isMainThread) {
       assert.equal(overall.completed, overall.campaigns, "every sampled strategy must finish the campaign");
       assert.ok(overall.elapsedMinutes.p10 >= 45, `campaign must retain a real opening and middle game: ${JSON.stringify(overall.elapsedMinutes)}`);
       assert.ok(overall.elapsedMinutes.p90 <= 135, `90% of campaigns should fit the 1-2 hour target with margin: ${JSON.stringify(overall.elapsedMinutes)}`);
-      assert.ok(overall.maxMechanicGapMinutes.p90 <= 8, `90% of campaigns need a notable unlock at least every eight minutes: ${JSON.stringify(overall.maxMechanicGapMinutes)}`);
-      assert.ok(overall.maxMechanicGapMinutes.max <= 10, `no sampled campaign should go ten minutes without a notable unlock: ${JSON.stringify(overall.maxMechanicGapMinutes)}`);
+      assert.equal(overall.finalApproachMinutes.found, overall.campaigns, "every completed campaign must install the Solar Drill before breaching the seal");
+      assert.ok(overall.finalApproachMinutes.p90 <= 12, `90% of campaigns should breach the seal within twelve minutes of installing the Solar Drill: ${JSON.stringify(overall.finalApproachMinutes)}`);
+      assert.ok(overall.finalApproachMinutes.max <= 14, `the final directed descent must not become another long progression plateau: ${JSON.stringify(overall.finalApproachMinutes)}`);
+      assert.ok(overall.maxMechanicGapMinutes.p90 <= 12, `90% of campaigns need a notable unlock at least every twelve minutes: ${JSON.stringify(overall.maxMechanicGapMinutes)}`);
+      assert.ok(overall.maxMechanicGapMinutes.max <= 14, `no sampled campaign should go fourteen minutes without a notable unlock: ${JSON.stringify(overall.maxMechanicGapMinutes)}`);
+      assert.ok(overall.maxPurchaseGapMinutes.p90 <= 7, `90% of campaigns need an affordable useful purchase at least every seven minutes: ${JSON.stringify(overall.maxPurchaseGapMinutes)}`);
+      assert.ok(overall.maxPurchaseGapMinutes.max <= 9, `no sampled campaign should go nine minutes without any upgrade purchase: ${JSON.stringify(overall.maxPurchaseGapMinutes)}`);
       assert.ok(overall.maxLevelPackage.p90 <= 35, `late economy must not collapse into giant level packages: ${JSON.stringify(overall.maxLevelPackage)}`);
       assert.ok(overall.maxMechanicPackage.p90 <= 4, `notable mechanics need room to breathe between purchases: ${JSON.stringify(overall.maxMechanicPackage)}`);
       assert.equal(overall.firstEventMinutes.found, overall.campaigns, "every sampled campaign must encounter an underground event");

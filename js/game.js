@@ -68,6 +68,11 @@ const MIN_RUN_SECONDS = 6;
 const DIRECT_MAX_RUN_SECONDS = 45;
 const BONUS_MAX_RUN_SECONDS = 60;
 const EXPLORATION_SCAN_TILES = 18;
+const MAX_ASCENT_SHARE = 0.1;
+const DESCENT_CADENCE_MIN_DEPTH = 300;
+const DESCENT_CADENCE_STEP_METERS = METERS_PER_TILE;
+const DESCENT_CADENCE_GRACE_SECONDS = 3;
+const DESCENT_CADENCE_QUEUE_HOLD_SECONDS = 1.5;
 const CAMERA_ZOOM = 0.9;
 const FINAL_LAYER_DEPTH_METERS = Math.max(
   0,
@@ -194,27 +199,86 @@ const CAMPAIGN_PROGRESS_TOOLS = Object.freeze([
 const CAMPAIGN_AUTOBUY_TARGETS = Object.freeze({
   tools_iron_pick: 1,
   tools_steel_pick: 1,
+  tools_balanced_handle: 3,
   tools_pneumatic_pick: 1,
+  power_sharpened_edge: 4,
+  power_tempered_steel: 1,
+  power_furious_swing: 1,
+  dig_sweeping_arc: 1,
+  dig_omni_swing: 1,
+  dig_least_resistance: 1,
+  dig_mine_lift: 1,
+  time_extra_breath: 3,
+  dig_light_footwork: 1,
+  time_clockwork_heart: 3,
   gadgets_scout_drone: 1,
+  gadgets_drone_battery: 1,
+  gadgets_drone_drill: 1,
+  gadgets_drone_swarm: 1,
+  gadgets_powder_pocket: 1,
+  sense_echo_pulse: 1,
+  sense_instinct_spark: 6,
+  sense_deep_resonance: 1,
+  sense_panoramic_intuition: 1,
+  sense_ore_focus: 1,
+  sense_priority_tuning: 3,
+  sense_second_fix: 1,
+  sense_frequency_swing: 1,
+  sense_far_echo: 1,
   power_diamond_tip: 1,
+  power_sample_calibration: 1,
   tools_super_pick: 1,
-  tools_super_motor: 1,
-  tools_super_teeth: 1,
-  tools_super_field: 1,
+  tools_super_motor: 2,
+  tools_super_teeth: 2,
+  tools_super_field: 2,
   tools_laser_emitter: 1,
   tools_laser_range: 1,
   tools_laser_power: 1,
   tools_laser_width: 1,
   tools_laser_splitter: 2,
+  tools_mirror_crystal: 1,
+  tools_super_pick_echo: 1,
   power_corebreaker: 2,
+  sense_earth_call: 1,
+  dig_quarry_presence: 1,
+  power_mountain_splitter: 1,
+  time_thirty_second_oath: 1,
+  gadgets_demolition_orchestra: 1,
   tools_solar_drill: 1,
+  fortune_motherlode_covenant: 1,
+  core_bon_voyage: 1,
 });
 const CAMPAIGN_AUTOBUY_WEIGHTS = Object.freeze({
   tools_iron_pick: 0.18,
   tools_steel_pick: 0.18,
+  tools_balanced_handle: 0.35,
   tools_pneumatic_pick: 0.16,
+  power_sharpened_edge: 0.36,
+  power_tempered_steel: 0.34,
+  power_furious_swing: 0.2,
+  dig_sweeping_arc: 0.24,
+  dig_omni_swing: 0.18,
+  dig_least_resistance: 0.14,
+  dig_mine_lift: 0.08,
+  time_extra_breath: 0.28,
+  dig_light_footwork: 0.1,
+  time_clockwork_heart: 0.2,
   gadgets_scout_drone: 0.16,
+  gadgets_drone_battery: 0.24,
+  gadgets_drone_drill: 0.22,
+  gadgets_drone_swarm: 0.16,
+  gadgets_powder_pocket: 0.34,
+  sense_echo_pulse: 0.34,
+  sense_instinct_spark: 0.3,
+  sense_deep_resonance: 0.18,
+  sense_panoramic_intuition: 0.25,
+  sense_ore_focus: 0.12,
+  sense_priority_tuning: 0.2,
+  sense_second_fix: 0.16,
+  sense_frequency_swing: 0.15,
+  sense_far_echo: 0.2,
   power_diamond_tip: 0.24,
+  power_sample_calibration: 0.18,
   tools_super_pick: 0.14,
   tools_super_motor: 0.24,
   tools_super_teeth: 0.24,
@@ -224,8 +288,17 @@ const CAMPAIGN_AUTOBUY_WEIGHTS = Object.freeze({
   tools_laser_power: 0.24,
   tools_laser_width: 0.22,
   tools_laser_splitter: 0.18,
+  tools_mirror_crystal: 0.17,
+  tools_super_pick_echo: 0.16,
   power_corebreaker: 0.22,
+  sense_earth_call: 0.25,
+  dig_quarry_presence: 0.19,
+  power_mountain_splitter: 0.28,
+  time_thirty_second_oath: 0.22,
+  gadgets_demolition_orchestra: 0.31,
   tools_solar_drill: 0.12,
+  fortune_motherlode_covenant: 0.16,
+  core_bon_voyage: 0.08,
 });
 // First ranks that visibly change play instead of only increasing a scalar.
 // The workshop remains free-choice; this marker only helps diagnostics and
@@ -629,7 +702,7 @@ function normalizeStats(source = {}) {
     oreFocusEscalationDelay: Math.max(0, source.oreFocusEscalationDelay || 0),
     oreFocusEscalationBonus: Math.max(0, source.oreFocusEscalationBonus || 0),
     leastResistancePathing: Boolean(source.leastResistancePathing),
-    mineLiftRecordDepthRatio: clamp(source.mineLiftRecordDepthRatio || 0, 0, 0.9),
+    mineLiftRecordDepthRatio: clamp(source.mineLiftRecordDepthRatio || 0, 0, 1),
     focusedOreHardnessReduction: clamp(source.focusedOreHardnessReduction || 0, 0, 0.8),
     discoveryTimeBonus: Math.max(0, source.discoveryTimeBonus || 0),
     directionalBombs: Boolean(source.directionalBombs),
@@ -665,15 +738,17 @@ function normalizeStats(source = {}) {
     deepResonanceConeHalfAngle: clamp(source.deepResonanceConeHalfAngle || 0, 0, Math.PI * 0.49),
     deepResonanceTargetHold: Math.max(0, source.deepResonanceTargetHold || 0),
     deepResonanceTargetSlots: clamp(Math.floor(source.deepResonanceTargetSlots || 0), 0, 3),
+    veinTrailEnabled: Boolean(source.veinTrailEnabled),
     veinTrailRangeMultiplier: Math.max(1, source.veinTrailRangeMultiplier || 1),
     veinTrailMoveSpeedBonus: Math.max(0, source.veinTrailMoveSpeedBonus || 0),
+    descentTargetBias: Math.max(0, source.descentTargetBias || 0),
+    descentMoveSpeedBonus: Math.max(0, source.descentMoveSpeedBonus || 0),
+    openingDescentMoveSpeedBonus: Math.max(0, source.openingDescentMoveSpeedBonus || 0),
+    openingDepthPowerBonus: Math.max(0, source.openingDepthPowerBonus || 0),
     seismicRouteSlots: clamp(Math.floor(source.seismicRouteSlots || 0), 0, 6),
     ghostTrailDuration: Math.max(0, source.ghostTrailDuration || 0),
     ghostTrailThroughWalls: Boolean(source.ghostTrailThroughWalls || source.ghostTrailMaxLayers > 0),
     ghostTrailMaxLayers: Math.max(0, Math.floor(source.ghostTrailMaxLayers || 0)),
-    veinLockEnabled: Boolean(source.veinLockEnabled),
-    veinLockRangeMultiplier: Math.max(1, source.veinLockRangeMultiplier || 1),
-    veinLockMoveSpeedBonus: Math.max(0, source.veinLockMoveSpeedBonus || 0),
     openingSprintMultiplier: Math.max(1, source.openingSprintMultiplier || 1),
     targetRelaySprintMultiplier: Math.max(1, source.targetRelaySprintMultiplier || 1),
     targetRelaySprintDuration: Math.max(0, source.targetRelaySprintDuration || 0),
@@ -747,6 +822,7 @@ function normalizeStats(source = {}) {
     solarDrillProcEvery: Math.max(0, Math.floor(source.solarDrillProcEvery || 0)),
     solarDrillBeamDuration: Math.max(0, source.solarDrillBeamDuration || source.solarDrillDuration || 0),
     solarDrillFinalBurstPower: Math.max(0, source.solarDrillFinalBurstPower || 0),
+    solarDrillFinalBurstRadiusTiles: Math.max(0, source.solarDrillFinalBurstRadiusTiles || 0),
   };
 }
 
@@ -798,6 +874,22 @@ function getCampaignProgress() {
 
 const oreById = new Map(ORE_TYPES.map((ore) => [ore.id, ore]));
 const upgradeById = new Map(UPGRADE_DEFS.map((definition) => [definition.id, definition]));
+const CAMPAIGN_FINAL_PATH_TARGETS = (() => {
+  const targets = new Map();
+  const visit = (id, level = 1) => {
+    const definition = upgradeById.get(id);
+    if (!definition) return;
+    const requiredLevel = clamp(Math.floor(Number(level) || 1), 1, definition.maxLevel);
+    if ((targets.get(id) || 0) >= requiredLevel) return;
+    targets.set(id, requiredLevel);
+    for (const requirement of definition.requires || []) {
+      if (typeof requirement === 'string') visit(requirement, 1);
+      else if (requirement?.id) visit(requirement.id, requirement.level || 1);
+    }
+  };
+  visit(CAMPAIGN.finalUpgrade, 1);
+  return targets;
+})();
 const UPGRADE_LANES = Object.freeze(['time', 'dig', 'tools', 'power', 'fortune', 'gadgets', 'sense']);
 const UPGRADE_NODE_WIDTH = 62;
 const UPGRADE_NODE_HEIGHT = 62;
@@ -880,6 +972,11 @@ function createRunMetrics() {
     searchingSeconds: 0,
     attacks: 0,
     targetSwitches: 0,
+    descentCadencePulses: 0,
+    descentCadenceCompletions: 0,
+    descentCadenceTimeouts: 0,
+    descentCadenceSeconds: 0,
+    descentCadenceEligibleSeconds: 0,
     sourceBreaks: {},
     maxBlockHp: 0,
     maxBlockKind: '',
@@ -1025,6 +1122,14 @@ const state = {
   attackCooldown: 0,
   manualPulseCooldown: 0,
   stuckElapsed: 0,
+  descentCadenceAnchorDepth: 0,
+  descentCadenceStallElapsed: 0,
+  descentCadenceGoalDepth: 0,
+  descentCadenceStartedAt: -1,
+  descentCadenceGraceRemaining: 0,
+  descentCadenceQueued: false,
+  descentCadenceQueuedAt: -1,
+  descentCadenceQueuedTargetKey: null,
   targetCooldown: 0,
   pathCooldown: 0,
   droneCooldown: 0,
@@ -1071,14 +1176,13 @@ const state = {
   deafKnockCooldown: 0,
   deafKnockBoostRemaining: 0,
   laserShotCount: 0,
+  solarDrillShotCount: 0,
   triangleOreMemory: new Map(),
   triangleRefreshCooldown: 0,
   echoPingCooldownRemaining: 0,
   deepResonanceCooldownRemaining: 0,
   rememberedVeins: [],
   ghostTarget: null,
-  lockedVeinId: null,
-  lockedVeinOreId: null,
   veinRemainingCounts: new Map(),
   lastBrokenVeinId: null,
   veinBreakStreak: 0,
@@ -1238,6 +1342,68 @@ function getHighestUnlockedOreTier() {
   }, 0);
 }
 
+function campaignAutobuyTargetLevel(definitionOrId) {
+  const id = typeof definitionOrId === 'string' ? definitionOrId : definitionOrId?.id;
+  const bestDepth = Math.max(0, Number(save.bestDepth) || 0);
+  const steelReady = getUpgradeLevel(upgradeById.get('tools_steel_pick')) > 0;
+  const pneumaticReady = getUpgradeLevel(upgradeById.get('tools_pneumatic_pick')) > 0;
+  const superPickReady = getUpgradeLevel(upgradeById.get('tools_super_pick')) > 0;
+  const focusReady = getUpgradeLevel(upgradeById.get('sense_ore_focus')) > 0;
+  const laserReady = getUpgradeLevel(upgradeById.get('tools_laser_emitter')) > 0;
+  const lifetimeOre = (oreId) => Math.max(0, Number(save.lifetimeOres?.[oreId]) || 0);
+  const explicitTarget = Math.max(0, CAMPAIGN_AUTOBUY_TARGETS[id] || 0);
+  // A purposeful campaign route starts assembling the seven branch summits
+  // while the super-pick is crossing the 600–900 m transition. Waiting for
+  // the laser made the diagnostic player postpone dozens of inexpensive
+  // branch prerequisites until after reaching the bottom, exaggerating a
+  // late-game resource drought that a real tree-reading player would avoid.
+  const finalPathReady = superPickReady && bestDepth >= 600;
+  const finalPathTarget = finalPathReady
+    ? Math.max(0, CAMPAIGN_FINAL_PATH_TARGETS.get(id) || 0)
+    : 0;
+  const target = Math.max(explicitTarget, finalPathTarget);
+  if (!target) return 0;
+
+  // The third handle rank is a pneumatic-pick prerequisite, but reserving its
+  // eight iron before buying the cheaper steel pick recreates the long
+  // copper-only opening. Two handle ranks are enough until steel is installed.
+  if (id === 'tools_balanced_handle' && !steelReady) return Math.min(target, 2);
+  // Keep the inexpensive first power rank in the opening, then build the
+  // critical/impact route only after the pneumatic tool has ended the T1–T3
+  // phase. Otherwise four scalar ranks reserve the same iron as the next tool.
+  if (id === 'power_sharpened_edge' && !pneumaticReady) return Math.min(target, 1);
+
+  if ([
+    'sense_instinct_spark',
+    'sense_deep_resonance',
+  ].includes(id) && (!pneumaticReady || bestDepth < 400)) return 0;
+
+  if ([
+    'sense_panoramic_intuition',
+    'sense_far_echo',
+  ].includes(id) && (!focusReady || lifetimeOre('gold') <= 0)) return 0;
+
+  if (id === 'sense_ore_focus' && (!pneumaticReady || bestDepth < 650)) return 0;
+
+  if ([
+    'sense_priority_tuning',
+    'sense_second_fix',
+    'power_sample_calibration',
+  ].includes(id) && !focusReady) return 0;
+
+  if (id === 'sense_frequency_swing' && (!focusReady || lifetimeOre('prism_crystal') <= 0)) return 0;
+  if (id === 'power_corebreaker' && (!superPickReady || lifetimeOre('amethyst') <= 0)) return 0;
+
+  if (CAMPAIGN.capstones.includes(id) && !laserReady) return 0;
+  if (id === CAMPAIGN.finalUpgrade) {
+    const capstonesReady = CAMPAIGN.capstones.every((upgradeId) => (
+      getUpgradeLevel(upgradeById.get(upgradeId)) > 0
+    ));
+    if (!capstonesReady) return 0;
+  }
+  return target;
+}
+
 function depthFromOrigin(x, y) {
   const origin = state.depthOrigin || state.spawn;
   if (!origin) return 0;
@@ -1246,27 +1412,45 @@ function depthFromOrigin(x, y) {
 
 function getLiftResupplyPreferences(tierCap = 0) {
   const maximumTier = Math.max(0, Math.floor(Number(tierCap) || 0));
-  const deficits = new Map();
-  for (const definition of UPGRADE_DEFS) {
+  const eligibleDefinitions = UPGRADE_DEFS.filter((definition) => {
     const level = getUpgradeLevel(definition);
-    if (level >= definition.maxLevel || !requirementsMet(definition)) continue;
+    return level < definition.maxLevel && requirementsMet(definition);
+  });
+  const deficits = new Map();
+  for (const definition of eligibleDefinitions) {
+    const level = getUpgradeLevel(definition);
     const recipe = getUpgradeRecipe(definition, level);
+    const selectedDemand = definition.id === state.selectedUpgradeId;
     for (const [oreId, amount] of Object.entries(recipe)) {
       const ore = oreById.get(oreId);
       if (!ore || (ore.tier || 0) > maximumTier) continue;
       const shortage = Math.max(0, amount - (save.inventory?.[oreId] || 0));
       if (shortage <= 0) continue;
-      const current = deficits.get(oreId) || { oreId, votes: 0, shortage: 0, tier: ore.tier || 0 };
+      const current = deficits.get(oreId) || {
+        oreId,
+        votes: 0,
+        shortage: 0,
+        relativeShortage: 0,
+        tier: ore.tier || 0,
+        selectedDemand: false,
+      };
       // Every blocked frontier recipe casts a vote. Cap the quantity term so
       // one enormous capstone recipe cannot monopolise every lift landing.
       current.votes += 1 + Math.min(4, shortage / Math.max(1, amount) * 3);
       current.shortage += shortage;
+      current.relativeShortage += shortage / Math.max(1, amount);
+      current.selectedDemand ||= selectedDemand;
       deficits.set(oreId, current);
     }
   }
+  const focusedOreId = stats.oreFocusUnlocked ? save.focusedOreId : null;
   return [...deficits.values()]
     .sort((left, right) => (
+      Number(right.selectedDemand) - Number(left.selectedDemand)
+      || Number(right.oreId === focusedOreId) - Number(left.oreId === focusedOreId)
+      ||
       right.votes - left.votes
+      || right.relativeShortage - left.relativeShortage
       || right.shortage - left.shortage
       || right.tier - left.tier
       || left.oreId.localeCompare(right.oreId)
@@ -1636,6 +1820,14 @@ function startRun(options = {}) {
     attackCooldown: 0,
     manualPulseCooldown: 0,
     stuckElapsed: 0,
+    descentCadenceAnchorDepth: Math.max(state.liftDepth, save.bestDepth || 0),
+    descentCadenceStallElapsed: 0,
+    descentCadenceGoalDepth: 0,
+    descentCadenceStartedAt: -1,
+    descentCadenceGraceRemaining: 0,
+    descentCadenceQueued: false,
+    descentCadenceQueuedAt: -1,
+    descentCadenceQueuedTargetKey: null,
     targetCooldown: 0,
     pathCooldown: 0,
     droneCooldown: 0,
@@ -1661,14 +1853,13 @@ function startRun(options = {}) {
     deafKnockCooldown: 0,
     deafKnockBoostRemaining: 0,
     laserShotCount: 0,
+    solarDrillShotCount: 0,
     triangleOreMemory: new Map(),
     triangleRefreshCooldown: 0,
     echoPingCooldownRemaining: 0,
     deepResonanceCooldownRemaining: 0,
     rememberedVeins: [],
     ghostTarget: null,
-    lockedVeinId: null,
-    lockedVeinOreId: null,
     veinRemainingCounts: collectVeinRemainingCounts(),
     lastBrokenVeinId: null,
     veinBreakStreak: 0,
@@ -1858,6 +2049,11 @@ function buildRunReport(catalog, haul, activeRunSeconds) {
     searchingSeconds: Number(searching.toFixed(2)),
     bonusTime: Number(state.bonusTimeEarned.toFixed(2)),
     targetSwitches: state.metrics.targetSwitches || 0,
+    descentCadencePulses: state.metrics.descentCadencePulses || 0,
+    descentCadenceCompletions: state.metrics.descentCadenceCompletions || 0,
+    descentCadenceTimeouts: state.metrics.descentCadenceTimeouts || 0,
+    descentCadenceSeconds: Number((state.metrics.descentCadenceSeconds || 0).toFixed(2)),
+    descentCadenceEligibleSeconds: Number((state.metrics.descentCadenceEligibleSeconds || 0).toFixed(2)),
     eventCount: state.metrics.eventCount || 0,
     microEvents: { ...(state.metrics.microEvents || {}) },
     sourceBreaks: { ...(state.metrics.sourceBreaks || {}) },
@@ -1995,6 +2191,7 @@ function finishRun() {
   const haul = catalog.haul;
   const haulCount = countOreBag(haul);
   const report = buildRunReport(catalog, haul, activeRunSeconds);
+  clearDescentCadenceState(state.deepest);
   state.lastHaul = haul;
   state.lastHaulCount = haulCount;
   addOreBag(save.inventory, haul);
@@ -2245,6 +2442,13 @@ function renderGeologicalJournal() {
     card.className = `journal-card${known ? ' is-discovered' : ' is-unknown'}`;
     card.style.setProperty('--ore-journal', ore.color || '#71808c');
     card.setAttribute('role', 'listitem');
+    const oreMinDepth = Math.floor((ore.depth || 0) / TILE_SIZE * METERS_PER_TILE);
+    const oreMaxDepth = Number.isFinite(Number(ore.maxDepth))
+      ? Math.floor(Number(ore.maxDepth) / TILE_SIZE * METERS_PER_TILE)
+      : null;
+    const oreDepthRange = oreMaxDepth == null
+      ? `от ~${oreMinDepth} м`
+      : `~${oreMinDepth}–${oreMaxDepth} м`;
     if (known) card.tabIndex = 0;
     if (known) {
       card.innerHTML = `
@@ -2254,7 +2458,7 @@ function renderGeologicalJournal() {
         <dl>
           <div><dt>Всего</dt><dd>${formatNumber(save.lifetimeOres?.[ore.id] || 0)}</dd></div>
           <div><dt>Ценность</dt><dd>×${formatNumber(ore.value || 1)}</dd></div>
-          <div><dt>Встречается</dt><dd>от ~${Math.floor((ore.depth || 0) / TILE_SIZE * METERS_PER_TILE)} м</dd></div>
+          <div><dt>Встречается</dt><dd>${oreDepthRange}</dd></div>
           <div><dt>Выход</dt><dd>${formatNumber(record.largestYield || 0)}</dd></div>
           <div><dt>Рекорд глубины</dt><dd>${Math.floor(record.deepest || 0)} м</dd></div>
           <div><dt>Блоки</dt><dd>${formatNumber(record.physicalBlocks || 0)}</dd></div>
@@ -2428,7 +2632,6 @@ function estimateBalanceRun(seed, profilePercent, preparedStats = null) {
     : 1;
   const beamPower = simulatedStats.laserUnlocked
     ? (simulatedStats.laserPower || 1)
-      * (1 + Math.max(0, beamCount - 1) * 0.62)
       * (1 + Math.max(0, simulatedStats.laserPierce || 1) * 0.08)
     : 1;
   const overclock = simulatedStats.chronoOverclock
@@ -2494,7 +2697,7 @@ function estimateBalanceRun(seed, profilePercent, preparedStats = null) {
     * sustainedMagneticFactor;
   const droneDps = Math.max(0, simulatedStats.droneCount || 0)
     * Math.max(0, simulatedStats.droneSpeed || 1)
-    * simulatedStats.pickPower * Math.max(0, simulatedStats.dronePower || 0.35)
+    * simulatedStats.pickPower * Math.max(0, simulatedStats.dronePower || 0.75)
     * clamp(simulatedStats.droneLifetime || 0, 0, 1)
     * sustainedMagneticFactor;
   const echoDps = simulatedStats.laserUnlocked && simulatedStats.laserSuperPickEchoEvery > 0
@@ -2528,6 +2731,10 @@ function estimateBalanceRun(seed, profilePercent, preparedStats = null) {
   const solarDps = simulatedStats.solarDrillEnabled && simulatedStats.solarDrillProcEvery > 0
     ? directDps * (1 + Math.max(0, simulatedStats.solarDrillFinalBurstPower || 0))
       / simulatedStats.solarDrillProcEvery
+      * Math.max(
+        1,
+        Math.PI * Math.max(0, simulatedStats.solarDrillFinalBurstRadiusTiles || 0) ** 2 * 0.14,
+      )
     : 0;
   const effectiveDps = Math.max(
     0.1,
@@ -3146,7 +3353,9 @@ function requirementsMet(definition) {
   });
   const sampleId = definition.requiresOreDiscovery;
   const sampleReady = !sampleId || (save.lifetimeOres?.[sampleId] || 0) > 0;
-  return dependenciesReady && sampleReady;
+  const depthRequirement = Math.max(0, Number(definition.requiresBestDepth) || 0);
+  const depthReady = depthRequirement <= 0 || save.bestDepth >= depthRequirement;
+  return dependenciesReady && sampleReady && depthReady;
 }
 
 function invalidateWorkshopEligibility() {
@@ -3510,6 +3719,9 @@ function requirementNames(definition) {
   if (definition.requiresOreDiscovery) {
     const ore = oreById.get(definition.requiresOreDiscovery);
     names.push(`образец «${ore?.name || definition.requiresOreDiscovery}»`);
+  }
+  if ((Number(definition.requiresBestDepth) || 0) > 0) {
+    names.push(`рекордная глубина ${Math.floor(definition.requiresBestDepth)} м`);
   }
   return names.join(', ');
 }
@@ -4231,11 +4443,20 @@ function liftFloorTy() {
   return Math.max(0, Math.floor(Number(state.spawn.ty) || 0) - 2);
 }
 
-function targetRespectsLiftFloor(target) {
+function activeDepthFloorTy() {
+  const origin = state.depthOrigin || state.spawn;
+  if (!origin) return liftFloorTy();
+  const originTy = Number.isFinite(Number(origin.ty))
+    ? Math.floor(Number(origin.ty))
+    : state.world?.worldToTile(origin.x, origin.y)?.ty || 0;
+  const retainedDepthMeters = Math.max(0, Number(state.deepest) || 0) * (1 - MAX_ASCENT_SHARE);
+  const retreatFloorTy = originTy + Math.ceil(retainedDepthMeters / METERS_PER_TILE);
+  return Math.max(liftFloorTy(), retreatFloorTy);
+}
+
+function targetRespectsDepthFloor(target) {
   if (!target) return true;
-  // Let a vein curl a couple of rows around the landing chamber, but never
-  // send the miner back into strata that the lift deliberately skipped.
-  return Number(target.ty) >= liftFloorTy();
+  return Number(target.ty) >= activeDepthFloorTy();
 }
 
 function decorateRememberedTarget(target, options = {}) {
@@ -4402,7 +4623,7 @@ function findBestOreTargets(x, y, radius, focusedOreId = null, options = {}, lim
 
   const consider = (tile, tx, ty) => {
     if (!tile?.oreId || tile.kind === 'air') return;
-    if (options.respectLiftFloor && !targetRespectsLiftFloor({ ty })) return;
+    if (options.respectLiftFloor && !targetRespectsDepthFloor({ ty })) return;
     if (focusedOreId && tile.oreId !== focusedOreId) return;
     if (options.veinId && tile.veinId !== options.veinId) return;
     if (excludedKeys.has(`${tx}:${ty}`)) return;
@@ -4428,12 +4649,28 @@ function findBestOreTargets(x, y, radius, focusedOreId = null, options = {}, lim
       * Math.max(0, stats.critMultiplier - 1);
     const expectedMulti = 1 + Math.max(0, (stats.multiHitCount || 1) - 1) * 0.65 + procChance(stats.multiHitChance, 0.1) * 0.65;
     const rarePower = 1 + (oreRank(ore) >= 4 ? (stats.rareOreDamageBonus || 0) : 0);
-    const laserPower = stats.laserUnlocked ? (stats.laserPower || 1) * (1 + Math.max(0, (stats.laserBeams || 1) - 1) * 0.55) : 1;
+    const laserPower = stats.laserUnlocked
+      ? (stats.laserPower || 1) * (1 + Math.max(0, stats.laserPierce || 1) * 0.08)
+      : 1;
     const focusedCalibration = focusedOreId ? focusedDamageMultiplier(tile) : 1;
-    const effectivePower = stats.pickPower * hardnessPierceMultiplier(tile) * (1 + (stats.oreDamageBonus || 0)) * expectedCritical * expectedMulti * rarePower * laserPower * focusedCalibration;
+    const openingPower = depthFromOrigin(targetX, targetY) < 100
+      ? 1 + (stats.openingDepthPowerBonus || 0)
+      : 1;
+    const effectivePower = stats.pickPower * openingPower * hardnessPierceMultiplier(tile) * (1 + (stats.oreDamageBonus || 0)) * expectedCritical * expectedMulti * rarePower * laserPower * focusedCalibration;
     const miningSeconds = (tile.hp || 1) / Math.max(0.1, effectivePower * stats.digSpeed);
     const liftSupplyWeight = tile.liftSupply ? 4 : 1;
-    const score = (travelSeconds + miningSeconds) / (valueWeight * veinSizeWeight * liftSupplyWeight);
+    // A large late-game sense radius must not dilute the preference for going
+    // down. Saturate the comparison after eight rows: a similarly priced node
+    // below wins decisively, while an upper node remains available only when
+    // it is genuinely much faster or more valuable.
+    const verticalTiles = ty - center.ty;
+    const verticalProgress = clamp(Math.abs(verticalTiles) / 10, 0, 1);
+    const authoredBias = clamp(stats.descentTargetBias || 0, 0, 0.25);
+    const descentPriority = verticalTiles >= 0
+      ? 1 - verticalProgress * (0.3 + authoredBias * 0.5)
+      : 1 + verticalProgress * (0.8 + authoredBias * 2);
+    const score = (travelSeconds + miningSeconds) * descentPriority
+      / (valueWeight * veinSizeWeight * liftSupplyWeight);
     const threshold = ranked.length >= resultLimit ? ranked[ranked.length - 1].score : Infinity;
     if (score >= threshold) return;
     const solidLayerLimit = Number.isFinite(Number(options.solidLayerLimit))
@@ -4466,6 +4703,108 @@ function findBestOreTarget(x, y, radius, focusedOreId = null, options = {}) {
   return findBestOreTargets(x, y, radius, focusedOreId, options, 1)[0] || null;
 }
 
+function findFrontierReserveTarget(x, y, radius, focusedOreId = null) {
+  if (!state.world) return null;
+  const currentDepth = depthFromOrigin(x, y);
+  const searchRadius = Math.max(radius, TILE_SIZE * 12);
+  const center = state.world.worldToTile(x, y);
+  const reach = Math.ceil(searchRadius / TILE_SIZE);
+  const searchRadiusSquared = searchRadius * searchRadius;
+  let best = null;
+
+  const consider = (tile, tx, ty) => {
+    if (
+      !tile?.oreId
+      || tile.kind === 'air'
+      || tile.frontierReserveOreId !== tile.oreId
+      || (save.lifetimeOres?.[tile.oreId] || 0) > 0
+      || (focusedOreId && tile.oreId !== focusedOreId)
+      || !targetRespectsDepthFloor({ ty })
+    ) return;
+    const ore = oreById.get(tile.oreId);
+    if (!ore) return;
+    const thresholdMeters = Math.max(0, Number(ore.depth) || 0)
+      / TILE_SIZE
+      * METERS_PER_TILE;
+    if (currentDepth + 10 < thresholdMeters) return;
+    const targetX = (tx + 0.5) * TILE_SIZE;
+    const targetY = (ty + 0.5) * TILE_SIZE;
+    const dx = targetX - x;
+    const dy = targetY - y;
+    const distanceSquared = dx * dx + dy * dy;
+    if (distanceSquared > searchRadiusSquared) return;
+    const score = Math.abs(depthFromOrigin(targetX, targetY) - thresholdMeters) * TILE_SIZE
+      + Math.sqrt(distanceSquared);
+    if (best && score >= best.score) return;
+    best = {
+      kind: 'ore',
+      tile,
+      tx,
+      ty,
+      x: targetX,
+      y: targetY,
+      distance: Math.sqrt(distanceSquared),
+      score,
+      frontierReserve: true,
+      lockRadius: searchRadius,
+    };
+  };
+
+  if (typeof state.world.forEachOreTileInBounds === 'function') {
+    state.world.forEachOreTileInBounds(
+      Math.max(0, center.tx - reach),
+      Math.max(0, center.ty - reach),
+      Math.min(WORLD_CONFIG.WIDTH - 1, center.tx + reach),
+      Math.min(WORLD_CONFIG.HEIGHT - 1, center.ty + reach),
+      consider,
+    );
+  } else {
+    for (let ty = Math.max(0, center.ty - reach); ty <= Math.min(WORLD_CONFIG.HEIGHT - 1, center.ty + reach); ty += 1) {
+      for (let tx = Math.max(0, center.tx - reach); tx <= Math.min(WORLD_CONFIG.WIDTH - 1, center.tx + reach); tx += 1) {
+        consider(state.world.getTile(tx, ty), tx, ty);
+      }
+    }
+  }
+  if (!best) return null;
+  best.tile.discovered = true;
+  best.tile.sensedUntil = Math.max(best.tile.sensedUntil || 0, state.elapsed + 2.5);
+  if (!best.tile.frontierReserveSignaled) {
+    best.tile.frontierReserveSignaled = true;
+    state.shocks.push({
+      x,
+      y,
+      life: 0.58,
+      maxLife: 0.58,
+      tick: Infinity,
+      radius: searchRadius,
+      color: '#7de8d7',
+      kind: 'sense-pulse',
+    });
+    state.beams.push({
+      x,
+      y,
+      x2: best.x,
+      y2: best.y,
+      color: '#b5fff0',
+      life: 0.52,
+      maxLife: 0.52,
+      width: 2.5,
+      kind: 'sense-sector',
+    });
+    state.floaters.push({
+      x,
+      y: y - 40,
+      text: 'ЭХО НОВОГО ПЛАСТА',
+      color: '#a8fff0',
+      life: 0.9,
+      maxLife: 0.9,
+    });
+    sound.tone(132, 0.16, 'sine', 0.025, 220);
+  }
+  state.ping = Math.max(state.ping || 0, 0.75);
+  return best;
+}
+
 function oreTargetIsValid(target, focusedOreId = null) {
   if (!target || target.kind !== 'ore') return false;
   const tile = state.world?.getTile(target.tx, target.ty);
@@ -4478,32 +4817,33 @@ function oreTargetIsValid(target, focusedOreId = null) {
 }
 
 function chooseOreTargets(x, y, radius, focusedOreId = null) {
-  const lockedVeinId = stats.veinLockEnabled && remainingVeinNodes(state.lockedVeinId) > 0
-    ? state.lockedVeinId
-    : null;
-  const trailVeinId = remainingVeinNodes(state.lastBrokenVeinId) > 0
+  const frontierReserve = findFrontierReserveTarget(x, y, radius, focusedOreId);
+  if (frontierReserve) {
+    return { primary: decorateRememberedTarget(frontierReserve), backup: null };
+  }
+  const trailVeinId = stats.veinTrailEnabled && remainingVeinNodes(state.lastBrokenVeinId) > 0
     ? state.lastBrokenVeinId
     : null;
-  const preferredVeinId = lockedVeinId || trailVeinId;
-  if (preferredVeinId) {
-    const rangeMultiplier = lockedVeinId
-      ? Math.max(stats.veinLockRangeMultiplier || 1, stats.veinTrailRangeMultiplier || 1)
-      : stats.veinTrailRangeMultiplier || 1;
+  if (trailVeinId) {
+    const centerTy = state.world.worldToTile(x, y).ty;
     const veinTargets = findBestOreTargets(
       x,
       y,
-      radius * rangeMultiplier,
+      radius * (stats.veinTrailRangeMultiplier || 1),
       focusedOreId,
-      { veinId: preferredVeinId, ignoreSenseLine: true, respectLiftFloor: true },
+      {
+        veinId: trailVeinId,
+        ignoreSenseLine: true,
+        respectLiftFloor: true,
+        // "След жилы" may continue a downward or level branch immediately,
+        // but an upper remnant competes normally with every deeper target.
+        predicate: (candidate) => candidate.ty >= centerTy,
+      },
       (stats.backupTargetSlots || 0) > 0 ? 2 : 1,
     );
     if (veinTargets[0]) {
       const [primary, backup = null] = veinTargets;
       return { primary: decorateRememberedTarget(primary), backup };
-    }
-    if (lockedVeinId) {
-      state.lockedVeinId = null;
-      state.lockedVeinOreId = null;
     }
   }
 
@@ -4544,9 +4884,9 @@ function chooseOreTargets(x, y, radius, focusedOreId = null) {
   }
   if (distantRoutes.length) rememberSeismicRoutes(distantRoutes, null, focusedOreId);
   const ghost = takeGhostTrailTarget(focusedOreId);
-  if (ghost && targetRespectsLiftFloor(ghost)) return { primary: ghost, backup: null };
+  if (ghost && targetRespectsDepthFloor(ghost)) return { primary: ghost, backup: null };
   let remembered = takeRememberedVeinTarget(focusedOreId);
-  while (remembered && !targetRespectsLiftFloor(remembered)) {
+  while (remembered && !targetRespectsDepthFloor(remembered)) {
     remembered = takeRememberedVeinTarget(focusedOreId);
   }
   return { primary: remembered, backup: null };
@@ -4641,11 +4981,6 @@ function noteTargetAcquired(target) {
     }
     state.targetRelaySprintLastTargetKey = key;
     decorateRememberedTarget(target);
-    const veinId = target.tile?.veinId || null;
-    if (stats.veinLockEnabled && veinId && (!state.lockedVeinId || remainingVeinNodes(state.lockedVeinId) <= 0)) {
-      state.lockedVeinId = veinId;
-      state.lockedVeinOreId = target.tile?.oreId || null;
-    }
     showTutorial(
       'sense_target',
       'ЧУТЬЁ ВЗЯЛО СЛЕД',
@@ -4656,7 +4991,7 @@ function noteTargetAcquired(target) {
 }
 
 function promoteBackupTarget(focusedOreId = null) {
-  if (!oreTargetIsValid(state.backupTarget, focusedOreId) || !targetRespectsLiftFloor(state.backupTarget)) {
+  if (!oreTargetIsValid(state.backupTarget, focusedOreId) || !targetRespectsDepthFloor(state.backupTarget)) {
     state.backupTarget = null;
     return false;
   }
@@ -4767,6 +5102,7 @@ function findValuableOreInField(field, focusedOre = null, excludedKeys = []) {
   let bestScore = -Infinity;
   const consider = (tile, tx, ty) => {
     if (!tile?.oreId || tile.kind === 'air' || excluded.has(`${tx}:${ty}`)) return;
+    if (!targetRespectsDepthFloor({ ty })) return;
     if (focusedOre?.id && tile.oreId !== focusedOre.id) return;
     const x = (tx + 0.5) * TILE_SIZE;
     const y = (ty + 0.5) * TILE_SIZE;
@@ -4834,11 +5170,16 @@ function explorationSearchMinTy(centerTy, scanRadius, finalFallback = false) {
   const localMinTy = finalFallback
     ? 0
     : Math.max(0, Math.floor(Number(centerTy) || 0) - Math.floor(Math.max(0, Number(scanRadius) || 0) * 0.35));
-  return Math.max(liftFloorTy(), localMinTy);
+  return Math.max(activeDepthFloorTy(), localMinTy);
 }
 
-function findExplorationTarget(x, y, focusedOreId = null) {
+function findExplorationTarget(x, y, focusedOreId = null, options = {}) {
   const center = state.world.worldToTile(x, y);
+  const requiredMinTy = clamp(
+    Math.floor(Number(options.minimumTy) || 0),
+    0,
+    WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 1,
+  );
   const edgeMargin = EXPLORATION_SCAN_TILES + 2;
   const fullWorldRadius = Math.ceil(Math.hypot(WORLD_CONFIG.WIDTH, WORLD_CONFIG.HEIGHT));
   const scanRadii = [EXPLORATION_SCAN_TILES, 30, 48, 72, 108, fullWorldRadius]
@@ -4854,15 +5195,25 @@ function findExplorationTarget(x, y, focusedOreId = null) {
     const finalFallback = scanRadius === fullWorldRadius;
     let best = null;
     let bestScore = Infinity;
-    const minTy = explorationSearchMinTy(center.ty, scanRadius, finalFallback);
+    const minTy = Math.max(
+      explorationSearchMinTy(center.ty, scanRadius, finalFallback),
+      requiredMinTy,
+    );
     const maxTy = Math.min(WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 1, center.ty + scanRadius);
+    if (minTy > maxTy) continue;
     const minTx = Math.max(0, center.tx - scanRadius);
     const maxTx = Math.min(WORLD_CONFIG.WIDTH - 1, center.tx + scanRadius);
 
     for (let ty = minTy; ty <= maxTy; ty += 1) {
       for (let tx = minTx; tx <= maxTx; tx += 1) {
         const tile = state.world.getTile(tx, ty);
-        if (!tile || tile.kind === 'air' || tile.kind === 'bedrock' || tile.hp <= 0) continue;
+        if (
+          !tile
+          || tile.kind === 'air'
+          || tile.kind === 'bedrock'
+          || tile.kind === 'final_seal'
+          || tile.hp <= 0
+        ) continue;
 
         const offsetX = tx - center.tx;
         const offsetY = ty - center.ty;
@@ -4870,9 +5221,9 @@ function findExplorationTarget(x, y, focusedOreId = null) {
         if (tileDistance < 0.5 || tileDistance > scanRadius) continue;
 
         const forwardOffset = offsetX * forward;
-        const upwardPenalty = offsetY < 0 ? 7 + Math.abs(offsetY) : 0;
+        const upwardPenalty = offsetY < 0 ? 9 + Math.abs(offsetY) * 1.15 : 0;
         const backwardPenalty = forwardOffset < 0 ? 0.9 + Math.abs(forwardOffset) * 0.08 : 0;
-        const downwardBias = Math.min(5.2, Math.max(0, offsetY) * 0.38);
+        const downwardBias = Math.min(12, Math.max(0, offsetY) * 0.9);
         const forwardBias = Math.min(0.65, Math.max(0, forwardOffset) * 0.055);
         const lateralPenalty = Math.abs(offsetX) * 0.08;
         const ignoredOrePenalty = focusedOreId && tile.oreId && tile.oreId !== focusedOreId ? 2.5 : 0;
@@ -4909,6 +5260,185 @@ function findExplorationTarget(x, y, focusedOreId = null) {
   }
 
   return null;
+}
+
+function descentCadenceStallDelay() {
+  return clamp((stats.runDuration || MIN_RUN_SECONDS) * 0.18, 6, 7);
+}
+
+function descentCadencePulseDuration() {
+  return clamp((stats.runDuration || MIN_RUN_SECONDS) * 0.12, 4, 5);
+}
+
+function descentCadenceIsActive() {
+  return Number.isFinite(Number(state.descentCadenceStartedAt))
+    && Number(state.descentCadenceStartedAt) >= 0
+    && (state.descentCadenceGoalDepth || 0) > 0;
+}
+
+function liveCurrentOreTarget() {
+  if (state.target?.kind !== 'ore') return false;
+  const tile = state.world?.getTile(state.target.tx, state.target.ty);
+  return Boolean(tile?.oreId && tile.kind !== 'air' && tile.kind !== 'bedrock');
+}
+
+function currentOreTargetKey() {
+  return liveCurrentOreTarget() ? `${state.target.tx}:${state.target.ty}` : null;
+}
+
+function descentCadenceHasPriorityBlocker() {
+  if (
+    state.target?.kind === 'micro_event'
+    || state.target?.motherlode
+  ) return true;
+  return Boolean(
+    findPriorityChestTarget()
+    || findMotherlodePriorityTarget()
+  );
+}
+
+function clearDescentCadenceState(anchorDepth = 0) {
+  state.descentCadenceAnchorDepth = Math.max(0, Number(anchorDepth) || 0);
+  state.descentCadenceStallElapsed = 0;
+  state.descentCadenceGoalDepth = 0;
+  state.descentCadenceStartedAt = -1;
+  state.descentCadenceGraceRemaining = 0;
+  state.descentCadenceQueued = false;
+  state.descentCadenceQueuedAt = -1;
+  state.descentCadenceQueuedTargetKey = null;
+}
+
+function finishDescentCadence(completed = false, timedOut = false) {
+  if (completed) state.metrics.descentCadenceCompletions += 1;
+  if (timedOut) state.metrics.descentCadenceTimeouts += 1;
+  clearDescentCadenceState(state.deepest);
+  state.descentCadenceGraceRemaining = DESCENT_CADENCE_GRACE_SECONDS;
+  if (state.target?.descentCadence) state.target = null;
+  state.pathWaypoint = null;
+  state.targetCooldown = 0;
+  state.pathCooldown = 0;
+}
+
+function beginDescentCadence() {
+  const finalApproachDepth = Math.max(0, FINAL_LAYER_DEPTH_METERS - METERS_PER_TILE);
+  const deepest = Math.max(0, Number(state.deepest) || 0);
+  if (deepest < DESCENT_CADENCE_MIN_DEPTH || deepest >= finalApproachDepth) {
+    finishDescentCadence(false, false);
+    return false;
+  }
+  state.descentCadenceGoalDepth = Math.min(
+    finalApproachDepth,
+    Math.max(deepest, state.descentCadenceAnchorDepth || 0) + DESCENT_CADENCE_STEP_METERS,
+  );
+  state.descentCadenceStartedAt = state.elapsed;
+  state.descentCadenceQueued = false;
+  state.descentCadenceQueuedAt = -1;
+  state.descentCadenceQueuedTargetKey = null;
+  state.target = null;
+  state.backupTarget = null;
+  state.pathWaypoint = null;
+  state.targetCooldown = 0;
+  state.pathCooldown = 0;
+  state.metrics.descentCadencePulses += 1;
+  return true;
+}
+
+function updateDescentCadence(delta) {
+  if (!state.player || !state.world) return;
+  const deepest = Math.max(0, Number(state.deepest) || 0);
+  const finalApproachDepth = Math.max(0, FINAL_LAYER_DEPTH_METERS - METERS_PER_TILE);
+  const anchor = Math.max(0, Number(state.descentCadenceAnchorDepth) || 0);
+  const completionDepth = descentCadenceIsActive()
+    ? Math.max(0, Number(state.descentCadenceGoalDepth) || 0)
+    : anchor + DESCENT_CADENCE_STEP_METERS;
+
+  if (deepest >= completionDepth - 0.25) {
+    if (descentCadenceIsActive()) finishDescentCadence(true, false);
+    else {
+      state.descentCadenceAnchorDepth = deepest;
+      state.descentCadenceStallElapsed = 0;
+      state.descentCadenceQueued = false;
+      state.descentCadenceQueuedAt = -1;
+      state.descentCadenceQueuedTargetKey = null;
+    }
+    return;
+  }
+
+  if (deepest >= DESCENT_CADENCE_MIN_DEPTH && deepest < finalApproachDepth) {
+    state.metrics.descentCadenceEligibleSeconds += Math.max(0, Number(delta) || 0);
+  }
+
+  if (state.target?.kind === 'final_seal' || findFinalSealTarget()) {
+    clearDescentCadenceState(deepest);
+    return;
+  }
+
+  if (descentCadenceHasPriorityBlocker()) {
+    if (descentCadenceIsActive()) state.descentCadenceStartedAt += Math.max(0, Number(delta) || 0);
+    if (state.descentCadenceQueued) state.descentCadenceQueuedAt += Math.max(0, Number(delta) || 0);
+    return;
+  }
+
+  if (descentCadenceIsActive()) {
+    state.metrics.descentCadenceSeconds += Math.max(0, Number(delta) || 0);
+    if (state.elapsed - state.descentCadenceStartedAt >= descentCadencePulseDuration()) {
+      finishDescentCadence(false, true);
+    }
+    return;
+  }
+
+  if (state.descentCadenceGraceRemaining > 0) {
+    state.descentCadenceGraceRemaining = Math.max(
+      0,
+      state.descentCadenceGraceRemaining - Math.max(0, Number(delta) || 0),
+    );
+    return;
+  }
+
+  if (deepest < DESCENT_CADENCE_MIN_DEPTH || deepest >= finalApproachDepth) {
+    state.descentCadenceStallElapsed = 0;
+    state.descentCadenceQueued = false;
+    state.descentCadenceQueuedAt = -1;
+    state.descentCadenceQueuedTargetKey = null;
+    return;
+  }
+
+  if (state.descentCadenceQueued) {
+    const queuedTargetStillLive = state.descentCadenceQueuedTargetKey
+      && currentOreTargetKey() === state.descentCadenceQueuedTargetKey;
+    if (
+      !queuedTargetStillLive
+      || state.elapsed - state.descentCadenceQueuedAt >= DESCENT_CADENCE_QUEUE_HOLD_SECONDS
+    ) beginDescentCadence();
+    return;
+  }
+
+  state.descentCadenceStallElapsed += Math.max(0, Number(delta) || 0);
+  if (state.descentCadenceStallElapsed >= descentCadenceStallDelay()) {
+    state.descentCadenceQueued = true;
+    state.descentCadenceQueuedAt = state.elapsed;
+    state.descentCadenceQueuedTargetKey = currentOreTargetKey();
+    if (!liveCurrentOreTarget()) beginDescentCadence();
+  }
+}
+
+function findDescentCadenceTarget(x, y, focusedOreId = null) {
+  if (!descentCadenceIsActive()) return null;
+  const center = state.world.worldToTile(x, y);
+  const origin = state.depthOrigin || state.spawn;
+  const originTy = origin
+    ? state.world.worldToTile(origin.x, origin.y).ty
+    : center.ty;
+  const goalTy = originTy + Math.ceil(state.descentCadenceGoalDepth / METERS_PER_TILE);
+  const target = findExplorationTarget(x, y, focusedOreId, {
+    minimumTy: Math.max(center.ty + 1, goalTy),
+  });
+  if (!target) {
+    finishDescentCadence(false, true);
+    return null;
+  }
+  target.descentCadence = true;
+  return target;
 }
 
 function triggerDeafKnock(x = state.player?.x, y = state.player?.y) {
@@ -5173,7 +5703,7 @@ function findMotherlodePriorityTarget() {
   const runtime = state.veinRuntime.get(state.motherlodeVeinId);
   if (!runtime?.motherlode || runtime.completed || countLiveVeinNodes(state.motherlodeVeinId) <= 0) return null;
   const target = findNearestLiveVeinNode(state.motherlodeVeinId, state.player.x, state.player.y);
-  if (!target) return null;
+  if (!target || !targetRespectsDepthFloor(target)) return null;
   const targetDistance = distance(state.player.x, state.player.y, target.x, target.y);
   return {
     kind: 'ore',
@@ -5439,10 +5969,6 @@ function noteToolBreakProgress(tile, x, y, source) {
         state.lastBrokenVeinId = null;
         state.veinBreakStreak = 0;
       }
-      if (state.lockedVeinId === veinId) {
-        state.lockedVeinId = null;
-        state.lockedVeinOreId = null;
-      }
       if (state.quarryVeinId === veinId) {
         state.quarryModeActive = false;
         state.quarryModeRemaining = 0;
@@ -5580,7 +6106,12 @@ function resolveBrokenTile(tile, tx, ty, source = 'pick') {
   state.combo = now <= state.comboExpires ? state.combo + 1 : 1;
   state.comboExpires = now + stats.comboWindow;
   let hadRareEffect = veinRuntime.richTaggedAtBreak === state.blocksBroken;
-  let yieldCount = 1 + (noProcSource ? 0 : advanceTripleSample(tile, x, y));
+  let yieldCount = Math.max(1, Math.floor(Number(ore.baseYield) || 1))
+    // The landing sample replaces one ordinary node rather than adding ore
+    // density. Its larger yield prevents a deep lift from forcing several
+    // return trips for an obsolete shallow-tier recipe.
+    + (tile?.liftSupply ? 5 : 0)
+    + (noProcSource ? 0 : advanceTripleSample(tile, x, y));
   const breakKey = `${tx}:${ty}`;
   if (state.overkillYieldReady && state.overkillYieldTargetKey === breakKey) {
     yieldCount += 1;
@@ -5867,7 +6398,13 @@ function findPickContact(player, nx, ny, reach, preferredTarget = null) {
   for (let ty = minTy; ty <= maxTy; ty += 1) {
     for (let tx = minTx; tx <= maxTx; tx += 1) {
       const tile = state.world.getTile(tx, ty);
-      if (!tile || tile.kind === 'air' || tile.kind === 'bedrock' || tile.hp <= 0) continue;
+      if (
+        !tile
+        || tile.kind === 'air'
+        || tile.kind === 'bedrock'
+        || tile.kind === 'final_seal'
+        || tile.hp <= 0
+      ) continue;
       const centerX = (tx + 0.5) * TILE_SIZE;
       const centerY = (ty + 0.5) * TILE_SIZE;
       const forward = (centerX - player.x) * nx + (centerY - player.y) * ny;
@@ -5898,7 +6435,12 @@ function findPickContact(player, nx, ny, reach, preferredTarget = null) {
 function clearanceTarget(blockedTiles, player) {
   const unique = new Map();
   for (const blocked of blockedTiles) {
-    if (!blocked?.tile || blocked.tile.kind === 'air' || blocked.tile.kind === 'bedrock') continue;
+    if (
+      !blocked?.tile
+      || blocked.tile.kind === 'air'
+      || blocked.tile.kind === 'bedrock'
+      || blocked.tile.kind === 'final_seal'
+    ) continue;
     const key = `${blocked.tx}:${blocked.ty}`;
     const previous = unique.get(key);
     if (!previous || Math.abs(blocked.probeOffset || 0) < Math.abs(previous.probeOffset || 0)) unique.set(key, blocked);
@@ -6150,7 +6692,10 @@ function attack(aimTarget = state.target) {
   const heatKey = `${aimTarget.tx}:${aimTarget.ty}`;
   const heatMarkActive = stats.laserUnlocked && (state.laserHeatMarks.get(heatKey) || 0) >= state.elapsed;
   const laserHeatBonus = heatMarkActive ? 1 + stats.laserHeatNextHitBonus : 1;
-  const damage = stats.pickPower * streakBonus * densityBonus * oreBonus * rareBonus * chargedBonus * (critical ? stats.critMultiplier : 1) * eventSoftnessBonus * approachBonus * laserHeatBonus;
+  const openingPower = depthFromOrigin(aimTarget.x, aimTarget.y) < 100
+    ? 1 + (stats.openingDepthPowerBonus || 0)
+    : 1;
+  const damage = stats.pickPower * openingPower * streakBonus * densityBonus * oreBonus * rareBonus * chargedBonus * (critical ? stats.critMultiplier : 1) * eventSoftnessBonus * approachBonus * laserHeatBonus;
   if (
     targetOre
     && state.overkillReservoir > 0
@@ -6192,6 +6737,7 @@ function attack(aimTarget = state.target) {
   let toolImpactX = aimTarget.x;
   let toolImpactY = aimTarget.y;
   let hadToolImpact = false;
+  let firstLaserImpact = null;
   const broken = [];
   const onBreak = (tile, tx, ty) => {
     broken.push({ tile, tx, ty });
@@ -6202,14 +6748,15 @@ function attack(aimTarget = state.target) {
   if (stats.laserUnlocked) {
     const relicBeam = state.relicSecondBeamRemaining > 0 ? 1 : 0;
     const beamCount = clamp(Math.floor(stats.laserBeams || 1) + relicBeam, 1, 6);
+    const splitOffsets = [0, -1, 1, -2, 2, -3];
+    const primaryTargetKey = `${aimTarget.tx}:${aimTarget.ty}`;
     for (let beamIndex = 0; beamIndex < beamCount; beamIndex += 1) {
-      const offsetIndex = beamIndex - (beamCount - 1) * 0.5;
-      const splitAngle = offsetIndex * 0.075;
+      const splitAngle = splitOffsets[beamIndex] * 0.13;
       const cos = Math.cos(splitAngle);
       const sin = Math.sin(splitAngle);
       const beamX = nx * cos - ny * sin;
       const beamY = nx * sin + ny * cos;
-      const centralBeam = beamIndex === Math.floor(beamCount / 2);
+      const centralBeam = beamIndex === 0;
       const splitPower = centralBeam ? 1 : 0.62;
       const beamDamage = damage * (stats.laserPower || 1) * (1 + (stats.laserPierce || 1) * 0.08) * splitPower
         + (centralBeam ? reservoirAvailable : 0);
@@ -6226,7 +6773,26 @@ function attack(aimTarget = state.target) {
         beamDamage,
         Math.min(LASER_CORE_WIDTH, stats.laserWidth),
         onBreak,
-        { damageMultiplier: laserTerrainDamageMultiplier },
+        {
+          damageMultiplier: laserTerrainDamageMultiplier,
+          onHit: centralBeam
+            ? (tile, tx, ty, appliedDamage) => {
+              if (firstLaserImpact) return;
+              firstLaserImpact = {
+                kind: 'terrain',
+                tile,
+                tx,
+                ty,
+                x: (tx + 0.5) * TILE_SIZE,
+                y: (ty + 0.5) * TILE_SIZE,
+                damage: appliedDamage,
+              };
+            }
+            : undefined,
+          // Splitter rays clear neighboring paths instead of secretly
+          // multiplying damage on the selected block.
+          excludedKeys: centralBeam ? undefined : new Set([primaryTargetKey]),
+        },
       );
       const beamDamageTaken = tileDamageAmount(aimTarget.tx, aimTarget.ty, beamHpBefore);
       if (beamDamageTaken > 0) {
@@ -6293,6 +6859,11 @@ function attack(aimTarget = state.target) {
     hadToolImpact = true;
     toolImpactX = aimTarget.x;
     toolImpactY = aimTarget.y;
+  }
+  else if (stats.laserUnlocked && firstLaserImpact) {
+    hadToolImpact = true;
+    toolImpactX = firstLaserImpact.x;
+    toolImpactY = firstLaserImpact.y;
   }
   if (hadToolImpact && state.openingSprintActive) {
     state.openingSprintActive = false;
@@ -6434,28 +7005,46 @@ function attack(aimTarget = state.target) {
     ) {
       triggerSuperPickEcho(aimTarget, cadenceDamage);
     }
-    if (
-      stats.solarDrillEnabled
-      && stats.solarDrillProcEvery > 0
-      && state.laserShotCount % stats.solarDrillProcEvery === 0
-    ) {
+  }
+
+  const directFinalSealImpact = Boolean(
+    aimingAtMainTarget
+    && mainTargetInLaserRange
+    && aimTarget.kind === 'final_seal'
+    && state.world.getTile(aimTarget.tx, aimTarget.ty)?.kind === 'final_seal'
+  );
+  const solarImpact = directFinalSealImpact
+    ? aimTarget
+    : firstLaserImpact || (aimReceivedPrimaryHit ? aimTarget : null);
+  if (
+    stats.laserUnlocked
+    && stats.solarDrillEnabled
+    && stats.solarDrillProcEvery > 0
+    && solarImpact
+  ) {
+    state.solarDrillShotCount += 1;
+    if (state.solarDrillShotCount % stats.solarDrillProcEvery === 0) {
       const duration = Math.max(0.12, stats.solarDrillBeamDuration || 0.7);
+      const cadenceDamage = Math.max(
+        Number(solarImpact.damage) || 0,
+        laserImpactDamage,
+        damage * (stats.laserPower || 1),
+      );
       state.solarDrillBursts.push({
         originX: player.x,
         originY: player.y,
-        x: aimTarget.x,
-        y: aimTarget.y,
-        tx: aimTarget.tx,
-        ty: aimTarget.ty,
-        finalSeal: aimTarget.kind === 'final_seal'
-          || state.world.getTile(aimTarget.tx, aimTarget.ty)?.kind === 'final_seal',
+        x: solarImpact.x,
+        y: solarImpact.y,
+        tx: solarImpact.tx,
+        ty: solarImpact.ty,
+        finalSeal: directFinalSealImpact,
         remaining: duration,
         maxDuration: duration,
         tick: 0,
         damage: cadenceDamage,
       });
       state.metrics.solarDrillBursts += 1;
-      state.floaters.push({ x: aimTarget.x, y: aimTarget.y - 52, text: 'СОЛНЕЧНЫЙ БУР', color: '#fff08a', life: 1, maxLife: 1 });
+      state.floaters.push({ x: solarImpact.x, y: solarImpact.y - 52, text: 'СОЛНЕЧНЫЙ БУР', color: '#fff08a', life: 1, maxLife: 1 });
       sound.tone(610, 0.18, 'sawtooth', 0.03, 280);
     }
   }
@@ -7149,7 +7738,7 @@ function findPriorityChestTarget() {
     senseTiles,
     { type: 'ancient_container' },
   ).find((event) => event.distanceTiles <= senseTiles) || null;
-  if (!chest) return null;
+  if (!chest || !targetRespectsDepthFloor(chest)) return null;
   return {
     kind: 'micro_event',
     eventId: chest.id,
@@ -7177,13 +7766,19 @@ function checkMicroEventsAt(x, y, fromBreak = false) {
 }
 
 function veinTravelSpeedMultiplier(target = state.target) {
-  if (!target || target.kind !== 'ore' || !state.world) return 1;
+  if (!target || !state.player) return 1;
+  const movingDeeper = target.y >= state.player.y + TILE_SIZE * 0.4;
+  let bonus = movingDeeper ? (stats.descentMoveSpeedBonus || 0) : 0;
+  if (movingDeeper && depthFromOrigin(state.player.x, state.player.y) < 100) {
+    bonus += stats.openingDescentMoveSpeedBonus || 0;
+  }
+  if (target.kind !== 'ore' || !state.world) return 1 + bonus;
   const tile = state.world.getTile(target.tx, target.ty);
   const veinId = tile?.veinId || null;
-  if (!veinId) return 1;
-  let bonus = 0;
-  if (veinId === state.lastBrokenVeinId) bonus += stats.veinTrailMoveSpeedBonus || 0;
-  if (stats.veinLockEnabled && veinId === state.lockedVeinId) bonus += stats.veinLockMoveSpeedBonus || 0;
+  if (!veinId) return 1 + bonus;
+  if (stats.veinTrailEnabled && veinId === state.lastBrokenVeinId) {
+    bonus += stats.veinTrailMoveSpeedBonus || 0;
+  }
   const focusedOre = getFocusedOre();
   if (focusedOre?.id === tile.oreId && veinId === state.lastBrokenVeinId) {
     bonus += Math.min(6, state.veinBreakStreak || 0) * (stats.focusMoveSpeedPerNode || 0);
@@ -7294,15 +7889,19 @@ function updateSolarDrillBursts(delta) {
       }
       const finalPower = Math.max(0, stats.solarDrillFinalBurstPower || 0);
       if (finalPower > 0) {
+        const finalRadius = TILE_SIZE * Math.max(
+          1.15,
+          stats.solarDrillFinalBurstRadiusTiles || 0,
+        );
         state.world.damageCircle(
           burst.x,
           burst.y,
-          TILE_SIZE * 1.15,
+          finalRadius,
           burst.damage * finalPower,
           (tile, tx, ty) => resolveBrokenTile(tile, tx, ty, 'solar'),
         );
-        state.shocks.push({ x: burst.x, y: burst.y, life: 0.5, maxLife: 0.5, tick: Infinity, radius: TILE_SIZE * 1.15, color: '#fff08a', kind: 'solar' });
-        spawnSparks(burst.x, burst.y, '#fff6a8', 16);
+        state.shocks.push({ x: burst.x, y: burst.y, life: 0.55, maxLife: 0.55, tick: Infinity, radius: finalRadius, color: '#fff08a', kind: 'solar' });
+        spawnSparks(burst.x, burst.y, '#fff6a8', 24);
       }
     } else {
       survivors.push(burst);
@@ -7323,6 +7922,8 @@ function completeFinalBreach() {
 
 function updateRun(delta, now = performance.now()) {
   if (state.paused || !state.player || !state.world) return;
+  const diagnosticStartX = state.player.x;
+  const diagnosticStartY = state.player.y;
   state.activeWallElapsed = Math.max(0, (now - state.runStartedAt) / 1000);
   if (state.activeWallElapsed >= getBonusRunCap()) {
     state.timeLeft = 0;
@@ -7404,6 +8005,8 @@ function updateRun(delta, now = performance.now()) {
     }
   }
 
+  state.deepest = Math.max(state.deepest, depthFromOrigin(state.player.x, state.player.y));
+  updateDescentCadence(delta);
   const focusedOre = getFocusedOre();
   if (state.target) {
     const current = state.world.getTile(state.target.tx, state.target.ty);
@@ -7455,7 +8058,7 @@ function updateRun(delta, now = performance.now()) {
       || (!microEventTarget && !finalSealTarget && current.kind === 'air')
       || (!microEventTarget && !finalSealTarget && current.kind === 'bedrock')
       || (!microEventTarget && !finalSealTarget && !explorationTarget && !current.oreId)
-      || (!microEventTarget && !finalSealTarget && !targetRespectsLiftFloor(state.target))
+      || (!microEventTarget && !finalSealTarget && !targetRespectsDepthFloor(state.target))
       || (!microEventTarget && !finalSealTarget && !explorationTarget && !state.target.motherlode && focusedOre && current.oreId !== focusedOre.id)
       || distance(state.player.x, state.player.y, state.target.x, state.target.y) > maxTargetDistance
     ) {
@@ -7488,8 +8091,11 @@ function updateRun(delta, now = performance.now()) {
     const priorityChest = findPriorityChestTarget();
     const priorityFinalSeal = priorityChest ? null : findFinalSealTarget();
     const priorityMotherlode = priorityChest || priorityFinalSeal ? null : findMotherlodePriorityTarget();
-    const incumbentOre = !priorityChest && !priorityFinalSeal && !priorityMotherlode
-      && targetRespectsLiftFloor(state.target)
+    const priorityDescent = priorityChest || priorityFinalSeal || priorityMotherlode
+      ? null
+      : findDescentCadenceTarget(state.player.x, state.player.y, focusedOre?.id || null);
+    const incumbentOre = !priorityChest && !priorityFinalSeal && !priorityMotherlode && !priorityDescent
+      && targetRespectsDepthFloor(state.target)
       && oreTargetIsValid(state.target, focusedOre?.id || null)
       ? state.target
       : null;
@@ -7499,10 +8105,12 @@ function updateRun(delta, now = performance.now()) {
         ? { primary: priorityFinalSeal, backup: null }
       : priorityMotherlode
         ? { primary: priorityMotherlode, backup: state.target?.kind === 'ore' && !state.target.motherlode ? state.target : state.backupTarget }
+        : priorityDescent
+          ? { primary: priorityDescent, backup: null }
         : incumbentOre
           ? {
             primary: incumbentOre,
-            backup: targetRespectsLiftFloor(state.backupTarget)
+            backup: targetRespectsDepthFloor(state.backupTarget)
               && oreTargetIsValid(state.backupTarget, focusedOre?.id || null)
               ? state.backupTarget
               : null,
@@ -7546,14 +8154,6 @@ function updateRun(delta, now = performance.now()) {
     state.triangleRefreshCooldown = 0.12;
   }
 
-  if (!state.target) {
-    state.metrics.searchingSeconds += delta;
-  } else {
-    const workRange = stats.laserUnlocked ? stats.laserRange * 0.78 : Math.max(stats.digReach, TILE_SIZE * 0.9);
-    if (distance(state.player.x, state.player.y, state.target.x, state.target.y) > workRange) state.metrics.movementSeconds += delta;
-    else state.metrics.miningSeconds += delta;
-  }
-
   if (state.target) {
     if (
       stats.leastResistancePathing
@@ -7564,18 +8164,28 @@ function updateRun(delta, now = performance.now()) {
       const focusedCalibration = focusedOre ? focusedDamageMultiplier(focusedOre.id) : 1;
       const route = state.world.findLeastResistanceStep(state.player, state.target, {
         moveSpeed: stats.moveSpeed * (stats.mineMoveMultiplier || 1),
-        digPowerPerSecond: stats.pickPower * stats.digSpeed,
+        digPowerPerSecond: stats.pickPower
+          * stats.digSpeed
+          * (depthFromOrigin(state.player.x, state.player.y) < 100
+            ? 1 + (stats.openingDepthPowerBonus || 0)
+            : 1),
         focusedOreId: focusedOre?.id || null,
         focusedOreDigMultiplier: focusedCalibration,
         maxDetourTiles: 9,
         minimumSavings: 0.08,
         waypointLookAhead: 4,
+        minimumTy: activeDepthFloorTy(),
       });
       state.pathWaypoint = route?.waypoint
         ? { ...route.waypoint, kind: 'route', usedDetour: route.usedDetour, savedSeconds: route.savedSeconds }
         : null;
       if (route?.usedDetour) state.metrics.pathDetours += 1;
       state.pathCooldown = 0.32;
+    }
+    const activeFloorTy = activeDepthFloorTy();
+    if (state.pathWaypoint && Number(state.pathWaypoint.ty) < activeFloorTy) {
+      state.pathWaypoint = null;
+      state.pathCooldown = 0;
     }
     if (state.pathWaypoint && distance(state.player.x, state.player.y, state.pathWaypoint.x, state.pathWaypoint.y) < TILE_SIZE * 0.45) {
       state.pathWaypoint = null;
@@ -7608,7 +8218,12 @@ function updateRun(delta, now = performance.now()) {
       * veinTravelSpeedMultiplier(state.target);
     const moveDistance = Math.min(targetDistance, desiredSpeed * delta);
     const nextX = clamp(state.player.x + nx * moveDistance, TILE_SIZE, WORLD_CONFIG.WIDTH * TILE_SIZE - TILE_SIZE);
-    const nextY = clamp(state.player.y + ny * moveDistance, TILE_SIZE, WORLD_CONFIG.HEIGHT * TILE_SIZE - TILE_SIZE);
+    const retreatFloorY = (activeFloorTy + 0.5) * TILE_SIZE;
+    const nextY = clamp(
+      Math.max(retreatFloorY, state.player.y + ny * moveDistance),
+      TILE_SIZE,
+      WORLD_CONFIG.HEIGHT * TILE_SIZE - TILE_SIZE,
+    );
     const perpendicularX = -ny;
     const perpendicularY = nx;
     const probeOffsets = [0, -MINER_COLLISION_RADIUS, MINER_COLLISION_RADIUS];
@@ -7673,6 +8288,17 @@ function updateRun(delta, now = performance.now()) {
     if (state.targetCooldown <= 0.03) state.ping = Math.max(state.ping, 0.35);
   }
 
+  if (!state.target) {
+    state.metrics.searchingSeconds += delta;
+  } else if (
+    distance(diagnosticStartX, diagnosticStartY, state.player.x, state.player.y)
+    > 0.05
+  ) {
+    state.metrics.movementSeconds += delta;
+  } else {
+    state.metrics.miningSeconds += delta;
+  }
+
   if (dronesAreActive() && state.droneCooldown <= 0) {
     droneAttack();
     const fieldSpeed = activeMagneticField() ? 1 + stats.magneticFieldTargetingBonus : 1;
@@ -7692,15 +8318,22 @@ function updateRun(delta, now = performance.now()) {
 function dronePosition(index, now = state.elapsed) {
   const count = Math.max(1, Math.floor(stats.droneCount));
   const angle = now * (1.2 + index * 0.07) + index / count * Math.PI * 2;
-  const radius = 35 + (index % 2) * 10;
+  const radius = 56 + (index % 2) * 14;
   return {
     x: state.player.x + Math.cos(angle) * radius,
-    y: state.player.y - 12 + Math.sin(angle * 1.2) * radius * 0.45,
+    y: state.player.y - 20 + Math.sin(angle * 1.2) * radius * 0.45,
   };
 }
 
 function droneAttack() {
   const count = Math.min(8, Math.max(0, Math.floor(stats.droneCount)));
+  const claimedKeys = new Set();
+  const playerTargetKey = state.target?.kind === 'ore'
+    ? `${state.target.tx}:${state.target.ty}`
+    : null;
+  const backupTargetKey = state.backupTarget?.kind === 'ore'
+    ? `${state.backupTarget.tx}:${state.backupTarget.ty}`
+    : null;
   for (let index = 0; index < count; index += 1) {
     const origin = dronePosition(index);
     const focusedOre = getFocusedOre();
@@ -7709,39 +8342,69 @@ function droneAttack() {
     const triangle = getTriangulationTriangle();
     const hasRememberedOre = [...state.triangleOreMemory.values()].some((expires) => expires >= state.elapsed);
     const fieldRangeMultiplier = activeMagneticField() ? 1 + stats.magneticFieldTargetingBonus : 1;
-    const baseRange = (effectiveSenseRadius() * 0.85 + Math.max(0, (stats.pickupRadius || 46) - 46) * 0.35)
+    const baseRange = (
+      effectiveSenseRadius() * 1.35
+      + TILE_SIZE
+      + Math.max(0, (stats.pickupRadius || 46) - 46) * 0.35
+    )
       * (focusedOre ? focusedSenseMultiplier(focusedOre) : 1)
       * (triangle ? 1 + stats.triangularFixRangeBonus : 1)
       * fieldRangeMultiplier;
-    const triangleTarget = (triangle || hasRememberedOre) && stats.triangularFixDronePriority
-      ? findBeaconAwareTarget(
+    const selectTarget = (excludedKeys) => {
+      const commonOptions = {
+        excludedKeys,
+        solidLayerLimit: 5,
+        respectLiftFloor: true,
+      };
+      const triangleTarget = (triangle || hasRememberedOre) && stats.triangularFixDronePriority
+        ? findBeaconAwareTarget(
+          origin.x,
+          origin.y,
+          baseRange,
+          focusedOre,
+          beacon,
+          {
+            ...commonOptions,
+            predicate: (candidate) => (
+              pointInTriangle(candidate.x, candidate.y, triangle)
+              || (state.triangleOreMemory.get(`${candidate.tx}:${candidate.ty}`) || 0) >= state.elapsed
+            ),
+          },
+        )
+        : null;
+      const magneticTarget = findMagneticFieldTarget(focusedOre, excludedKeys);
+      return magneticTarget || triangleTarget || findBeaconAwareTarget(
         origin.x,
         origin.y,
         baseRange,
         focusedOre,
         beacon,
-        {
-          predicate: (candidate) => (
-            pointInTriangle(candidate.x, candidate.y, triangle)
-            || (state.triangleOreMemory.get(`${candidate.tx}:${candidate.ty}`) || 0) >= state.elapsed
-          ),
-        },
-      )
-      : null;
-    const magneticTarget = findMagneticFieldTarget(focusedOre);
-    const target = magneticTarget || triangleTarget || findBeaconAwareTarget(
-      origin.x,
-      origin.y,
-      baseRange,
-      focusedOre,
-      beacon,
-    );
+        commonOptions,
+      );
+    };
+    const preferredExclusions = new Set(claimedKeys);
+    if (playerTargetKey) preferredExclusions.add(playerTargetKey);
+    if (backupTargetKey) preferredExclusions.add(backupTargetKey);
+    let target = selectTarget(preferredExclusions);
+    if (!target && playerTargetKey) target = selectTarget(claimedKeys);
+    if (!target && claimedKeys.size) target = selectTarget(new Set());
     if (!target) continue;
+    claimedKeys.add(`${target.tx}:${target.ty}`);
+    if (target.tile) {
+      target.tile.discovered = true;
+      target.tile.sensedUntil = Math.max(target.tile.sensedUntil || 0, state.elapsed + 0.9);
+    }
     const inTriangle = pointInTriangle(target.x, target.y, triangle);
     const gadgetBonus = inTriangle ? stats.triangularFixGadgetDamageBonus : 0;
-    if (triangleTarget || gadgetBonus > 0 || (triangle && stats.triangularFixRangeBonus > 0)) state.metrics.triangleBuffHits += 1;
-    const power = stats.pickPower * Math.max(0.2, stats.dronePower || 0.35) * (1 + gadgetBonus)
-      * magneticGadgetMultiplier(target.x, target.y);
+    if (inTriangle || gadgetBonus > 0 || (triangle && stats.triangularFixRangeBonus > 0)) state.metrics.triangleBuffHits += 1;
+    const targetOre = oreById.get(target.tile?.oreId);
+    const orePower = 1 + Math.max(0, stats.oreDamageBonus || 0) * 0.7;
+    const rarePower = 1 + (oreRank(targetOre) >= 4 ? Math.max(0, stats.rareOreDamageBonus || 0) * 0.7 : 0);
+    const power = stats.pickPower * Math.max(0.2, stats.dronePower || 0.75) * (1 + gadgetBonus)
+      * magneticGadgetMultiplier(target.x, target.y)
+      * hardnessPierceMultiplier(target.tile)
+      * orePower
+      * rarePower;
     const hpBefore = target.tile.hp || 0;
     const comboTarget = { ...target, veinId: target.tile?.veinId || null };
     const calibration = focusedDamageMultiplier(target.tile);
@@ -7761,7 +8424,30 @@ function droneAttack() {
       relayCrewOverkill(target, targetOreId, Math.max(0, power * calibration - hpBefore), [`${target.tx}:${target.ty}`]);
     }
     advanceDemolitionCombo('drone', comboTarget);
-    state.beams.push({ x: origin.x, y: origin.y, x2: target.x, y2: target.y, color: '#76dbff', life: 0.1, maxLife: 0.1, width: 2, kind: 'drone' });
+    const drillVisual = clamp(((stats.dronePower || 0.75) - 0.75) / 1.8, 0, 1);
+    const batteryVisual = clamp(((stats.droneLifetime || 0.75) - 0.75) / 0.25, 0, 1);
+    state.beams.push({
+      x: origin.x,
+      y: origin.y,
+      x2: target.x,
+      y2: target.y,
+      color: '#76dbff',
+      life: 0.2 + batteryVisual * 0.08,
+      maxLife: 0.2 + batteryVisual * 0.08,
+      width: 4 + drillVisual * 3,
+      kind: 'drone',
+    });
+    state.shocks.push({
+      x: target.x,
+      y: target.y,
+      life: 0.24,
+      maxLife: 0.24,
+      tick: Infinity,
+      radius: 12 + drillVisual * 8,
+      color: '#8deaff',
+      kind: 'drone-impact',
+    });
+    spawnSparks(target.x, target.y, '#8deaff', 3 + Math.round(drillVisual * 4));
     if ((stats.droneBombChance || 0) > 0 && Math.random() < procChance(stats.droneBombChance, 0.12)) {
       const dx = target.x - origin.x;
       const dy = target.y - origin.y;
@@ -8439,6 +9125,25 @@ function drawTerrainDepthTone(x, y, tx, ty, openMask) {
   ctx.globalAlpha = 1;
 }
 
+function drawFracturedStratumMark(x, y, tx, ty) {
+  const split = 10 + Math.floor(tileNoise(tx, ty, 175) * 5);
+  const leftY = 11 + Math.floor(tileNoise(tx, ty, 174) * 7);
+  const rightY = 11 + Math.floor(tileNoise(tx + 1, ty, 174) * 7);
+  const splitRatio = split / TILE_SIZE;
+  const splitY = leftY + (rightY - leftY) * splitRatio;
+  ctx.save();
+  ctx.globalAlpha = 0.24;
+  ctx.strokeStyle = ty % 3 === 0 ? '#a95c3d' : '#78939a';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(x, y + leftY);
+  ctx.lineTo(x + split - 2, y + splitY - 1);
+  ctx.moveTo(x + split + 2, y + splitY + 1);
+  ctx.lineTo(x + TILE_SIZE, y + rightY);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawTerrainEdgeLandmark(x, y, tx, ty, palette, openMask) {
   if (!openMask) return;
   const depth = terrainDepthFactor(tx, ty);
@@ -8940,6 +9645,7 @@ function drawTile({ tile, tx, ty, x, y }, now, phase = 'all', oreVisualStates = 
     drawTerrainBaseLayer(x, y, tx, ty, tile.kind, palette, baseIndex, openMask);
     drawTerrainDepthTone(x, y, tx, ty, openMask);
     drawTerrainEdgeLandmark(x, y, tx, ty, palette, openMask);
+    if (tile.fracturedStratum) drawFracturedStratumMark(x, y, tx, ty);
 
     if (tile.kind === 'final_seal') {
     const pulse = REDUCED_MOTION ? 0.72 : 0.62 + Math.sin(now * 0.004 + tx * 0.3) * 0.1;
@@ -10094,21 +10800,37 @@ function drawBeams() {
       ctx.moveTo(beam.x, beam.y);
       ctx.lineTo(beam.x2, beam.y2);
       ctx.stroke();
-    } else if (beam.kind === 'drone' || beam.kind === 'beacon') {
+    } else if (beam.kind === 'drone') {
+      ctx.globalAlpha = alpha * 0.9;
+      ctx.strokeStyle = beam.color;
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = Math.max(3, beam.width || 4);
+      ctx.beginPath();
+      ctx.moveTo(beam.x, beam.y);
+      ctx.lineTo(beam.x2, beam.y2);
+      ctx.stroke();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#efffff';
+      ctx.shadowBlur = 4;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.translate(beam.x2, beam.y2);
+      ctx.rotate(Math.atan2(dy, dx) + Math.PI * 0.25);
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#bff8ff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-4, -4, 8, 8);
+    } else if (beam.kind === 'beacon') {
       ctx.globalAlpha = alpha * 0.74;
       ctx.strokeStyle = beam.color;
       ctx.shadowBlur = 6;
-      ctx.lineWidth = beam.kind === 'beacon' ? 2 : 1.5;
-      ctx.setLineDash(beam.kind === 'beacon' ? [2, 5] : [4, 4]);
+      ctx.lineWidth = 2;
+      ctx.setLineDash([2, 5]);
       ctx.beginPath();
       ctx.moveTo(beam.x, beam.y);
       ctx.lineTo(beam.x2, beam.y2);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.translate(beam.x2, beam.y2);
-      ctx.rotate(Math.atan2(dy, dx) + Math.PI * 0.25);
-      ctx.globalAlpha = alpha * 0.9;
-      ctx.strokeRect(-3, -3, 6, 6);
     } else if (beam.kind === 'sense-sector') {
       ctx.globalAlpha = alpha * 0.78;
       ctx.strokeStyle = beam.color;
@@ -10246,24 +10968,72 @@ function drawBeams() {
 function drawDrones() {
   if (!dronesAreActive()) return;
   const count = Math.min(8, Math.max(0, Math.floor(stats.droneCount || 0)));
+  const batteryVisual = clamp(((stats.droneLifetime || 0.75) - 0.75) / 0.25, 0, 1);
+  const drillVisual = clamp(((stats.dronePower || 0.75) - 0.75) / 1.8, 0, 1);
   for (let index = 0; index < count; index += 1) {
     const point = dronePosition(index, state.elapsed);
     ctx.save();
     ctx.translate(point.x, point.y);
-    ctx.fillStyle = '#101c28';
-    ctx.strokeStyle = '#76dbff';
-    ctx.lineWidth = 2;
+    ctx.scale(1.2 + drillVisual * 0.08, 1.2 + drillVisual * 0.08);
+    const enginePulse = 0.72 + Math.sin(state.elapsed * 8 + index * 1.7) * 0.18;
+    if (batteryVisual > 0) {
+      const tailLength = 5 + batteryVisual * 10;
+      ctx.globalAlpha = 0.38 + batteryVisual * 0.34;
+      ctx.strokeStyle = '#76dbff';
+      ctx.lineWidth = 1.5 + batteryVisual * 1.5;
+      ctx.shadowColor = '#76dbff';
+      ctx.shadowBlur = 6 + batteryVisual * 7;
+      ctx.beginPath();
+      ctx.moveTo(-10, -2);
+      ctx.lineTo(-10 - tailLength * enginePulse, -4);
+      ctx.moveTo(-10, 3);
+      ctx.lineTo(-10 - tailLength * enginePulse, 5);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+    }
+    ctx.fillStyle = '#42251b';
+    ctx.strokeStyle = '#f08a43';
+    ctx.lineWidth = 2.4;
+    ctx.shadowColor = '#76dbff';
+    ctx.shadowBlur = 7 * enginePulse;
     ctx.beginPath();
-    ctx.moveTo(-8, 0);
-    ctx.lineTo(-3, -6);
-    ctx.lineTo(6, -4);
-    ctx.lineTo(8, 2);
-    ctx.lineTo(0, 6);
+    ctx.moveTo(-12, 1);
+    ctx.lineTo(-7, -8);
+    ctx.lineTo(7, -7);
+    ctx.lineTo(12, 1);
+    ctx.lineTo(7, 8);
+    ctx.lineTo(-7, 7);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#c45c2c';
+    ctx.fillRect(-7, -4, 8, 8);
     ctx.fillStyle = '#d8ffff';
-    ctx.fillRect(1, -2, 3, 3);
+    ctx.fillRect(3, -3, 5, 5);
+    if (drillVisual > 0) {
+      ctx.fillStyle = '#d8ffff';
+      ctx.strokeStyle = '#76dbff';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(11, -3 - drillVisual * 2);
+      ctx.lineTo(16 + drillVisual * 5, 1);
+      ctx.lineTo(11, 4 + drillVisual * 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.fillStyle = `rgba(118, 219, 255, ${enginePulse})`;
+    ctx.fillRect(-11, -2, 3, 5);
+    ctx.strokeStyle = '#9a4c2b';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-8, 7);
+    ctx.lineTo(-11, 11);
+    ctx.moveTo(8, 7);
+    ctx.lineTo(11, 11);
+    ctx.stroke();
     ctx.restore();
   }
 }
@@ -11183,6 +11953,7 @@ function resetAllProgress() {
     deafKnockCooldown: 0,
     deafKnockBoostRemaining: 0,
     laserShotCount: 0,
+    solarDrillShotCount: 0,
     triangleOreMemory: new Map(),
     activeMicroEvent: null,
     eventYieldBoostRemaining: 0,
@@ -11196,6 +11967,14 @@ function resetAllProgress() {
     stagedEventId: null,
     finalLayerBreached: false,
     finalBreachPending: false,
+    descentCadenceAnchorDepth: 0,
+    descentCadenceStallElapsed: 0,
+    descentCadenceGoalDepth: 0,
+    descentCadenceStartedAt: -1,
+    descentCadenceGraceRemaining: 0,
+    descentCadenceQueued: false,
+    descentCadenceQueuedAt: -1,
+    descentCadenceQueuedTargetKey: null,
   });
   if (ui.upgradeSearch) ui.upgradeSearch.value = '';
   $$('.filter-btn[data-category]').forEach((button) => {
@@ -11433,6 +12212,17 @@ window.__DEPTH_ZERO__ = {
     liftDepth: state.liftDepth,
     liftSupplyOreId: state.liftSupplyOreId,
     deepest: state.deepest,
+    descentCadence: {
+      active: descentCadenceIsActive(),
+      queued: state.descentCadenceQueued,
+      queuedTargetKey: state.descentCadenceQueuedTargetKey,
+      stalledFor: state.descentCadenceStallElapsed,
+      goalDepth: state.descentCadenceGoalDepth,
+      startedAt: state.descentCadenceStartedAt,
+      delay: descentCadenceStallDelay(),
+      pulseDuration: descentCadencePulseDuration(),
+      graceRemaining: state.descentCadenceGraceRemaining,
+    },
     upgrades: UPGRADE_DEFS.length,
     purchasedLevels: countPurchasedLevels(save.levels),
     campaign: getCampaignProgress(),
@@ -11457,6 +12247,7 @@ window.__DEPTH_ZERO__ = {
       nextAt: Number.isFinite(state.nextGlobalEventAt) ? state.nextGlobalEventAt : null,
     },
     laserShotCount: state.laserShotCount,
+    solarDrillShotCount: state.solarDrillShotCount,
     deepResonanceCooldownRemaining: state.deepResonanceCooldownRemaining,
     openingSprintActive: state.openingSprintActive,
     targetRelaySprintRemaining: state.targetRelaySprintRemaining,
@@ -11505,6 +12296,14 @@ window.__DEPTH_ZERO__ = {
     },
   }),
   getStats: () => ({ ...stats }),
+  debugGetLiftResupplyPreferences: (tierCap = ORE_TYPES.length - 1) => (
+    [...getLiftResupplyPreferences(tierCap)]
+  ),
+  debugSetSelectedUpgrade: (upgradeId = null) => {
+    if (upgradeId && !upgradeById.has(upgradeId)) return false;
+    state.selectedUpgradeId = upgradeId || null;
+    return true;
+  },
   debugGetMinerSpriteVariant: (overrides = {}) => ({
     ...getMinerSpriteVariant({
       ...stats,
@@ -11711,7 +12510,7 @@ window.__DEPTH_ZERO__ = {
     const tile = state.world.getTile(Math.floor(tx), Math.floor(ty));
     if (!tile) return null;
     const previousVeinId = tile.oreId && tile.veinId && tile.kind !== 'air' ? tile.veinId : null;
-    for (const key of ['kind', 'oreId', 'veinId', 'hp', 'maxHp', 'discovered', 'cracked']) {
+    for (const key of ['kind', 'oreId', 'veinId', 'hp', 'maxHp', 'discovered', 'cracked', 'liftSupply', 'frontierReserveOreId']) {
       if (Object.prototype.hasOwnProperty.call(patch, key)) tile[key] = patch[key];
     }
     const nextVeinId = tile.oreId && tile.veinId && tile.kind !== 'air' ? tile.veinId : null;
@@ -11801,6 +12600,11 @@ window.__DEPTH_ZERO__ = {
     const center = state.world.worldToTile(state.player.x, state.player.y);
     return explorationSearchMinTy(center.ty, scanRadius, Boolean(finalFallback));
   },
+  debugGetActiveDepthFloorTy: () => (
+    state.mode === 'run' && state.player && state.world
+      ? activeDepthFloorTy()
+      : null
+  ),
   debugGetHorizontalCameraBounds: (viewportWidth = state.viewport.width) => horizontalCameraBounds(
     WORLD_CONFIG.WIDTH * TILE_SIZE,
     viewportWidth / CAMERA_ZOOM,
@@ -11969,6 +12773,46 @@ window.__DEPTH_ZERO__ = {
     state.attackCooldown = Math.max(0, Number(seconds) || 0);
     return state.attackCooldown;
   },
+  debugSetDescentCadenceState: (patch = {}) => {
+    if (Object.hasOwn(patch, 'deepest')) state.deepest = Math.max(0, Number(patch.deepest) || 0);
+    if (Object.hasOwn(patch, 'anchorDepth')) {
+      state.descentCadenceAnchorDepth = Math.max(0, Number(patch.anchorDepth) || 0);
+    }
+    if (Object.hasOwn(patch, 'stallElapsed')) {
+      state.descentCadenceStallElapsed = Math.max(0, Number(patch.stallElapsed) || 0);
+    }
+    if (Object.hasOwn(patch, 'goalDepth')) {
+      state.descentCadenceGoalDepth = Math.max(0, Number(patch.goalDepth) || 0);
+    }
+    if (Object.hasOwn(patch, 'startedAt')) {
+      state.descentCadenceStartedAt = Number.isFinite(Number(patch.startedAt))
+        ? Number(patch.startedAt)
+        : -1;
+    }
+    if (Object.hasOwn(patch, 'graceRemaining')) {
+      state.descentCadenceGraceRemaining = Math.max(0, Number(patch.graceRemaining) || 0);
+    }
+    if (Object.hasOwn(patch, 'queued')) state.descentCadenceQueued = Boolean(patch.queued);
+    if (Object.hasOwn(patch, 'queuedAt')) {
+      state.descentCadenceQueuedAt = Number.isFinite(Number(patch.queuedAt))
+        ? Number(patch.queuedAt)
+        : -1;
+    }
+    if (Object.hasOwn(patch, 'queuedTargetKey')) {
+      state.descentCadenceQueuedTargetKey = patch.queuedTargetKey
+        ? String(patch.queuedTargetKey)
+        : null;
+    }
+    return window.__DEPTH_ZERO__.getSnapshot().descentCadence;
+  },
+  debugAdvanceDescentCadence: (seconds = 0) => {
+    const delta = Math.max(0, Number(seconds) || 0);
+    if (!state.paused) {
+      state.elapsed += delta;
+      updateDescentCadence(delta);
+    }
+    return window.__DEPTH_ZERO__.getSnapshot().descentCadence;
+  },
   debugResetProgress: () => {
     save = createDefaultSave();
     stats = normalizeStats(calculateMetaStats(save.levels));
@@ -11993,6 +12837,14 @@ window.__DEPTH_ZERO__ = {
       workshopBreakthroughRun: -1,
       workshopBreakthroughTokens: new Set(),
       metrics: createRunMetrics(),
+      descentCadenceAnchorDepth: 0,
+      descentCadenceStallElapsed: 0,
+      descentCadenceGoalDepth: 0,
+      descentCadenceStartedAt: -1,
+      descentCadenceGraceRemaining: 0,
+      descentCadenceQueued: false,
+      descentCadenceQueuedAt: -1,
+      descentCadenceQueuedTargetKey: null,
     });
     persistSave();
     return true;
@@ -12005,11 +12857,56 @@ window.__DEPTH_ZERO__ = {
       for (const definition of UPGRADE_DEFS) {
         if (categoryLevels[definition.category] != null) categoryLevels[definition.category] += getUpgradeLevel(definition);
       }
+      const pendingProgressTool = CAMPAIGN_PROGRESS_TOOLS
+        .map((id) => upgradeById.get(id))
+        .find((definition) => (
+          definition
+          && getUpgradeLevel(definition) < campaignAutobuyTargetLevel(definition)
+          && upgradeIsAvailable(definition)
+        ));
+      const pendingProgressToolRecipe = pendingProgressTool
+        ? getUpgradeRecipe(pendingProgressTool, getUpgradeLevel(pendingProgressTool))
+        : {};
+      const pendingStrategic = UPGRADE_DEFS.filter((definition) => {
+        const targetLevel = campaignAutobuyTargetLevel(definition);
+        return getUpgradeLevel(definition) < targetLevel
+          && upgradeIsPurchaseEligible(definition);
+      });
+      const reservedOreIds = new Set();
+      for (const definition of pendingStrategic) {
+        const level = getUpgradeLevel(definition);
+        const recipe = getUpgradeRecipe(definition, level);
+        for (const oreId of Object.keys(recipe)) reservedOreIds.add(oreId);
+      }
+      const lastFirstRankSlot = workshopInstallStatus().remaining === 1;
       const candidates = UPGRADE_DEFS
         .filter((definition) => {
           const level = getUpgradeLevel(definition);
           if (level >= definition.maxLevel || !upgradeIsPurchaseEligible(definition)) return false;
-          return canAffordRecipe(save.inventory, getUpgradeRecipe(definition, level));
+          const recipe = getUpgradeRecipe(definition, level);
+          if (!canAffordRecipe(save.inventory, recipe)) return false;
+          if (
+            pendingProgressTool
+            && definition.id !== pendingProgressTool.id
+            && Object.entries(pendingProgressToolRecipe).some(([oreId, reservedAmount]) => (
+              (recipe[oreId] || 0) > Math.max(
+                0,
+                (save.inventory[oreId] || 0) - reservedAmount,
+              )
+            ))
+          ) return false;
+          const strategicTarget = campaignAutobuyTargetLevel(definition);
+          const isPendingStrategic = level < strategicTarget;
+          const reservesFinalMechanicSlot = lastFirstRankSlot
+            && level === 0
+            && BREAKTHROUGH_FIRST_RANK_IDS.has(definition.id)
+            && !CAMPAIGN.capstones.includes(definition.id);
+          if (
+            !isPendingStrategic
+            && !reservesFinalMechanicSlot
+            && Object.keys(recipe).some((oreId) => reservedOreIds.has(oreId))
+          ) return false;
+          return true;
         })
         .map((definition) => {
           const level = getUpgradeLevel(definition);
@@ -12019,9 +12916,12 @@ window.__DEPTH_ZERO__ = {
           ), 0);
           const depth = getUpgradeLayout().depthById.get(definition.id) || 0;
           const categoryLoad = categoryLevels[definition.category] || 0;
-          const strategicTarget = CAMPAIGN_AUTOBUY_TARGETS[definition.id] || 0;
+          const strategicTarget = campaignAutobuyTargetLevel(definition);
           const strategicWeight = level < strategicTarget
-            ? (CAMPAIGN_AUTOBUY_WEIGHTS[definition.id] || 1)
+            ? (
+              CAMPAIGN_AUTOBUY_WEIGHTS[definition.id]
+              || (CAMPAIGN_FINAL_PATH_TARGETS.has(definition.id) ? 0.14 : 1)
+            )
             : 1;
           const corePriority = definition.id === 'core_first_descent' ? -1_000_000 : 0;
           const finalPriority = definition.id === CAMPAIGN.finalUpgrade ? -100_000 : 0;
@@ -12040,11 +12940,8 @@ window.__DEPTH_ZERO__ = {
           || UPGRADE_DEFS.indexOf(left.definition) - UPGRADE_DEFS.indexOf(right.definition)
         ));
       let candidate = candidates[0];
-      const lastFirstRankSlot = workshopInstallStatus().remaining === 1;
       const originalIsReplaceableScalar = candidate
-        && candidate.level === 0
         && !candidate.breakthrough
-        && !candidate.strategic
         && !candidate.final;
       if (lastFirstRankSlot && originalIsReplaceableScalar) {
         const breakthroughCandidate = candidates.find((entry) => (
@@ -12066,7 +12963,14 @@ window.__DEPTH_ZERO__ = {
       save.focusedOreId = null;
     } else {
       const deficits = createOreBag();
-      for (const definition of UPGRADE_DEFS) {
+      const pendingStrategic = UPGRADE_DEFS.filter((definition) => (
+        getUpgradeLevel(definition) < campaignAutobuyTargetLevel(definition)
+        && requirementsMet(definition)
+      ));
+      const focusCandidates = pendingStrategic.length
+        ? pendingStrategic
+        : UPGRADE_DEFS;
+      for (const definition of focusCandidates) {
         const level = getUpgradeLevel(definition);
         if (level >= definition.maxLevel || !requirementsMet(definition)) continue;
         const recipe = getUpgradeRecipe(definition, level);
@@ -12076,7 +12980,10 @@ window.__DEPTH_ZERO__ = {
       }
       const focus = ORE_TYPES
         .filter((ore) => deficits[ore.id] > 0 && (save.lifetimeOres[ore.id] || 0) > 0)
-        .sort((left, right) => deficits[right.id] * right.value - deficits[left.id] * left.value)[0];
+        .sort((left, right) => (
+          deficits[right.id] * (right.value || 1) - deficits[left.id] * (left.value || 1)
+          || right.tier - left.tier
+        ))[0];
       save.focusedOreId = focus?.id || null;
     }
     persistSave();

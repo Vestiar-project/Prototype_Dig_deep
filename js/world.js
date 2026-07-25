@@ -4,13 +4,13 @@
 const WORLD_CONFIG = Object.freeze({
   TILE_SIZE: 28,
   WIDTH: 88,
-  HEIGHT: 180,
+  HEIGHT: 420,
   METERS_PER_TILE: 5,
   SURFACE_BASE: 9,
   SURFACE_VARIANCE: 4,
   SPAWN_TX: 44,
   BEDROCK_ROWS: 2,
-  CAVE_COUNT: 32,
+  CAVE_COUNT: 79,
 });
 
 const REFERENCE_WORLD_WIDTH = 240;
@@ -18,16 +18,26 @@ const REFERENCE_WORLD_HEIGHT = 90;
 // Strict T5+ depth gates trim a few edge cells from veins that touch a tier
 // boundary. Scale the authored budget by total field area so narrowing the
 // shaft changes its silhouette, not the density or size of individual veins.
-const DEPTH_GATED_VEIN_COMPENSATION = 1.05;
+// Keep the established total ore density after removing the old lift donor
+// overcount. The same small budget is now spread through authored depth bands
+// instead of being concentrated in dozens of extra surface-copper cells.
+const DEPTH_GATED_VEIN_COMPENSATION = 1.13;
 const WORLD_DENSITY_SCALE = (
   WORLD_CONFIG.WIDTH * WORLD_CONFIG.HEIGHT
   / (REFERENCE_WORLD_WIDTH * REFERENCE_WORLD_HEIGHT)
 ) * DEPTH_GATED_VEIN_COMPENSATION;
-const FRONTIER_RESERVE_ORE_IDS = new Set(["amber", "gold"]);
-const FRONTIER_RESERVE_HALF_WIDTH = 10;
-const FRONTIER_RESERVE_DEPTH_ROWS = 12;
-const LIFT_REDISTRIBUTION_MIN_VEIN_SIZE = 6;
-const LIFT_REDISTRIBUTION_MAX_VEIN_SIZE = 9;
+const FRONTIER_RESERVE_ORE_IDS = new Set([
+  "iron",
+  "amber",
+  "silver",
+  "gold",
+  "amethyst",
+  "prism_crystal",
+  "void_ore",
+  "star_core",
+]);
+const FRONTIER_RESERVE_HALF_WIDTH = 6;
+const FRONTIER_RESERVE_DEPTH_ROWS = 6;
 const CARDINAL_DIRECTIONS = Object.freeze([
   Object.freeze([1, 0]),
   Object.freeze([-1, 0]),
@@ -42,6 +52,86 @@ const FINAL_SEAL_HITS = 3;
 const FINAL_LAYER_TY = WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 1;
 const DEFAULT_SECTOR_ID = "stable_strata";
 const RANDOM_SECTOR_ID = "random_strata";
+const ROCK_STRATA_TRANSITION_METERS = 20;
+const ROCK_STRATA = Object.freeze([
+  Object.freeze({ depth: 0, floorHp: 0 }),
+  Object.freeze({ depth: 120, floorHp: 12 }),
+  Object.freeze({ depth: 180, floorHp: 17 }),
+  Object.freeze({ depth: 240, floorHp: 22 }),
+  Object.freeze({ depth: 300, floorHp: 32 }),
+  Object.freeze({ depth: 360, floorHp: 42 }),
+  Object.freeze({ depth: 420, floorHp: 66 }),
+  Object.freeze({ depth: 480, floorHp: 90 }),
+  Object.freeze({ depth: 540, floorHp: 140 }),
+  Object.freeze({ depth: 600, floorHp: 215 }),
+  Object.freeze({ depth: 630, floorHp: 250 }),
+  Object.freeze({ depth: 660, floorHp: 300 }),
+  Object.freeze({ depth: 690, floorHp: 365 }),
+  Object.freeze({ depth: 720, floorHp: 430 }),
+  Object.freeze({ depth: 750, floorHp: 515 }),
+  Object.freeze({ depth: 780, floorHp: 600 }),
+  Object.freeze({ depth: 810, floorHp: 690 }),
+  Object.freeze({ depth: 840, floorHp: 780 }),
+  Object.freeze({ depth: 870, floorHp: 865 }),
+  Object.freeze({ depth: 900, floorHp: 950 }),
+  Object.freeze({ depth: 960, floorHp: 1150 }),
+  Object.freeze({ depth: 1020, floorHp: 1400 }),
+  Object.freeze({ depth: 1080, floorHp: 1700 }),
+    Object.freeze({ depth: 1140, floorHp: 2050 }),
+    Object.freeze({ depth: 1200, floorHp: 2450 }),
+    Object.freeze({ depth: 1240, floorHp: 2850 }),
+    Object.freeze({ depth: 1260, floorHp: 3075 }),
+    Object.freeze({ depth: 1280, floorHp: 3300 }),
+    Object.freeze({ depth: 1300, floorHp: 3550 }),
+    Object.freeze({ depth: 1320, floorHp: 3800 }),
+  Object.freeze({ depth: 1360, floorHp: 4350 }),
+  Object.freeze({ depth: 1400, floorHp: 4950 }),
+  Object.freeze({ depth: 1440, floorHp: 5600 }),
+  Object.freeze({ depth: 1480, floorHp: 6300 }),
+  Object.freeze({ depth: 1520, floorHp: 7100 }),
+  Object.freeze({ depth: 1560, floorHp: 7950 }),
+  Object.freeze({ depth: 1600, floorHp: 8850 }),
+  Object.freeze({ depth: 1640, floorHp: 9850 }),
+  Object.freeze({ depth: 1680, floorHp: 10900 }),
+  Object.freeze({ depth: 1720, floorHp: 12000 }),
+  Object.freeze({ depth: 1750, floorHp: 13200 }),
+  Object.freeze({ depth: 1800, floorHp: 13800 }),
+  Object.freeze({ depth: 1840, floorHp: 14400 }),
+  Object.freeze({ depth: 1880, floorHp: 15000 }),
+  Object.freeze({ depth: 1920, floorHp: 15600 }),
+  Object.freeze({ depth: 1960, floorHp: 16200 }),
+  Object.freeze({ depth: 2000, floorHp: 16800 }),
+]);
+const ORE_FULL_HARDNESS_TERRAIN_HP = 180;
+const ORE_DEEP_HARDNESS_BLEND = 0.12;
+const PRESSURE_RIDGE_MIN_DEPTH_METERS = 630;
+const PRESSURE_RIDGE_MAX_DEPTH_METERS = 900;
+const PRESSURE_RIDGE_FLOOR_MULTIPLIER = 3.5;
+const PRESSURE_RIDGE_AREA_EXPONENT = 0.7;
+const PRESSURE_RIDGE_AREA_FLOOR = 0.35;
+const FRACTURED_STRATA_MID_MIN_DEPTH_METERS = 360;
+const FRACTURED_STRATA_MID_MAX_DEPTH_METERS = 600;
+const FRACTURED_STRATA_DEEP_MIN_DEPTH_METERS = 960;
+const FRACTURED_STRATA_MAX_DEPTH_METERS = 2000;
+const FRACTURED_STRATA_OFFSET_METERS = 15;
+const FRACTURED_STRATA_SOLID_PERIOD = 13;
+const FRACTURED_STRATA_OPEN_WIDTH = 4;
+const FRACTURED_STRATA_GUARANTEED_FRACTURES = 2;
+const ROCK_FORMATION_MULTIPLIER_ANCHORS = Object.freeze([
+  Object.freeze({ depth: 540, multiplier: 1 }),
+  Object.freeze({ depth: 630, multiplier: 1.2 }),
+  Object.freeze({ depth: 900, multiplier: 1.35 }),
+  Object.freeze({ depth: 1050, multiplier: 2.35 }),
+  Object.freeze({ depth: 1350, multiplier: 2.9 }),
+  Object.freeze({ depth: 1650, multiplier: 3.15 }),
+  Object.freeze({ depth: 2000, multiplier: 3.25 }),
+]);
+// Fractured ribs keep lucky caves from collapsing the 300-600 m act. Ten
+// one-row seams in the 630-900 m transition then form the super-pick checks.
+// Deep strata return to the smooth ordinary-rock curve and preserve only
+// fractured ribs with guaranteed gaps, so the laser act stays gradual without
+// adding more full-width walls.
+const PRESSURE_RIDGE_THICKNESS_METERS = WORLD_CONFIG.METERS_PER_TILE;
 
 /**
  * Legacy named profiles remain available to deterministic diagnostics. Normal
@@ -179,6 +269,114 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function rockStrataFloorHp(depthMeters) {
+  const depth = Math.max(0, asFinite(depthMeters, 0));
+  let previous = ROCK_STRATA[0];
+  for (let index = 1; index < ROCK_STRATA.length; index += 1) {
+    const layer = ROCK_STRATA[index];
+    if (depth < layer.depth) return previous.floorHp;
+    const transition = clamp(
+      (depth - layer.depth) / ROCK_STRATA_TRANSITION_METERS,
+      0,
+      1,
+    );
+    const eased = transition * transition * (3 - 2 * transition);
+    const floor = previous.floorHp + (layer.floorHp - previous.floorHp) * eased;
+    if (transition < 1) return floor;
+    previous = layer;
+  }
+  return previous.floorHp;
+}
+
+function rockFormationMultiplier(depthMeters) {
+  const depth = Math.max(0, asFinite(depthMeters, 0));
+  let previous = ROCK_FORMATION_MULTIPLIER_ANCHORS[0];
+  if (depth <= previous.depth) return previous.multiplier;
+  for (let index = 1; index < ROCK_FORMATION_MULTIPLIER_ANCHORS.length; index += 1) {
+    const anchor = ROCK_FORMATION_MULTIPLIER_ANCHORS[index];
+    if (depth > anchor.depth) {
+      previous = anchor;
+      continue;
+    }
+    const span = Math.max(1, anchor.depth - previous.depth);
+    const progress = clamp((depth - previous.depth) / span, 0, 1);
+    const eased = progress * progress * (3 - 2 * progress);
+    return previous.multiplier
+      + (anchor.multiplier - previous.multiplier) * eased;
+  }
+  return previous.multiplier;
+}
+
+function oreDurabilityForTerrain(terrainHp, hardness = 1, density = 1) {
+  const baseTerrainHp = Math.max(1, asFinite(terrainHp, 1));
+  const hardnessMultiplier = Math.max(1, asFinite(hardness, 1));
+  const densityMultiplier = clamp(asFinite(density, 1), 0.4, 4);
+  const fullHardnessHp = Math.min(baseTerrainHp, ORE_FULL_HARDNESS_TERRAIN_HP);
+  const deepTerrainHp = Math.max(0, baseTerrainHp - fullHardnessHp);
+  const deepHardnessMultiplier = 1
+    + (hardnessMultiplier - 1) * ORE_DEEP_HARDNESS_BLEND;
+  const oreHp = (
+    fullHardnessHp * hardnessMultiplier
+    + deepTerrainHp * deepHardnessMultiplier
+  ) * densityMultiplier;
+  return Math.max(baseTerrainHp, oreHp);
+}
+
+function isPressureRidgeDepth(depthMeters) {
+  const depth = Math.max(0, asFinite(depthMeters, 0));
+  return ROCK_STRATA.some((layer) => (
+    layer.depth >= PRESSURE_RIDGE_MIN_DEPTH_METERS
+    && layer.depth <= PRESSURE_RIDGE_MAX_DEPTH_METERS
+    && depth >= layer.depth
+    && depth < layer.depth + PRESSURE_RIDGE_THICKNESS_METERS
+  ));
+}
+
+function fracturedStratumAtDepth(depthMeters) {
+  const depth = Math.max(0, asFinite(depthMeters, 0));
+  return ROCK_STRATA.find((layer) => (
+    isFracturedStratumLayerDepth(layer.depth)
+    && depth >= layer.depth + FRACTURED_STRATA_OFFSET_METERS
+    && depth < layer.depth + FRACTURED_STRATA_OFFSET_METERS + WORLD_CONFIG.METERS_PER_TILE
+  )) || null;
+}
+
+function isFracturedStratumLayerDepth(depthMeters) {
+  const depth = Math.max(0, asFinite(depthMeters, 0));
+  return (
+    (
+      depth >= FRACTURED_STRATA_MID_MIN_DEPTH_METERS
+      && depth <= FRACTURED_STRATA_MID_MAX_DEPTH_METERS
+    )
+    || (
+      depth >= FRACTURED_STRATA_DEEP_MIN_DEPTH_METERS
+      && depth <= FRACTURED_STRATA_MAX_DEPTH_METERS
+    )
+  );
+}
+
+function pressureRidgeFloorHp(depthMeters) {
+  const depth = Math.max(0, asFinite(depthMeters, 0));
+  if (
+    depth < PRESSURE_RIDGE_MIN_DEPTH_METERS
+    || depth > PRESSURE_RIDGE_MAX_DEPTH_METERS
+    || !isPressureRidgeDepth(depth)
+  ) return 0;
+  const layer = ROCK_STRATA.find((candidate) => (
+    candidate.depth >= PRESSURE_RIDGE_MIN_DEPTH_METERS
+    && candidate.depth <= PRESSURE_RIDGE_MAX_DEPTH_METERS
+    && depth >= candidate.depth
+    && depth < candidate.depth + PRESSURE_RIDGE_THICKNESS_METERS
+  ));
+  return layer ? layer.floorHp * PRESSURE_RIDGE_FLOOR_MULTIPLIER : 0;
+}
+
+function pressureRidgeAreaDamageMultiplier(candidateCount) {
+  const count = Math.max(0, Math.floor(asFinite(candidateCount, 0)));
+  if (count <= 1) return 1;
+  return Math.max(PRESSURE_RIDGE_AREA_FLOOR, count ** -PRESSURE_RIDGE_AREA_EXPONENT);
+}
+
 function asFinite(value, fallback) {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
@@ -233,6 +431,8 @@ function createTile(kind, maxHp, discovered = false) {
     veinId: null,
     discovered,
     cracked: 0,
+    pressureRidge: false,
+    fracturedStratum: false,
   };
 }
 
@@ -411,12 +611,13 @@ class MineWorld {
     this.tiles = [];
     this.surface = [];
     this._oreDefinitions = [];
+    this._oreBandAllocationNormalizer = 1;
     this._oreCompositionNormalizer = 1;
     this._oreRankByTile = new Int16Array(0);
     this._spawn = { x: 0, y: 0, tx: 0, ty: 0 };
     this._liftStations = [];
     this._liftTargetKeys = new Set();
-    this._liftCompensationCells = [];
+    this._liftReservedKeys = new Set();
     this._liftSupplyDonorConsumed = false;
     this._nextVeinId = 1;
     this._oreColumnsByRow = [];
@@ -459,31 +660,57 @@ class MineWorld {
     this._sector = geology;
     this.sector = publicSector(geology);
     this._rng = new SeededRandom(this.seed);
+    this._fracturedStrataPhaseByDepth = new Map(
+      ROCK_STRATA
+        .filter(({ depth }) => isFracturedStratumLayerDepth(depth))
+        .map(({ depth }) => [
+          depth,
+          hashSeed(`${this.seed}:fractured-stratum:${depth}`)
+            % FRACTURED_STRATA_SOLID_PERIOD,
+        ]),
+    );
     this.surface = this._generateSurface();
     this._spawn = this._makeSpawn();
     this.tiles = this._generateBaseTiles();
     this._oreRankByTile = new Int16Array(WORLD_CONFIG.WIDTH * WORLD_CONFIG.HEIGHT);
     this._oreRankByTile.fill(-1);
     this._oreDefinitions = this._normalizeOreTypes();
+    this._oreBandAllocationNormalizer = this._calculateOreBandAllocationNormalizer();
     this._oreCompositionNormalizer = this._calculateOreCompositionNormalizer();
     this._nextVeinId = 1;
     this._oreColumnsByRow = [];
     this._oreIndexReady = false;
     this._liftTargetKeys = new Set();
-    this._liftCompensationCells = [];
+    this._liftReservedKeys = new Set();
     this._liftSupplyDonorConsumed = false;
     this._undergroundEvents = [];
     this._undergroundEventById = new Map();
 
     this._carveCaves();
     this._carveSpawnChamber();
-    this._generateOreVeins();
     this._prepareLiftStations();
+    this._carveFormationFractures();
+    // Lay ore after the authored lift chambers. Otherwise a station can erase
+    // the guaranteed first vein of a newly reached tier and reintroduce the
+    // exact resource drought the reserve is meant to prevent.
+    this._generateOreVeins();
     this._placeStarterOre();
     this._generateUndergroundEvents();
+    // Generate the ordinary geology first so the planetary seal cannot shift
+    // the seeded origin sequence for every deep vein. Only the rare complete
+    // veins that actually touch the seal row are moved, with their exact node
+    // budget and the RNG state preserved, before the row becomes immutable.
+    this._relocateFinalSealVeins();
     this._installFinalSeal();
     this._repairDisconnectedVeins();
-    this._compensateLiftTargetsWithCopper();
+    // A rare cavern repair may rebuild the frontier vein in another free
+    // pocket and, in doing so, clear its reserve tag. Revalidate every gated
+    // tier after repairs: _ensureFrontierReserveVein relocates one existing
+    // same-size vein, so this restores the lift-frontier guarantee without
+    // adding a single ore node or changing authored density.
+    for (const definition of this._oreDefinitions) {
+      this._ensureFrontierReserveVein(definition);
+    }
     this._rebuildOreIndex();
     this._revealAround(this._spawn.tx, this._spawn.ty, 6);
     return this;
@@ -541,13 +768,8 @@ class MineWorld {
   }
 
   getAvailableOreIdsAt(tx, ty) {
-    const progress = this._difficultyAt(tx, ty);
     return this._oreDefinitions
-      .filter((definition) => (
-        definition.minProgress <= progress + 0.025
-        && definition.maxProgress + 0.025 >= progress
-        && this._canOreAppearAt(tx, ty, definition)
-      ))
+      .filter((definition) => this._oreProgressAllowsAt(tx, ty, definition, 0.025, 0.025))
       .sort((left, right) => left.rank - right.rank)
       .map((definition) => definition.id);
   }
@@ -752,7 +974,9 @@ class MineWorld {
   }
 
   /**
-   * Read-only shaft-lift selector. Depth values use the same metre units as
+   * Shaft-lift selector. It opens only the chosen landing chamber; inactive
+   * stations remain solid rock and cannot form a free tunnel through strata.
+   * Depth values use the same metre units as
    * the game's saved bestDepth. Either call with positional arguments:
    *   getLiftStart(bestDepth, fraction, unlockedDepthCap, options)
    * or one options object containing bestDepth, fraction, unlockedDepthCap and
@@ -824,6 +1048,7 @@ class MineWorld {
       };
     }
 
+    const activeTarget = this._activateLiftStation(selected);
     return {
       x: selected.x,
       y: selected.y,
@@ -837,15 +1062,15 @@ class MineWorld {
       requestedDepth,
       clampedDepth,
       requiredTier: selected.requiredTier,
-      target: selected.target ? { ...selected.target } : null,
+      target: activeTarget ? { ...activeTarget } : null,
     };
   }
 
   /**
-   * Moves one edge cell from the redistributed copper budget onto the selected
-   * landing and retunes it to a phase-appropriate ore requested by the meta
-   * economy. Unused stations remain ordinary rock, and total ore density stays
-   * unchanged.
+   * Moves one leaf cell from an existing natural opening-tier vein onto the
+   * selected landing and retunes it to a phase-appropriate ore requested by
+   * the meta economy. Unused stations remain ordinary rock, and total ore
+   * density stays unchanged.
    */
   retuneLiftTarget(lift, preferredOreIds = []) {
     if (!lift || lift.isSurfaceSpawn || lift.source !== "shaft-lift" || !lift.target) return null;
@@ -876,7 +1101,11 @@ class MineWorld {
     const allowed = this._oreDefinitions
       .filter((definition) => {
         const tier = Math.max(0, Math.floor(numericField(definition.source, ["tier"], 0)));
-        return tier <= tierCap && this._canOreAppearAt(tx, ty, definition);
+        // The one landing sample is the deliberate exception to natural ore
+        // bands: it can resupply an older shortage without sending the miner
+        // back hundreds of metres upward. The station's tier cap still blocks
+        // ores that have not been reached naturally yet.
+        return tier <= tierCap;
       })
       .sort((left, right) => left.rank - right.rank);
     if (!allowed.length) return null;
@@ -898,7 +1127,7 @@ class MineWorld {
       definition = pool[hashSeed(`${this.seed}:lift-supply:${tx}:${ty}`) % pool.length];
     }
 
-    const donor = this._findLiftCompensationDonor();
+    const donor = this._findLiftSupplyDonor();
     if (!donor) return null;
     if (!this._applyOre(tx, ty, definition, `lift-supply:${tx}:${ty}:${definition.id}`)) return null;
     // Changing copper into a denser material must not undo the deliberately
@@ -916,7 +1145,6 @@ class MineWorld {
       tile.pendingLiftSupply = true;
       return null;
     }
-    donor.consumed = true;
     this._liftSupplyDonorConsumed = true;
     const tier = Math.max(0, Math.floor(numericField(definition.source, ["tier"], 0)));
     return {
@@ -958,6 +1186,11 @@ class MineWorld {
       maxExpandedNodes: clamp(Math.floor(asFinite(options.maxExpandedNodes, 6000)), 128, 20_000),
       minimumSavings: Math.max(0, asFinite(options.minimumSavings, 0.02)),
       waypointLookAhead: clamp(Math.floor(asFinite(options.waypointLookAhead, 5)), 1, 10),
+      minimumTy: clamp(
+        Math.floor(asFinite(options.minimumTy, 0)),
+        0,
+        WORLD_CONFIG.HEIGHT - 1,
+      ),
     };
     const directCost = this._routeCost(directRoute, routeOptions);
     const detourResult = routeOptions.maxDetourTiles > 0
@@ -1115,7 +1348,14 @@ class MineWorld {
     const margin = options.maxDetourTiles;
     const minTx = clamp(Math.min(start.tx, goal.tx) - margin, 0, WORLD_CONFIG.WIDTH - 1);
     const maxTx = clamp(Math.max(start.tx, goal.tx) + margin, 0, WORLD_CONFIG.WIDTH - 1);
-    const minTy = clamp(Math.min(start.ty, goal.ty) - margin, 0, WORLD_CONFIG.HEIGHT - 1);
+    // If the caller has already crossed its retreat frontier, allow the
+    // current tile as a starting point but never search a route even higher.
+    const routeFloorTy = Math.min(start.ty, options.minimumTy);
+    const minTy = clamp(
+      Math.max(Math.min(start.ty, goal.ty) - margin, routeFloorTy),
+      0,
+      WORLD_CONFIG.HEIGHT - 1,
+    );
     const maxTy = clamp(Math.max(start.ty, goal.ty) + margin, 0, WORLD_CONFIG.HEIGHT - 1);
     const neighborOffsets = [
       [1, 0],
@@ -1402,7 +1642,14 @@ class MineWorld {
     }
 
     candidates.sort((a, b) => a.order - b.order || a.ty - b.ty || a.tx - b.tx);
-    return this._damageCandidates(candidates, amount, onBreak);
+    const ridgeCandidateCount = candidates.reduce((
+      count,
+      candidate,
+    ) => count + (this.getTile(candidate.tx, candidate.ty)?.pressureRidge ? 1 : 0), 0);
+    const ridgeMultiplier = pressureRidgeAreaDamageMultiplier(ridgeCandidateCount);
+    return this._damageCandidates(candidates, amount, onBreak, {
+      damageMultiplier: (tile) => (tile.pressureRidge ? ridgeMultiplier : 1),
+    });
   }
 
   damageTile(tx, ty, damage, onBreak) {
@@ -1744,6 +1991,24 @@ class MineWorld {
     };
   }
 
+  _shouldPreserveFracturedStratumCell(tx, ty) {
+    const surfaceY = this.surface[clamp(Math.floor(tx), 0, WORLD_CONFIG.WIDTH - 1)]
+      ?? WORLD_CONFIG.SURFACE_BASE;
+    const depthMeters = Math.max(0, Math.floor(ty) - surfaceY)
+      * WORLD_CONFIG.METERS_PER_TILE;
+    const layer = fracturedStratumAtDepth(depthMeters);
+    if (!layer) return false;
+    const offset = this._fracturedStrataPhaseByDepth?.get(layer.depth) || 0;
+    const phase = (
+      Math.floor(tx) - offset + FRACTURED_STRATA_SOLID_PERIOD
+    ) % FRACTURED_STRATA_SOLID_PERIOD;
+    // Four adjacent fracture columns per thirteen prevent a preserved layer
+    // from becoming another full-width wall. The other nine columns retain
+    // enough authored rock that a lucky vertical cave cannot skip an entire
+    // late-game act.
+    return phase >= FRACTURED_STRATA_OPEN_WIDTH;
+  }
+
   _generateBaseTiles() {
     const tiles = new Array(WORLD_CONFIG.WIDTH * WORLD_CONFIG.HEIGHT);
     const seedPhase = hashSeed(this.seed) / UINT32_RANGE * Math.PI * 2;
@@ -1769,34 +2034,41 @@ class MineWorld {
 
           if (depth <= 2) {
             kind = "loam";
-            baseHp = 1.5;
+            baseHp = 1.25;
           } else if (depth <= earthBoundary) {
             kind = "dirt";
-            baseHp = 3.5;
+            baseHp = 3;
           } else if (difficulty < 0.62) {
             kind = "stone";
-            baseHp = 10;
+            baseHp = 7;
           } else {
             kind = "deepstone";
-            baseHp = 22;
+            baseHp = 14;
           }
 
           const difficultyScale = kind === "loam" || kind === "dirt" ? 0.75 : 1.65;
           const sectorHardness = Math.max(0.1, asFinite(this._sector?.modifiers?.hardness, 1));
-          // The first 60% remains governed by ordinary geology. Below that,
-          // planetary pressure rises smoothly to a 250 HP floor at bedrock.
-          // A fresh pick cannot casually mine the bottom, while upgraded
-          // lasers and the Solar Drill still tear through it quickly.
-          const usableDepth = WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - surfaceY;
-          const verticalProgress = clamp(depth / Math.max(1, usableDepth), 0, 1);
-          const pressureT = clamp((verticalProgress - 0.6) / 0.4, 0, 1);
-          const pressureEase = pressureT * pressureT * (3 - 2 * pressureT);
-          const pressureFloorHp = 250 * pressureEase ** 1.35;
+          // Absolute depth bands create several tool checks instead of one
+          // sudden pressure wall near the bottom. Each boundary eases in over
+          // twenty metres, so a run visibly slows down without hitting an
+          // arbitrary one-row cliff.
+          const depthMeters = depth * WORLD_CONFIG.METERS_PER_TILE;
+          // Pressure seams are discrete middle-game checks. Keeping them out
+          // of the smooth deep-rock multiplier prevents the whole 600-900 m
+          // act from becoming one oversized wall. Ordinary rock still grows
+          // continuously after the super-pick transition, so the laser and
+          // its late modules have a long, visible job below 900 m.
+          const strataFloorHp = Math.max(
+            rockStrataFloorHp(depthMeters) * rockFormationMultiplier(depthMeters),
+            pressureRidgeFloorHp(depthMeters),
+          );
           const geologicalHp = baseHp * (1 + difficulty * difficultyScale);
           const maxHp = Math.max(1, Math.round(
-            Math.max(geologicalHp, pressureFloorHp) * sectorHardness,
+            Math.max(geologicalHp, strataFloorHp) * sectorHardness,
           ));
           tile = createTile(kind, maxHp, false);
+          tile.pressureRidge = pressureRidgeFloorHp(depthMeters) > 0;
+          tile.fracturedStratum = this._shouldPreserveFracturedStratumCell(tx, ty);
         }
 
         tiles[this._index(tx, ty)] = tile;
@@ -1815,6 +2087,157 @@ class MineWorld {
     }
   }
 
+  _relocateFinalSealVeins() {
+    const affectedVeinIds = new Set();
+    for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+      const tile = this.getTile(tx, FINAL_LAYER_TY);
+      if (tile?.oreId && tile.veinId) affectedVeinIds.add(tile.veinId);
+    }
+
+    const stats = {
+      veins: affectedVeinIds.size,
+      nodes: 0,
+      before: 0,
+      after: 0,
+    };
+    if (!affectedVeinIds.size) {
+      this._finalSealRelocationStats = stats;
+      return stats;
+    }
+
+    const affectedVeins = new Map();
+    for (const veinId of affectedVeinIds) {
+      affectedVeins.set(veinId, {
+        oreId: null,
+        frontierReserve: false,
+        cells: [],
+      });
+    }
+    for (let ty = 0; ty < WORLD_CONFIG.HEIGHT; ty += 1) {
+      for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+        const tile = this.getTile(tx, ty);
+        const vein = affectedVeins.get(tile?.veinId);
+        if (!vein || !tile.oreId) continue;
+        vein.oreId ||= tile.oreId;
+        vein.frontierReserve ||= tile.frontierReserveOreId === tile.oreId;
+        vein.cells.push({ tx, ty });
+      }
+    }
+
+    stats.before = [...affectedVeins.values()]
+      .reduce((total, vein) => total + vein.cells.length, 0);
+    stats.nodes = stats.before;
+    const rngState = this._rng.state;
+
+    try {
+      for (const [veinId, vein] of affectedVeins) {
+        const definition = this._oreDefinitions.find(({ id }) => id === vein.oreId);
+        if (!definition || !vein.cells.length) {
+          throw new Error(`Cannot relocate final-seal vein ${veinId}: missing ore definition`);
+        }
+
+        const snapshots = vein.cells.map(({ tx, ty }) => ({
+          tx,
+          ty,
+          tile: { ...this.getTile(tx, ty) },
+          rank: this._oreRankByTile[this._index(tx, ty)],
+        }));
+        for (const cell of vein.cells) this._clearOreAt(cell.tx, cell.ty);
+
+        const centroidX = Math.round(
+          vein.cells.reduce((total, cell) => total + cell.tx, 0) / vein.cells.length,
+        );
+        const centroidY = Math.min(
+          FINAL_LAYER_TY - 1,
+          Math.round(vein.cells.reduce((total, cell) => total + cell.ty, 0) / vein.cells.length),
+        );
+        let completed = false;
+        const attemptedOrigins = new Set();
+        const tryOrigin = (tx, ty) => {
+          if (
+            completed
+            || !this._inBounds(tx, ty)
+            || ty >= FINAL_LAYER_TY
+          ) return completed;
+          const key = `${tx}:${ty}`;
+          if (attemptedOrigins.has(key)) return false;
+          attemptedOrigins.add(key);
+          const tile = this.getTile(tx, ty);
+          if (
+            !tile
+            || tile.kind === "air"
+            || tile.kind === "bedrock"
+            || tile.kind === "final_seal"
+            || tile.oreId
+            || this._liftTargetKeys.has(key)
+            || !this._oreProgressAllowsAt(tx, ty, definition)
+          ) return false;
+          const placed = this._placeVein(tx, ty, definition, vein.cells.length, {
+            veinId,
+            frontierReserve: vein.frontierReserve,
+            requireEmpty: true,
+            requireFullSize: true,
+            maximumTy: FINAL_LAYER_TY - 1,
+          });
+          completed = placed === vein.cells.length;
+          return completed;
+        };
+
+        // Preserve the vein's geological neighbourhood whenever the adjacent
+        // band has room, then use a seed-stable global scan as a guaranteed
+        // fallback for unusually cavernous bottom layers.
+        for (let radius = 0; radius <= 24 && !completed; radius += 1) {
+          if (radius === 0) {
+            tryOrigin(centroidX, centroidY);
+            continue;
+          }
+          for (let offset = -radius; offset <= radius && !completed; offset += 1) {
+            tryOrigin(centroidX + offset, centroidY - radius);
+            tryOrigin(centroidX + radius, centroidY + offset);
+            tryOrigin(centroidX - offset, centroidY + radius);
+            tryOrigin(centroidX - radius, centroidY - offset);
+          }
+        }
+
+        if (!completed) {
+          const tileCount = WORLD_CONFIG.WIDTH * FINAL_LAYER_TY;
+          const startIndex = hashSeed(`${this.seed}:final-seal-relocation:${veinId}`) % tileCount;
+          for (let offset = 0; offset < tileCount && !completed; offset += 1) {
+            const index = (startIndex + offset) % tileCount;
+            tryOrigin(index % WORLD_CONFIG.WIDTH, Math.floor(index / WORLD_CONFIG.WIDTH));
+          }
+        }
+
+        if (!completed) {
+          for (const snapshot of snapshots) {
+            Object.assign(this.getTile(snapshot.tx, snapshot.ty), snapshot.tile);
+            this._oreRankByTile[this._index(snapshot.tx, snapshot.ty)] = snapshot.rank;
+          }
+          throw new Error(
+            `Cannot relocate ${vein.cells.length}-node ${definition.id} vein ${veinId} above final seal`,
+          );
+        }
+      }
+    } finally {
+      // Relocation is a corrective geometry pass, not another random world
+      // roll. Later event and repair sequences must see the original state.
+      this._rng.state = rngState;
+    }
+
+    for (let ty = 0; ty < FINAL_LAYER_TY; ty += 1) {
+      for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+        if (affectedVeinIds.has(this.getTile(tx, ty)?.veinId)) stats.after += 1;
+      }
+    }
+    if (stats.after !== stats.before) {
+      throw new Error(
+        `Final-seal relocation changed ore budget: ${stats.before} -> ${stats.after}`,
+      );
+    }
+    this._finalSealRelocationStats = stats;
+    return stats;
+  }
+
   _difficultyAt(tx, ty) {
     const surfaceY = this.surface[clamp(Math.floor(tx), 0, WORLD_CONFIG.WIDTH - 1)] ?? WORLD_CONFIG.SURFACE_BASE;
     const usableDepth = WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - surfaceY;
@@ -1826,19 +2249,45 @@ class MineWorld {
   }
 
   _canOreAppearAt(tx, ty, definition) {
-    const tier = Math.max(0, Math.floor(numericField(
-      definition?.source,
-      ["tier"],
-      Math.round((definition?.rank || 0) * Math.max(0, this._oreDefinitions.length - 1)),
-    )));
-    // T1-T4 can vary through the opening strata. T5+ must cross its authored
-    // vertical depth, regardless of horizontal travel or placement fuzz.
-    if (tier < 4) return true;
-    const requiredDepth = numericField(definition?.source, ["minDepth", "depth"], null);
-    if (!Number.isFinite(requiredDepth) || requiredDepth <= 1) return true;
+    if (this._liftReservedKeys.has(`${Math.floor(tx)}:${Math.floor(ty)}`)) return false;
     const column = clamp(Math.floor(tx), 0, WORLD_CONFIG.WIDTH - 1);
     const verticalDepth = Math.max(0, Math.floor(ty) - (this.surface[column] ?? WORLD_CONFIG.SURFACE_BASE));
-    return verticalDepth * WORLD_CONFIG.TILE_SIZE + 0.001 >= requiredDepth;
+    const verticalDepthPixels = verticalDepth * WORLD_CONFIG.TILE_SIZE;
+    const requiredDepth = numericField(definition?.source, ["minDepth", "depth"], null);
+    const maximumDepth = numericField(definition?.source, ["maxDepth"], null);
+    if (
+      Number.isFinite(requiredDepth)
+      && requiredDepth > 1
+      && verticalDepthPixels + 0.001 < requiredDepth
+    ) return false;
+    if (
+      Number.isFinite(maximumDepth)
+      && maximumDepth > 1
+      && verticalDepthPixels - 0.001 > maximumDepth
+    ) return false;
+    return true;
+  }
+
+  _hasAuthoredVerticalBand(definition) {
+    const requiredDepth = numericField(definition?.source, ["minDepth", "depth"], null);
+    const maximumDepth = numericField(definition?.source, ["maxDepth"], null);
+    return (
+      (Number.isFinite(requiredDepth) && requiredDepth > 1)
+      || (Number.isFinite(maximumDepth) && maximumDepth > 1)
+    );
+  }
+
+  _oreProgressAllowsAt(tx, ty, definition, minimumFuzz = 0, maximumFuzz = 0) {
+    if (!this._canOreAppearAt(tx, ty, definition)) return false;
+    // Authored metre bands are authoritative and deliberately ignore the
+    // horizontal difficulty component. This prevents iron near the surface at
+    // the map edge and prevents old copper from reappearing in deep layers.
+    if (this._hasAuthoredVerticalBand(definition)) return true;
+    const progress = this._difficultyAt(tx, ty);
+    return (
+      progress + Math.max(0, minimumFuzz) >= definition.minProgress
+      && progress - Math.max(0, maximumFuzz) <= definition.maxProgress
+    );
   }
 
   _setAir(tx, ty, discovered = false) {
@@ -1853,6 +2302,8 @@ class MineWorld {
     tile.veinId = null;
     tile.discovered = tile.discovered || discovered;
     tile.cracked = 0;
+    tile.pressureRidge = false;
+    tile.fracturedStratum = false;
     this._oreRankByTile[this._index(tx, ty)] = -1;
   }
 
@@ -1866,6 +2317,15 @@ class MineWorld {
       for (let tx = minTx; tx <= maxTx; tx += 1) {
         if (!this._inBounds(tx, ty)) continue;
         if (preserveCrust && ty <= this.surface[tx] + 1) continue;
+        if (
+          preserveCrust
+          && (
+            isPressureRidgeDepth(
+              (ty - this.surface[tx]) * WORLD_CONFIG.METERS_PER_TILE,
+            )
+            || this.getTile(tx, ty)?.fracturedStratum
+          )
+        ) continue;
         const nx = (tx - centerX) / Math.max(0.1, radiusX);
         const ny = (ty - centerY) / Math.max(0.1, radiusY);
         if (nx * nx + ny * ny <= 1) this._setAir(tx, ty, discovered);
@@ -1910,21 +2370,21 @@ class MineWorld {
   _prepareLiftStations() {
     this._liftStations = [];
     this._liftTargetKeys = new Set();
-    // Five metres per tile makes closely spaced stations useful even for the
-    // first 5% lift rank: the first landing is 10 m down and stations repeat
-    // every 10 m instead of jumping in coarse 25 m steps.
-    const firstTy = this._spawn.ty + 2;
+    this._liftReservedKeys = new Set();
+    // Stations are discrete landings, not a pre-carved vertical tunnel. A
+    // 25-metre cadence remains precise for the 25/45/65% lift ranks while
+    // leaving solid rock between inactive chambers.
+    const stationStepTiles = 5;
+    const firstTy = this._spawn.ty + stationStepTiles;
     const lastTy = WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 4;
 
-    for (let ty = firstTy; ty <= lastTy; ty += 2) {
+    for (let ty = firstTy; ty <= lastTy; ty += stationStepTiles) {
       const stationHash = hashSeed(`${this.seed}:lift:${ty}`);
       const offset = stationHash % 17 - 8;
       const tx = clamp(this._spawn.tx + offset, 5, WORLD_CONFIG.WIDTH - 6);
       if (ty <= this.surface[tx] + 3) continue;
 
-      this._carveEllipse(tx, ty, 1.45, 1.15, true, false);
-      this._setAir(tx, ty, true);
-      this._revealAround(tx, ty, 2);
+      this._reserveLiftChamber(tx, ty, 1.45, 1.15);
       const direction = stationHash & 1 ? 1 : -1;
       const target = this._ensureLiftTarget(tx, ty, direction);
       if (!target) continue;
@@ -1946,6 +2406,82 @@ class MineWorld {
     this._liftStations.sort((left, right) => (
       left.depth - right.depth || left.ty - right.ty || left.tx - right.tx
     ));
+  }
+
+  _carveFormationFractures() {
+    const fracturedLayers = ROCK_STRATA.filter(({ depth }) => (
+      isFracturedStratumLayerDepth(depth)
+    ));
+    const candidateOffsets = [0, 1, -1, 2, -2, 3, -3, 4, -4];
+
+    for (const layer of fracturedLayers) {
+      for (
+        let fracture = 0;
+        fracture < FRACTURED_STRATA_GUARANTEED_FRACTURES;
+        fracture += 1
+      ) {
+        const lane = Math.round(
+          WORLD_CONFIG.WIDTH * (fracture + 1)
+          / (FRACTURED_STRATA_GUARANTEED_FRACTURES + 1),
+        );
+        const jitter = (
+          hashSeed(`${this.seed}:formation-fracture:${layer.depth}:${fracture}`) % 9
+        ) - 4;
+        let carved = false;
+
+        for (const offset of candidateOffsets) {
+          const tx = clamp(lane + jitter + offset, 3, WORLD_CONFIG.WIDTH - 4);
+          const ty = (this.surface[tx] ?? WORLD_CONFIG.SURFACE_BASE)
+            + Math.round(
+              (layer.depth + FRACTURED_STRATA_OFFSET_METERS)
+              / WORLD_CONFIG.METERS_PER_TILE,
+            );
+          if (!this._inBounds(tx, ty)) continue;
+          if (this._liftReservedKeys.has(`${tx}:${ty}`)) continue;
+          const tile = this.getTile(tx, ty);
+          if (!tile || tile.kind === "bedrock") continue;
+          this._setAir(tx, ty);
+          carved = true;
+          break;
+        }
+
+        if (!carved) continue;
+      }
+    }
+  }
+
+  _reserveLiftChamber(centerX, centerY, radiusX, radiusY) {
+    for (let ty = Math.floor(centerY - radiusY); ty <= Math.ceil(centerY + radiusY); ty += 1) {
+      for (let tx = Math.floor(centerX - radiusX); tx <= Math.ceil(centerX + radiusX); tx += 1) {
+        if (!this._inBounds(tx, ty)) continue;
+        const nx = (tx - centerX) / Math.max(0.1, radiusX);
+        const ny = (ty - centerY) / Math.max(0.1, radiusY);
+        if (nx * nx + ny * ny <= 1) this._liftReservedKeys.add(`${tx}:${ty}`);
+      }
+    }
+  }
+
+  _activateLiftStation(station) {
+    if (!station) return null;
+    this._carveEllipse(station.tx, station.ty, 1.45, 1.15, true, false);
+    this._setAir(station.tx, station.ty, true);
+    this._revealAround(station.tx, station.ty, 2);
+    const target = station.target;
+    if (!target) return null;
+    const tile = this.getTile(target.tx, target.ty);
+    if (!tile || tile.kind === "air" || tile.kind === "bedrock") return null;
+    const easyHpCap = Math.max(3, Math.round(3 + this._difficultyAt(target.tx, target.ty) * 9));
+    tile.discovered = true;
+    tile.maxHp = Math.min(tile.maxHp, easyHpCap);
+    tile.hp = tile.maxHp;
+    tile.pendingLiftSupply = true;
+    tile.liftSupply = false;
+    tile.cracked = 0;
+    station.target = {
+      ...target,
+      maxHp: tile.maxHp,
+    };
+    return station.target;
   }
 
   _starterReservedTileKeys() {
@@ -1990,10 +2526,7 @@ class MineWorld {
     }
 
     if (tile.oreId) this._clearOreAt(targetX, targetY);
-    tile.discovered = true;
-    const easyHpCap = Math.max(3, Math.round(3 + this._difficultyAt(targetX, targetY) * 9));
-    tile.maxHp = Math.min(tile.maxHp, easyHpCap);
-    tile.hp = tile.maxHp;
+    tile.discovered = false;
     tile.pendingLiftSupply = true;
     tile.liftSupply = false;
     tile.cracked = 0;
@@ -2112,7 +2645,7 @@ class MineWorld {
     });
   }
 
-  _oreBasePropensity(definition) {
+  _oreUnbandedBasePropensity(definition) {
     const explicit = numericField(definition.source, ["veinCount", "veins", "clusters"], null);
     if (Number.isFinite(explicit)) return Math.max(0, explicit);
 
@@ -2125,7 +2658,51 @@ class MineWorld {
       multiplier = rarity <= 1 ? 0.35 + rarity : 1 / Math.sqrt(rarity);
     }
 
-    return 54 * WORLD_DENSITY_SCALE / (1 + definition.rank * 1.8) * multiplier;
+    const generationWeight = Math.max(
+      0.05,
+      numericField(definition.source, ["generationWeight"], 1),
+    );
+    return 54 * WORLD_DENSITY_SCALE / (1 + definition.rank * 1.8)
+      * multiplier * generationWeight;
+  }
+
+  _oreBandSpanMultiplier(definition) {
+    const playableDepthPixels = Math.max(
+      WORLD_CONFIG.TILE_SIZE,
+      (WORLD_CONFIG.HEIGHT - WORLD_CONFIG.SURFACE_BASE - WORLD_CONFIG.BEDROCK_ROWS)
+        * WORLD_CONFIG.TILE_SIZE,
+    );
+    const minimum = Math.max(0, numericField(definition.source, ["minDepth", "depth"], 0));
+    const authoredMaximum = numericField(definition.source, ["maxDepth"], playableDepthPixels);
+    const maximum = Number.isFinite(authoredMaximum)
+      ? clamp(authoredMaximum, minimum + WORLD_CONFIG.TILE_SIZE, playableDepthPixels)
+      : playableDepthPixels;
+    const availableShare = clamp(
+      (maximum - minimum) / playableDepthPixels,
+      WORLD_CONFIG.TILE_SIZE / playableDepthPixels,
+      1,
+    );
+    // Square-root weighting keeps early ores common while preventing a short
+    // band from receiving the node budget of the entire 1.3 km shaft.
+    return Math.sqrt(availableShare);
+  }
+
+  _calculateOreBandAllocationNormalizer() {
+    let baselineNodes = 0;
+    let bandWeightedNodes = 0;
+    for (const definition of this._oreDefinitions) {
+      const base = this._oreUnbandedBasePropensity(definition);
+      const expectedNodesPerVein = this._oreExpectedVeinSize(definition);
+      baselineNodes += base * expectedNodesPerVein;
+      bandWeightedNodes += base * this._oreBandSpanMultiplier(definition) * expectedNodesPerVein;
+    }
+    return bandWeightedNodes > 0 ? baselineNodes / bandWeightedNodes : 1;
+  }
+
+  _oreBasePropensity(definition) {
+    return this._oreUnbandedBasePropensity(definition)
+      * this._oreBandSpanMultiplier(definition)
+      * Math.max(0.1, asFinite(this._oreBandAllocationNormalizer, 1));
   }
 
   _oreVeinSizeRange(definition) {
@@ -2190,21 +2767,43 @@ class MineWorld {
     return Math.max(1, Math.round(this._rng.int(min, max) * sectorVeins));
   }
 
+  _frontierReserveCenterTx(definition) {
+    const authoredDepth = numericField(definition?.source, ["minDepth", "depth"], null);
+    if (!Number.isFinite(authoredDepth) || authoredDepth <= 1 || !this._liftStations.length) {
+      return this._spawn.tx;
+    }
+    const authoredDepthMeters = authoredDepth
+      / WORLD_CONFIG.TILE_SIZE
+      * WORLD_CONFIG.METERS_PER_TILE;
+    const station = this._liftStations.reduce((best, candidate) => (
+      !best
+      || Math.abs(candidate.depth - authoredDepthMeters) < Math.abs(best.depth - authoredDepthMeters)
+        ? candidate
+        : best
+    ), null);
+    return station?.tx ?? this._spawn.tx;
+  }
+
   _frontierReserveOrigin(definition) {
     if (!FRONTIER_RESERVE_ORE_IDS.has(definition?.id)) return null;
     const authoredDepth = numericField(definition.source, ["minDepth", "depth"], null);
     if (!Number.isFinite(authoredDepth) || authoredDepth <= 1) return null;
 
-    const left = clamp(this._spawn.tx - FRONTIER_RESERVE_HALF_WIDTH, 2, WORLD_CONFIG.WIDTH - 3);
-    const right = clamp(this._spawn.tx + FRONTIER_RESERVE_HALF_WIDTH, left, WORLD_CONFIG.WIDTH - 3);
+    const centerTx = this._frontierReserveCenterTx(definition);
+    const left = clamp(centerTx - FRONTIER_RESERVE_HALF_WIDTH, 2, WORLD_CONFIG.WIDTH - 3);
+    const right = clamp(centerTx + FRONTIER_RESERVE_HALF_WIDTH, left, WORLD_CONFIG.WIDTH - 3);
     const minimumDepthRows = Math.ceil(authoredDepth / WORLD_CONFIG.TILE_SIZE);
     const bottom = WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 1;
     const accepts = (tx, ty) => {
       const tile = this.getTile(tx, ty);
-      if (!tile || tile.kind === "air" || tile.kind === "bedrock") return false;
-      if (!this._canOreAppearAt(tx, ty, definition)) return false;
-      const progress = this._difficultyAt(tx, ty);
-      return progress >= definition.minProgress && progress <= definition.maxProgress;
+      if (
+        !tile
+        || tile.kind === "air"
+        || tile.kind === "bedrock"
+        || tile.oreId
+        || tile.frontierReserveOreId
+      ) return false;
+      return this._oreProgressAllowsAt(tx, ty, definition);
     };
 
     // Keep the reserve procedural inside a narrow descent corridor. The
@@ -2230,6 +2829,128 @@ class MineWorld {
     return null;
   }
 
+  _ensureFrontierReserveVein(definition) {
+    if (!FRONTIER_RESERVE_ORE_IDS.has(definition?.id)) return 0;
+    const donorVeins = new Map();
+    for (let ty = 0; ty < WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS; ty += 1) {
+      for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+        const tile = this.getTile(tx, ty);
+        if (tile?.frontierReserveOreId === definition.id) return 0;
+        if (tile?.oreId !== definition.id || !tile.veinId) continue;
+        if (!donorVeins.has(tile.veinId)) donorVeins.set(tile.veinId, []);
+        donorVeins.get(tile.veinId).push({ tx, ty });
+      }
+    }
+
+    // If ordinary generation already left a same-tier vein in the intended
+    // lift window, promote that existing vein instead of moving any nodes.
+    // This also repairs the metadata-only variant of the rare reserve miss.
+    const authoredDepth = numericField(definition.source, ["minDepth", "depth"], null);
+    const centerTx = this._frontierReserveCenterTx(definition);
+    const spatialDonor = [...donorVeins.entries()].find(([_veinId, cells]) => (
+      cells.some(({ tx, ty }) => {
+        const localSurface = this.surface[tx] ?? WORLD_CONFIG.SURFACE_BASE;
+        const localDepth = Math.max(0, ty - localSurface) * WORLD_CONFIG.TILE_SIZE;
+        return Math.abs(tx - centerTx) <= FRONTIER_RESERVE_HALF_WIDTH
+          && localDepth >= authoredDepth
+          && localDepth <= authoredDepth + FRONTIER_RESERVE_DEPTH_ROWS * WORLD_CONFIG.TILE_SIZE;
+      })
+    ));
+    if (spatialDonor) {
+      for (const { tx, ty } of spatialDonor[1]) {
+        this.getTile(tx, ty).frontierReserveOreId = definition.id;
+      }
+      return spatialDonor[1].length;
+    }
+
+    const authoredDepthMeters = authoredDepth / WORLD_CONFIG.TILE_SIZE * WORLD_CONFIG.METERS_PER_TILE;
+    const frontierStation = this._liftStations.reduce((best, candidate) => (
+      !best
+      || Math.abs(candidate.depth - authoredDepthMeters) < Math.abs(best.depth - authoredDepthMeters)
+        ? candidate
+        : best
+    ), null);
+
+    // A large first donor can fail to fit inside an unusually hollow frontier.
+    // Prefer the smallest ordinary vein; relocating it still preserves the
+    // exact global node budget and gives the new tier a reachable first sample.
+    const donors = [...donorVeins.entries()].sort((left, right) => (
+      left[1].length - right[1].length
+      || String(left[0]).localeCompare(String(right[0]))
+    ));
+    for (const [veinId, cells] of donors) {
+      const snapshots = cells.map(({ tx, ty }) => ({
+        tx,
+        ty,
+        tile: { ...this.getTile(tx, ty) },
+        rank: this._oreRankByTile[this._index(tx, ty)],
+      }));
+      for (const cell of cells) this._clearOreAt(cell.tx, cell.ty);
+
+      const origins = [];
+      const firstOrigin = this._frontierReserveOrigin(definition);
+      if (firstOrigin) origins.push(firstOrigin);
+      if (Number.isFinite(authoredDepth) && authoredDepth > 1) {
+        const left = clamp(centerTx - FRONTIER_RESERVE_HALF_WIDTH, 2, WORLD_CONFIG.WIDTH - 3);
+        const right = clamp(centerTx + FRONTIER_RESERVE_HALF_WIDTH, left, WORLD_CONFIG.WIDTH - 3);
+        const minimumDepthRows = Math.ceil(authoredDepth / WORLD_CONFIG.TILE_SIZE);
+        const bottom = WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 1;
+        for (let tx = left; tx <= right; tx += 1) {
+          const localSurface = this.surface[tx] ?? WORLD_CONFIG.SURFACE_BASE;
+          const minTy = clamp(localSurface + minimumDepthRows, localSurface + 1, bottom);
+          const maxTy = clamp(minTy + FRONTIER_RESERVE_DEPTH_ROWS, minTy, bottom);
+          for (let ty = minTy; ty <= maxTy; ty += 1) origins.push({ tx, ty });
+        }
+      }
+
+      const attempted = new Set();
+      for (const origin of origins) {
+        const key = `${origin.tx}:${origin.ty}`;
+        if (attempted.has(key)) continue;
+        attempted.add(key);
+        const placed = this._placeVein(origin.tx, origin.ty, definition, cells.length, {
+          veinId,
+          frontierReserve: true,
+          requireEmpty: true,
+          requireFullSize: true,
+        });
+        if (placed === cells.length) return placed;
+      }
+
+      for (const snapshot of snapshots) {
+        Object.assign(this.getTile(snapshot.tx, snapshot.ty), snapshot.tile);
+        this._oreRankByTile[this._index(snapshot.tx, snapshot.ty)] = snapshot.rank;
+      }
+    }
+
+    // A fully hollow lift window has nowhere to place even the smallest seam.
+    // In that rare case, promote the nearest existing vein that is still
+    // inside the 12-tile frontier scan used by gameplay. The authored depth
+    // band and total node count remain untouched.
+    const fallbackDonor = [...donorVeins.entries()]
+      .map(([veinId, cells]) => {
+        const distance = cells.reduce((nearest, { tx, ty }) => {
+          const localSurface = this.surface[tx] ?? WORLD_CONFIG.SURFACE_BASE;
+          const localDepth = Math.max(0, ty - localSurface) * WORLD_CONFIG.TILE_SIZE;
+          if (
+            localDepth < authoredDepth
+            || localDepth > authoredDepth + 12 * WORLD_CONFIG.TILE_SIZE
+          ) return nearest;
+          return Math.min(nearest, Math.hypot(tx - frontierStation.tx, ty - frontierStation.ty));
+        }, Infinity);
+        return { veinId, cells, distance };
+      })
+      .filter(({ distance }) => distance <= 12.5)
+      .sort((left, right) => left.distance - right.distance || String(left.veinId).localeCompare(String(right.veinId)))[0];
+    if (fallbackDonor) {
+      for (const { tx, ty } of fallbackDonor.cells) {
+        this.getTile(tx, ty).frontierReserveOreId = definition.id;
+      }
+      return fallbackDonor.cells.length;
+    }
+    return 0;
+  }
+
   _generateOreVeins() {
     for (const definition of this._oreDefinitions) {
       const targetVeins = this._oreVeinCount(definition);
@@ -2237,9 +2958,10 @@ class MineWorld {
       let attempts = 0;
       const maxAttempts = Math.max(80, targetVeins * 36);
 
-      // One ordinary amber/gold vein is placed near the depth where its tier
-      // first matters. It replaces one random origin from the existing budget:
-      // vein count, rolled size and ore durability are otherwise unchanged.
+      // One ordinary vein from iron onward is placed beside the lift station
+      // nearest the depth where its tier first matters. It replaces one random
+      // origin from the existing budget: vein count, rolled size and ore
+      // durability are otherwise unchanged.
       if (targetVeins > 0) {
         const reserveOrigin = this._frontierReserveOrigin(definition);
         if (reserveOrigin) {
@@ -2248,6 +2970,7 @@ class MineWorld {
             reserveOrigin.ty,
             definition,
             this._oreVeinSize(definition),
+            { frontierReserve: true },
           );
           if (placed > 0) placedVeins += 1;
         }
@@ -2263,137 +2986,70 @@ class MineWorld {
         const ty = this._rng.int(minY, WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 1);
         const tile = this.getTile(tx, ty);
         if (!tile || tile.kind === "air" || tile.kind === "bedrock") continue;
-        if (!this._canOreAppearAt(tx, ty, definition)) continue;
-
-        const progress = this._difficultyAt(tx, ty);
-        if (progress + this._rng.range(-0.025, 0.045) < definition.minProgress) continue;
-        if (progress - this._rng.range(0, 0.08) > definition.maxProgress) continue;
+        if (!this._oreProgressAllowsAt(
+          tx,
+          ty,
+          definition,
+          this._rng.range(-0.025, 0.045),
+          this._rng.range(0, 0.08),
+        )) continue;
 
         const placed = this._placeVein(tx, ty, definition, this._oreVeinSize(definition));
         if (placed > 0) placedVeins += 1;
       }
+      // Extremely hollow or already occupied frontier strips can reject the
+      // first reserve attempt. Relocate one existing vein with the same id and
+      // exact node count instead of adding ore or leaving a random drought.
+      this._ensureFrontierReserveVein(definition);
     }
   }
 
-  _liftRedistributionVeinSizes(nodeBudget) {
-    const budget = Math.max(0, Math.floor(Number(nodeBudget) || 0));
-    if (budget <= 0) return [];
-    if (budget < LIFT_REDISTRIBUTION_MIN_VEIN_SIZE) return [budget];
-    const minimumCount = Math.ceil(budget / LIFT_REDISTRIBUTION_MAX_VEIN_SIZE);
-    const maximumCount = Math.max(
-      minimumCount,
-      Math.floor(budget / LIFT_REDISTRIBUTION_MIN_VEIN_SIZE),
-    );
-    const veinCount = clamp(Math.round(budget / 7), minimumCount, maximumCount);
-    const sizes = Array.from(
-      { length: veinCount },
-      () => LIFT_REDISTRIBUTION_MIN_VEIN_SIZE,
-    );
-    let remaining = budget - veinCount * LIFT_REDISTRIBUTION_MIN_VEIN_SIZE;
-    while (remaining > 0) {
-      const available = sizes
-        .map((size, index) => (size < LIFT_REDISTRIBUTION_MAX_VEIN_SIZE ? index : -1))
-        .filter((index) => index >= 0);
-      const index = available[this._rng.int(0, available.length - 1)];
-      sizes[index] += 1;
-      remaining -= 1;
-    }
-    return sizes;
-  }
-
-  _compensateLiftTargetsWithCopper() {
-    this._liftCompensationCells = [];
-    this._liftSupplyDonorConsumed = false;
-    const nodeBudget = this._liftTargetKeys.size;
-    if (nodeBudget <= 0) return 0;
-    const copper = this._oreDefinitions.find((definition) => definition.id === "copper")
-      || this._oreDefinitions.reduce((best, current) => (
-        !best || current.rank < best.rank ? current : best
-      ), null);
-    if (!copper) return 0;
-
-    let placedTotal = 0;
-    const veinSizes = this._liftRedistributionVeinSizes(nodeBudget);
-    for (const veinSize of veinSizes) {
-      let completed = false;
-      const tryOrigin = (tx, ty) => {
-        const tile = this.getTile(tx, ty);
-        if (
-          !tile
-          || tile.kind === "air"
-          || tile.kind === "bedrock"
-          || tile.kind === "final_seal"
-          || tile.oreId
-          || this._liftTargetKeys.has(`${tx}:${ty}`)
-          || !this._canOreAppearAt(tx, ty, copper)
-        ) return false;
-        const progress = this._difficultyAt(tx, ty);
-        if (progress < copper.minProgress || progress > copper.maxProgress) return false;
-        const cells = [];
-        const placed = this._placeVein(tx, ty, copper, veinSize, {
-          requireEmpty: true,
-          requireFullSize: true,
-          collectCells: cells,
-        });
-        if (placed !== veinSize) return false;
-        this._liftCompensationCells.push(...cells.map((cell) => ({
-          ...cell,
-          oreId: copper.id,
-          consumed: false,
-        })));
-        placedTotal += placed;
-        completed = true;
-        return true;
-      };
-
-      const maxRandomAttempts = 240;
-      for (let attempt = 0; attempt < maxRandomAttempts && !completed; attempt += 1) {
-        const tx = this._rng.int(2, WORLD_CONFIG.WIDTH - 3);
-        const minY = Math.min(
-          WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 2,
-          this.surface[tx] + 2,
-        );
-        const ty = this._rng.int(minY, WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 2);
-        tryOrigin(tx, ty);
-      }
-
-      if (!completed) {
-        const startIndex = hashSeed(`${this.seed}:lift-redistribution:${veinSize}:${placedTotal}`)
-          % (WORLD_CONFIG.WIDTH * WORLD_CONFIG.HEIGHT);
-        for (let offset = 0;
-          offset < WORLD_CONFIG.WIDTH * WORLD_CONFIG.HEIGHT && !completed;
-          offset += 1) {
-          const index = (startIndex + offset) % (WORLD_CONFIG.WIDTH * WORLD_CONFIG.HEIGHT);
-          const tx = index % WORLD_CONFIG.WIDTH;
-          const ty = Math.floor(index / WORLD_CONFIG.WIDTH);
-          tryOrigin(tx, ty);
-        }
-      }
-    }
-    return placedTotal;
-  }
-
-  _findLiftCompensationDonor() {
+  _findLiftSupplyDonor() {
     if (this._liftSupplyDonorConsumed) return null;
-    const liveCounts = new Map();
-    for (const candidate of this._liftCompensationCells) {
-      if (candidate.consumed) continue;
-      const tile = this.getTile(candidate.tx, candidate.ty);
-      if (!tile?.oreId || tile.veinId !== candidate.veinId) continue;
-      liveCounts.set(candidate.veinId, (liveCounts.get(candidate.veinId) || 0) + 1);
-    }
-    for (let index = this._liftCompensationCells.length - 1; index >= 0; index -= 1) {
-      const candidate = this._liftCompensationCells[index];
-      if (candidate.consumed || (liveCounts.get(candidate.veinId) || 0) <= 5) continue;
-      const tile = this.getTile(candidate.tx, candidate.ty);
-      if (!tile?.oreId || tile.veinId !== candidate.veinId) continue;
-      let sameVeinNeighbours = 0;
-      for (const [offsetX, offsetY] of CARDINAL_DIRECTIONS) {
-        if (this.getTile(candidate.tx + offsetX, candidate.ty + offsetY)?.veinId === candidate.veinId) {
-          sameVeinNeighbours += 1;
+    const rankedOpeningOreIds = this._oreDefinitions
+      .filter((definition) => (
+        Math.max(0, Math.floor(numericField(definition.source, ["tier"], 0))) <= 3
+      ))
+      .sort((left, right) => left.rank - right.rank)
+      .map((definition) => definition.id);
+
+    for (const oreId of rankedOpeningOreIds) {
+      const veins = new Map();
+      for (let ty = 0; ty < WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS; ty += 1) {
+        for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+          const tile = this.getTile(tx, ty);
+          if (
+            tile?.oreId !== oreId
+            || !tile.veinId
+            || String(tile.veinId).startsWith("starter-")
+            || tile.liftSupply
+            || tile.pendingLiftSupply
+            || this._liftTargetKeys.has(`${tx}:${ty}`)
+          ) continue;
+          if (!veins.has(tile.veinId)) veins.set(tile.veinId, []);
+          veins.get(tile.veinId).push({ tx, ty, veinId: tile.veinId, oreId });
         }
       }
-      if (sameVeinNeighbours <= 1) return candidate;
+
+      const donorVeins = [...veins.values()]
+        .filter((cells) => cells.length > 5)
+        .sort((left, right) => (
+          right.length - left.length
+          || String(left[0]?.veinId).localeCompare(String(right[0]?.veinId))
+        ));
+      for (const cells of donorVeins) {
+        for (let index = cells.length - 1; index >= 0; index -= 1) {
+          const candidate = cells[index];
+          let sameVeinNeighbours = 0;
+          for (const [offsetX, offsetY] of CARDINAL_DIRECTIONS) {
+            if (
+              this.getTile(candidate.tx + offsetX, candidate.ty + offsetY)?.veinId
+              === candidate.veinId
+            ) sameVeinNeighbours += 1;
+          }
+          if (sameVeinNeighbours <= 1) return candidate;
+        }
+      }
     }
     return null;
   }
@@ -2471,10 +3127,8 @@ class MineWorld {
           || tile.kind === "final_seal"
           || tile.oreId
           || this._liftTargetKeys.has(key)
-          || !this._canOreAppearAt(tx, ty, definition)
+          || !this._oreProgressAllowsAt(tx, ty, definition)
         ) return false;
-        const progress = this._difficultyAt(tx, ty);
-        if (progress < definition.minProgress || progress > definition.maxProgress) return false;
         const relocated = [];
         const placed = this._placeVein(tx, ty, definition, vein.cells.length, {
           veinId,
@@ -2551,7 +3205,11 @@ class MineWorld {
     const maxAttempts = Math.max(48, targetSize * 24);
     const requireEmpty = Boolean(options.requireEmpty);
     const requireFullSize = Boolean(options.requireFullSize);
+    const frontierReserve = Boolean(options.frontierReserve);
     const collectedCells = Array.isArray(options.collectCells) ? options.collectCells : null;
+    const maximumTy = Number.isFinite(options.maximumTy)
+      ? Math.floor(options.maximumTy)
+      : WORLD_CONFIG.HEIGHT - 1;
 
     const addFrontierAround = (centerX, centerY) => {
       for (const [offsetX, offsetY] of CARDINAL_DIRECTIONS) {
@@ -2563,6 +3221,7 @@ class MineWorld {
           || queuedCells.has(key)
           || this._liftTargetKeys.has(key)
           || !this._inBounds(candidateX, candidateY)
+          || candidateY > maximumTy
         ) continue;
         queuedCells.add(key);
         frontier.push({ tx: candidateX, ty: candidateY });
@@ -2573,6 +3232,7 @@ class MineWorld {
       const key = `${candidateX}:${candidateY}`;
       if (placedCells.has(key)) return false;
       if (this._liftTargetKeys.has(key)) return false;
+      if (candidateY > maximumTy) return false;
 
       const tile = this.getTile(candidateX, candidateY);
       if (
@@ -2584,11 +3244,13 @@ class MineWorld {
       if (!this._canOreAppearAt(candidateX, candidateY, definition)) return false;
       if (requireEmpty && tile.oreId !== null) return false;
       if (tile.oreId === definition.id) return false;
+      if (tile.frontierReserveOreId && tile.frontierReserveOreId !== definition.id) return false;
 
       const index = this._index(candidateX, candidateY);
       const currentRank = this._oreRankByTile[index];
       if (tile.oreId !== null && currentRank > rankValue) return false;
       if (!this._applyOre(candidateX, candidateY, definition, veinId)) return false;
+      if (frontierReserve) tile.frontierReserveOreId = definition.id;
 
       placedCells.add(key);
       placedCoordinates.push({ tx: candidateX, ty: candidateY, veinId });
@@ -2638,6 +3300,7 @@ class MineWorld {
     tile.hp = tile.maxHp;
     tile.cracked = 0;
     tile.liftSupply = false;
+    tile.frontierReserveOreId = null;
     this._oreRankByTile[this._index(tx, ty)] = -1;
     return true;
   }
@@ -2667,7 +3330,11 @@ class MineWorld {
       const densityMultiplier = Number.isFinite(density) && density > 0
         ? clamp(density, 0.4, 4)
         : 1;
-      targetHp = terrainMaxHp * hardnessMultiplier * densityMultiplier;
+      targetHp = oreDurabilityForTerrain(
+        terrainMaxHp,
+        hardnessMultiplier,
+        densityMultiplier,
+      );
     }
 
     const existingVeinId = tile.oreId === definition.id ? tile.veinId : null;
@@ -2700,8 +3367,9 @@ class MineWorld {
 
       // Caves and the first lift chamber may erase part of the compact opening
       // seam. Rebuild only the six authored cells; the ore-node budget stays
-      // unchanged while the five copper pieces form one cardinal C-shaped vein
-      // around the guaranteed coal sample.
+      // unchanged while four connected copper pieces flank two connected coal
+      // samples. This gives the opening economy fuel without another copper-only
+      // shift.
       let tile = current;
       if (tile.kind === "air" || Number.isFinite(hp)) {
         const terrainHp = Number.isFinite(hp) ? hp : 5;
@@ -2723,11 +3391,11 @@ class MineWorld {
     // miner is close enough to smell the coal and then the second copper. The
     // fixed HP caps keep this useful inside the initial six-second shift.
     placeStarterTile(0, 2, copper, copperVeinId, 2);
-    placeStarterTile(0, 3, coal, coalVeinId, 4);
-    placeStarterTile(0, 4, copper, copperVeinId, 3);
-    placeStarterTile(-1, 4, copper, copperVeinId);
-    placeStarterTile(-1, 3, copper, copperVeinId);
-    placeStarterTile(-1, 2, copper, copperVeinId);
+    placeStarterTile(0, 3, coal, coalVeinId, 2);
+    placeStarterTile(0, 4, coal, coalVeinId, 2);
+    placeStarterTile(-1, 4, copper, copperVeinId, 2);
+    placeStarterTile(-1, 3, copper, copperVeinId, 2);
+    placeStarterTile(-1, 2, copper, copperVeinId, 2);
   }
 
   _nearestSolidTile(originX, originY, radius) {
@@ -2764,6 +3432,9 @@ class MineWorld {
     const damageMultiplier = typeof options.damageMultiplier === "function"
       ? options.damageMultiplier
       : null;
+    const onHit = typeof options.onHit === "function"
+      ? options.onHit
+      : null;
     for (const candidate of candidates) {
       const tile = this.getTile(candidate.tx, candidate.ty);
       if (!this._isDamageable(tile)) continue;
@@ -2772,6 +3443,7 @@ class MineWorld {
         : 1;
       const appliedDamage = damage * multiplier;
       if (appliedDamage <= 0) continue;
+      if (onHit) onHit(tile, candidate.tx, candidate.ty, appliedDamage);
       tile.discovered = true;
       tile.hp = Math.max(0, tile.hp - appliedDamage);
       tile.cracked = clamp(1 - tile.hp / tile.maxHp, 0, 1);
@@ -2797,6 +3469,12 @@ class MineWorld {
 
 window.DepthZeroWorld = Object.freeze({
   WORLD_CONFIG,
+  ROCK_STRATA,
+  ROCK_STRATA_TRANSITION_METERS,
+  ROCK_FORMATION_MULTIPLIER_ANCHORS,
+  rockFormationMultiplier,
+  pressureRidgeAreaDamageMultiplier,
+  oreDurabilityForTerrain,
   FINAL_LAYER_TY,
   FINAL_SEAL_HITS,
   GEOLOGICAL_SECTORS,

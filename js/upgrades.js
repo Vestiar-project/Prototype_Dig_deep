@@ -77,6 +77,8 @@ const ORE_TYPES = Object.freeze(
       value: 1,
       hardness: 1,
       depth: 0,
+      maxDepth: 728,
+      generationWeight: 0.7,
     },
     {
       id: "coal",
@@ -88,6 +90,7 @@ const ORE_TYPES = Object.freeze(
       value: 2,
       hardness: 1.45,
       depth: 112,
+      maxDepth: 1176,
     },
     {
       id: "iron",
@@ -98,7 +101,8 @@ const ORE_TYPES = Object.freeze(
       accent: "#e5f0ef",
       value: 4,
       hardness: 2.2,
-      depth: 420,
+      depth: 308,
+      maxDepth: 1960,
     },
     {
       id: "amber",
@@ -109,7 +113,8 @@ const ORE_TYPES = Object.freeze(
       accent: "#fff0a1",
       value: 8,
       hardness: 3.35,
-      depth: 952,
+      depth: 784,
+      maxDepth: 3080,
     },
     {
       id: "silver",
@@ -120,7 +125,8 @@ const ORE_TYPES = Object.freeze(
       accent: "#ffffff",
       value: 16,
       hardness: 5.1,
-      depth: 1568,
+      depth: 1344,
+      maxDepth: 5040,
     },
     {
       id: "gold",
@@ -131,7 +137,8 @@ const ORE_TYPES = Object.freeze(
       accent: "#fff6a6",
       value: 32,
       hardness: 7.8,
-      depth: 2128,
+      depth: 2352,
+      maxDepth: 6720,
     },
     {
       id: "amethyst",
@@ -142,7 +149,8 @@ const ORE_TYPES = Object.freeze(
       accent: "#edc7ff",
       value: 68,
       hardness: 11.8,
-      depth: 2688,
+      depth: 3640,
+      maxDepth: 8960,
     },
     {
       id: "prism_crystal",
@@ -153,7 +161,9 @@ const ORE_TYPES = Object.freeze(
       accent: "#bffcff",
       value: 145,
       hardness: 17.5,
-      depth: 3248,
+      baseYield: 2,
+      depth: 4592,
+      maxDepth: 11424,
     },
     {
       id: "void_ore",
@@ -164,7 +174,9 @@ const ORE_TYPES = Object.freeze(
       accent: "#d56dff",
       value: 310,
       hardness: 26,
-      depth: 3808,
+      baseYield: 2,
+      depth: 5040,
+      maxDepth: 11424,
     },
     {
       id: "star_core",
@@ -175,7 +187,8 @@ const ORE_TYPES = Object.freeze(
       accent: "#fff4dd",
       value: 700,
       hardness: 39,
-      depth: 4312,
+      baseYield: 3,
+      depth: 7000,
     },
   ].map(Object.freeze),
 );
@@ -387,7 +400,7 @@ function spendRecipe(inventory, recipe) {
 const coreRootUpgrade = defineUpgrade({
   id: "core_first_descent",
   name: "Первый спуск",
-  description: "Начало пути шахтёра. Открывает семь ветвей мастерства.",
+  description: "Начало пути шахтёра. Открывает семь ветвей мастерства; до отметки 100 м даёт +70% силы копки и суммарно +77% скорости движения вниз, затем сохраняет +12% скорости движения к глубокой цели.",
   category: "core",
   icon: "⛏",
   maxLevel: 1,
@@ -395,7 +408,12 @@ const coreRootUpgrade = defineUpgrade({
   growth: 1,
   requires: [],
   recipeOverride: { copper: 1 },
-  apply: () => {},
+  apply: (stats, level) => {
+    add(stats, "descentMoveSpeedBonus", 0.12 * level);
+    add(stats, "openingDescentMoveSpeedBonus", 0.65 * level);
+    add(stats, "openingDepthPowerBonus", 0.7 * level);
+    add(stats, "descentTargetBias", 0.05 * level);
+  },
 });
 
 const senseUpgrades = [
@@ -410,8 +428,14 @@ const senseUpgrades = [
     baseCost: 4,
     growth: 1.29,
     requires: ["core_first_descent"],
+    firstRecipeOverride: { copper: 1 },
     levelRecipeOverrides: [
-      null, null, null, null, null, null,
+      { copper: 1 },
+      { copper: 5 },
+      { coal: 5, copper: 6 },
+      { iron: 4, coal: 4 },
+      { iron: 8, amber: 2 },
+      { silver: 2, amber: 4, iron: 10 },
       { gold: 4, amethyst: 2 },
       { gold: 7, amethyst: 2 },
     ],
@@ -435,8 +459,8 @@ const senseUpgrades = [
   }),
   defineUpgrade({
     id: "sense_clear_signal",
-    name: "Зацеп за жилу",
-    description: "Удерживает выбранную жилу до исчерпания. Переход к следующей её ноде ускоряется на 8/14/20%, а дальность продолжения жилы возрастает до 120/140/160% чутья.",
+    name: "Вектор глубины",
+    description: "Чутьё сильнее предпочитает цели ниже шахтёра, а движение к ним ускоряется на 8/14/20%.",
     category: "sense",
     icon: "⌖",
     maxLevel: 3,
@@ -444,9 +468,8 @@ const senseUpgrades = [
     growth: 1.54,
     requires: [{ id: "sense_instinct_spark", level: 3 }],
     apply: (stats, level) => {
-      stats.veinLockEnabled = true;
-      stats.veinLockMoveSpeedBonus = [0, 0.08, 0.14, 0.2][level] || 0.08;
-      stats.veinLockRangeMultiplier = [1, 1.2, 1.4, 1.6][level] || 1.2;
+      add(stats, "descentTargetBias", [0, 0.08, 0.14, 0.2][level] || 0.08);
+      add(stats, "descentMoveSpeedBonus", [0, 0.08, 0.14, 0.2][level] || 0.08);
     },
   }),
   defineUpgrade({
@@ -460,10 +483,10 @@ const senseUpgrades = [
     baseCost: 76,
     growth: 1.45,
     requires: [{ id: "sense_instinct_spark", level: 6 }],
-    firstRecipeOverride: { silver: 2, amber: 1, iron: 5 },
+    firstRecipeOverride: { silver: 3, amber: 2 },
     levelRecipeOverrides: [
       null,
-      { silver: 30, amber: 40, iron: 68 },
+      { gold: 10, silver: 27, amber: 40 },
       null,
     ],
     apply: (stats, level) => {
@@ -518,7 +541,11 @@ const senseUpgrades = [
     baseCost: 104,
     growth: 1.57,
     requires: ["sense_vein_whisper"],
-    firstRecipeOverride: { silver: 3, amber: 1, iron: 7 },
+    levelRecipeOverrides: [
+      { gold: 1, silver: 2, amber: 3 },
+      { gold: 3, silver: 5, amber: 6 },
+      { gold: 6, silver: 10, amber: 12 },
+    ],
     apply: (stats, level) => add(stats, "seismicRouteSlots", level),
   }),
   defineUpgrade({
@@ -532,7 +559,7 @@ const senseUpgrades = [
     baseCost: 160,
     growth: 1.51,
     requires: ["sense_deep_resonance"],
-    firstRecipeOverride: { silver: 3, amber: 3, iron: 4 },
+    firstRecipeOverride: { gold: 1, silver: 2, amber: 3 },
     apply: (stats, level) => add(stats, "senseRadiusMultiplier", 0.05 * level),
   }),
   defineUpgrade({
@@ -546,8 +573,9 @@ const senseUpgrades = [
     baseCost: 250,
     growth: 1,
     requires: ["sense_deep_resonance", "tools_steel_pick"],
+    requiresBestDepth: 750,
     requiresOreDiscovery: "silver",
-    recipeOverride: { silver: 5, iron: 4 },
+    recipeOverride: { gold: 2, silver: 2 },
     apply: (stats, level) => {
       if (level > 0) {
         stats.oreFocusUnlocked = true;
@@ -567,7 +595,7 @@ const senseUpgrades = [
     requires: ["sense_ore_focus"],
     levelRecipeOverrides: [
       { silver: 9 },
-      { amethyst: 1, gold: 1, silver: 2 },
+      { gold: 3, silver: 8 },
       { prism_crystal: 1, amethyst: 1, gold: 2 },
       { prism_crystal: 8, amethyst: 10, gold: 12 },
     ],
@@ -634,7 +662,7 @@ const senseUpgrades = [
     baseCost: 420,
     growth: 1,
     requires: ["sense_ore_focus", { id: "sense_priority_tuning", level: 2 }],
-    recipeOverride: { amethyst: 3, gold: 4, silver: 6 },
+    recipeOverride: { gold: 4, silver: 8 },
     apply: (stats, level) => add(stats, "backupTargetSlots", level),
   }),
   defineUpgrade({
@@ -724,7 +752,7 @@ const senseUpgrades = [
       "sense_frequency_swing",
       { id: "sense_triangular_fix", level: 2 },
     ],
-    recipeOverride: { prism_crystal: 500, void_ore: 100, star_core: 30 },
+    recipeOverride: { prism_crystal: 56, void_ore: 24 },
     apply: (stats, level) => {
       if (level > 0) stats.senseThroughWalls = true;
       add(stats, "senseRadiusMultiplier", 0.25 * level);
@@ -744,6 +772,7 @@ const digUpgrades = [
     baseCost: 4,
     growth: 1.29,
     requires: ["core_first_descent"],
+    firstRecipeOverride: { copper: 1 },
     levelRecipeOverrides: [
       null, null, null, null, null, null,
       { gold: 4, amethyst: 2 },
@@ -831,7 +860,8 @@ const digUpgrades = [
     maxLevel: 3,
     baseCost: 73,
     growth: 1.58,
-    requires: [{ id: "dig_arm_swing", level: 4 }],
+    requires: [{ id: "dig_arm_swing", level: 2 }],
+    firstRecipeOverride: { amber: 3, iron: 3 },
     apply: (stats, level) => {
       stats.approachStrikeTravelTime = 0.9;
       stats.approachStrikePower = [0, 0.5, 0.75, 1][level] || 0.5;
@@ -897,6 +927,7 @@ const digUpgrades = [
     baseCost: 240,
     growth: 1.49,
     requires: ["dig_precision_path", "dig_tunnel_step"],
+    firstRecipeOverride: { gold: 2, silver: 4, amber: 4 },
     apply: (stats, level) => {
       add(stats, "moveSpeedMultiplier", 0.06 * level);
       add(stats, "aimTurnSpeed", 0.08 * level);
@@ -925,7 +956,7 @@ const digUpgrades = [
     baseCost: 210,
     growth: 1.82,
     requires: ["dig_sweeping_arc", "power_furious_swing"],
-    firstRecipeOverride: { iron: 4, amber: 1, silver: 4 },
+    firstRecipeOverride: { silver: 5, amber: 1 },
     apply: (stats, level) => {
       stats.impactWaveEvery = [0, 6, 5, 4][level] || 6;
       stats.impactWaveRadiusTiles = [0, 1, 1.25, 1.5][level] || 1;
@@ -942,7 +973,7 @@ const digUpgrades = [
     baseCost: 150,
     growth: 1,
     requires: ["dig_sweeping_arc", "sense_echo_pulse"],
-    recipeOverride: { copper: 6, coal: 6, iron: 1 },
+    recipeOverride: { silver: 1, amber: 1 },
     apply: (stats, level) => {
       if (level > 0) stats.leastResistancePathing = true;
     },
@@ -950,24 +981,21 @@ const digUpgrades = [
   defineUpgrade({
     id: "dig_mine_lift",
     name: "Шахтный лифт",
-    description: "Начинает забег на 15/30/45% от рекордной глубины, но не ниже уже освоенного рудного слоя.",
+    description: "Начинает забег на 95/99/100% от рекордной глубины, но не ниже уже освоенного рудного слоя.",
     category: "dig",
     icon: "⇓",
     maxLevel: 3,
     baseCost: 520,
     growth: 1.82,
-    requires: [
-      "dig_tunnel_step",
-      { id: "time_clockwork_heart", level: 1 },
-      "tools_pneumatic_pick",
-    ],
+    requires: ["tools_iron_pick"],
+    requiresBestDepth: 35,
     levelRecipeOverrides: [
-      { silver: 3, amber: 5 },
-      { amethyst: 8, gold: 12, silver: 18 },
+      { coal: 2 },
+      { gold: 8, silver: 14, amber: 12 },
       { void_ore: 6, prism_crystal: 10, amethyst: 16 },
     ],
     apply: (stats, level) => {
-      stats.mineLiftRecordDepthRatio = [0, 0.15, 0.3, 0.45][level] || 0;
+      stats.mineLiftRecordDepthRatio = [0, 0.95, 0.99, 1][level] || 0;
     },
   }),
   defineUpgrade({
@@ -984,7 +1012,7 @@ const digUpgrades = [
       "dig_stone_dance",
       { id: "dig_mine_lift", level: 2 },
     ],
-    recipeOverride: { prism_crystal: 200, void_ore: 80, star_core: 330 },
+    recipeOverride: { prism_crystal: 69, star_core: 6 },
     apply: (stats, level) => {
       stats.quarryModeRequiredBreaks = 3;
       stats.quarryModeWindow = 1.2;
@@ -1008,8 +1036,12 @@ const powerUpgrades = [
     baseCost: 5,
     growth: 1.3,
     requires: ["core_first_descent"],
+    firstRecipeOverride: { copper: 1 },
     levelRecipeOverrides: [
-      null, null, null, null, null, null,
+      null, { amber: 2 }, { silver: 1, amber: 2 },
+      { silver: 2, amber: 3 },
+      { gold: 2, silver: 2, amber: 5 },
+      { gold: 3, silver: 4, amber: 4 },
       { gold: 5, amethyst: 3 },
       { gold: 9, amethyst: 3 },
     ],
@@ -1040,6 +1072,7 @@ const powerUpgrades = [
     baseCost: 37,
     growth: 1.44,
     requires: [{ id: "power_sharpened_edge", level: 4 }],
+    firstRecipeOverride: { amber: 3 },
     apply: (stats, level) => add(stats, "critChance", 0.025 * level),
   }),
   defineUpgrade({
@@ -1118,7 +1151,7 @@ const powerUpgrades = [
     baseCost: 105,
     growth: 1.78,
     requires: ["power_tempered_steel"],
-    firstRecipeOverride: { silver: 4, amber: 4, iron: 6 },
+    firstRecipeOverride: { silver: 6, amber: 3 },
     apply: (stats, level) => {
       add(stats, "pickPower", 0.9 * level);
       add(stats, "hardnessPierce", 0.35 * level);
@@ -1135,6 +1168,7 @@ const powerUpgrades = [
     baseCost: 230,
     growth: 1.53,
     requires: ["power_shatterpoint"],
+    firstRecipeOverride: { gold: 3, silver: 4, amber: 5 },
     apply: (stats, level) => {
       add(stats, "splashDamage", 0.08 * level);
       add(stats, "oreDamageBonus", 0.08 * level);
@@ -1151,6 +1185,7 @@ const powerUpgrades = [
     baseCost: 310,
     growth: 1.58,
     requires: ["power_momentum", "power_diamond_tip"],
+    firstRecipeOverride: { gold: 4, silver: 6, amber: 5 },
     apply: (stats, level) => add(stats, "chargedHitPower", 0.35 * level),
   }),
   defineUpgrade({
@@ -1179,8 +1214,8 @@ const powerUpgrades = [
     requires: ["power_tectonic_blow", "power_geologist_force"],
     levelRecipeOverrides: [
       { gold: 11, silver: 13 },
-      { amethyst: 34, gold: 72, silver: 1 },
-      { amethyst: 69, gold: 147 },
+      { amethyst: 6, prism_crystal: 4 },
+      { prism_crystal: 12, void_ore: 5 },
     ],
     apply: (stats, level) => {
       add(stats, "pickPowerMultiplier", 0.1 * level);
@@ -1224,7 +1259,7 @@ const powerUpgrades = [
       { id: "sense_priority_tuning", level: 2 },
     ],
     levelRecipeOverrides: [
-      { amethyst: 5, gold: 6, silver: 8 },
+      { gold: 6, silver: 14 },
       { gold: 60, silver: 65 },
       { gold: 139, silver: 150 },
     ],
@@ -1244,7 +1279,7 @@ const powerUpgrades = [
       "power_sample_calibration",
       { id: "power_corebreaker", level: 2 },
     ],
-    recipeOverride: { prism_crystal: 550, void_ore: 200, star_core: 200 },
+    recipeOverride: { prism_crystal: 64, void_ore: 26 },
     apply: (stats, level) => {
       stats.faultLineEnabled = level > 0;
       stats.faultLineMaxBlocks = 4;
@@ -1487,6 +1522,16 @@ const timeUpgrades = [
     baseCost: 4,
     growth: 1.27,
     requires: ["core_first_descent"],
+    levelRecipeOverrides: [
+      { copper: 1 },
+      { copper: 3 },
+      { copper: 3 },
+      { copper: 4 },
+      { copper: 5 },
+      { silver: 3, amber: 4 },
+      { gold: 3, silver: 5 },
+      { amethyst: 3, gold: 5 },
+    ],
     apply: (stats, level) => add(stats, "runDuration", 0.75 * level),
   }),
   defineUpgrade({
@@ -1501,17 +1546,17 @@ const timeUpgrades = [
     growth: 1.24,
     requires: [
       { id: "time_extra_breath", level: 3 },
-      { id: "dig_light_footwork", level: 2 },
+      { id: "dig_light_footwork", level: 1 },
     ],
     levelRecipeOverrides: [
       { coal: 2, copper: 3 },
       { coal: 4, iron: 2, copper: 4 },
       { iron: 4, coal: 6, copper: 6 },
       { iron: 3, coal: 4 },
-      { silver: 4, amber: 6, iron: 8 },
-      { gold: 4, silver: 6, amber: 8 },
-      { amethyst: 8, gold: 12, silver: 16 },
-      { prism_crystal: 8, amethyst: 14, gold: 18 },
+      { silver: 4, amber: 6 },
+      { gold: 4, silver: 6 },
+      { amethyst: 8, gold: 12 },
+      { prism_crystal: 8, amethyst: 14 },
     ],
     apply: (stats, level) => {
       add(stats, "runDuration", 1.125 * level);
@@ -1538,15 +1583,15 @@ const timeUpgrades = [
     growth: 1.38,
     requires: [
       { id: "time_clockwork_heart", level: 4 },
-      { id: "tools_balanced_handle", level: 4 },
+      { id: "tools_balanced_handle", level: 3 },
     ],
     levelRecipeOverrides: [
-      { amber: 7, iron: 9, coal: 8 },
-      { silver: 6, amber: 8, iron: 10 },
-      { gold: 5, silver: 8, amber: 10 },
-      { amethyst: 5, gold: 8, silver: 12 },
-      { prism_crystal: 6, amethyst: 10, gold: 14 },
-      { void_ore: 4, prism_crystal: 10, amethyst: 16 },
+      { silver: 3, amber: 4 },
+      { gold: 3, silver: 5 },
+      { amethyst: 3, gold: 5 },
+      { prism_crystal: 3, amethyst: 5 },
+      { void_ore: 3, prism_crystal: 6 },
+      { void_ore: 8, star_core: 2 },
     ],
     apply: (stats, level) => {
       add(stats, "runDuration", 4 * level);
@@ -1572,7 +1617,7 @@ const timeUpgrades = [
       { id: "time_clockwork_heart", level: 8 },
       { id: "time_capsule", level: 6 },
     ],
-    recipeOverride: { prism_crystal: 500, void_ore: 180, star_core: 150 },
+    recipeOverride: { void_ore: 30, star_core: 7 },
     apply: (stats, level) => {
       if (level > 0) {
         stats.chronoOverclock = true;
@@ -1597,6 +1642,7 @@ const gadgetUpgrades = [
     baseCost: 8,
     growth: 1.4,
     requires: ["core_first_descent"],
+    firstRecipeOverride: { copper: 1 },
     apply: (stats, level) => add(stats, "bombChance", 0.02 * level),
   }),
   defineUpgrade({
@@ -1651,7 +1697,7 @@ const gadgetUpgrades = [
     baseCost: 95,
     growth: 1.49,
     requires: ["gadgets_packed_charge"],
-    firstRecipeOverride: { silver: 3, amber: 1, iron: 5 },
+    firstRecipeOverride: { silver: 4, amber: 1 },
     apply: (stats, level) => add(stats, "stickyBombChance", 0.07 * level),
   }),
   defineUpgrade({
@@ -1677,6 +1723,12 @@ const gadgetUpgrades = [
     baseCost: 170,
     growth: 1.54,
     requires: ["gadgets_chain_spark"],
+    levelRecipeOverrides: [
+      { gold: 2, silver: 4, amber: 4 },
+      { gold: 5, silver: 8, amber: 7 },
+      null,
+      null,
+    ],
     apply: (stats, level) => {
       add(stats, "chainCount", level);
       add(stats, "chainPower", 0.05 * level);
@@ -1723,14 +1775,14 @@ const gadgetUpgrades = [
   defineUpgrade({
     id: "gadgets_scout_drone",
     name: "Дрон-разведчик",
-    description: "Открывает дрона, который сам ищет и бьёт руду.",
+    description: "Открывает заметного автономного дрона: он ищет руду дальше обычного чутья, подсвечивает цель и старается работать по соседней ноде, а не повторять удар шахтёра.",
     category: "gadgets",
     icon: "▣",
     maxLevel: 1,
     baseCost: 190,
     growth: 1,
-    requires: ["gadgets_magnet_mine", "sense_echo_pulse"],
-    recipeOverride: { silver: 1, amber: 2, iron: 2 },
+    requires: ["gadgets_powder_pocket", "sense_echo_pulse"],
+    recipeOverride: { iron: 1, coal: 3, copper: 4 },
     apply: (stats, level) => {
       if (level > 0) stats.droneUnlocked = true;
       add(stats, "droneCount", level);
@@ -1739,33 +1791,40 @@ const gadgetUpgrades = [
   defineUpgrade({
     id: "gadgets_drone_battery",
     name: "Батарея дрона",
-    description: "Скорость дронов +20%, время их работы +18,3% смены за уровень. Третий уровень даёт полную автономность.",
+    description: "Скорость дронов +15%, время их работы +8,3% смены за уровень. Третий уровень даёт полную автономность.",
     category: "gadgets",
     icon: "▥",
     maxLevel: 3,
-    effectLevelMultiplier: 5 / 3,
     baseCost: 360,
     growth: 1.55,
     requires: ["gadgets_scout_drone"],
-    firstRecipeOverride: { silver: 3, amber: 4, iron: 5 },
+    levelRecipeOverrides: [
+      { iron: 3, coal: 5 },
+      { amber: 5, iron: 8 },
+      { silver: 4, amber: 8 },
+    ],
     apply: (stats, level) => {
-      add(stats, "droneSpeed", 0.12 * level);
-      add(stats, "droneLifetime", 0.11 * level);
+      add(stats, "droneSpeed", 0.15 * level);
+      add(stats, "droneLifetime", (0.25 / 3) * level);
     },
   }),
   defineUpgrade({
     id: "gadgets_drone_drill",
     name: "Бур дрона",
-    description: "Сила дронов +33% за уровень.",
+    description: "Сила дронов +45% за уровень; бур использует пробивание плотности и часть бонусов урона по руде.",
     category: "gadgets",
     icon: "⚙",
     maxLevel: 4,
-    effectLevelMultiplier: 1.5,
     baseCost: 410,
     growth: 1.55,
     requires: ["gadgets_scout_drone"],
-    firstRecipeOverride: { silver: 4, amber: 5, iron: 6 },
-    apply: (stats, level) => add(stats, "dronePower", 0.22 * level),
+    levelRecipeOverrides: [
+      { iron: 4, coal: 5 },
+      { amber: 5, iron: 7 },
+      { silver: 5, amber: 8 },
+      { gold: 3, silver: 8 },
+    ],
+    apply: (stats, level) => add(stats, "dronePower", 0.45 * level),
   }),
   defineUpgrade({
     id: "gadgets_drone_swarm",
@@ -1778,9 +1837,9 @@ const gadgetUpgrades = [
     growth: 1.68,
     requires: ["gadgets_drone_battery", "gadgets_drone_drill"],
     levelRecipeOverrides: [
-      { gold: 3, silver: 6 },
-      { amethyst: 13, gold: 28 },
-      { amethyst: 30, gold: 63 },
+      { amber: 5, iron: 8 },
+      { silver: 6, amber: 10 },
+      { gold: 4, silver: 10 },
     ],
     apply: (stats, level) => add(stats, "droneCount", level),
   }),
@@ -1862,7 +1921,7 @@ const gadgetUpgrades = [
       "gadgets_geo_charge",
       "gadgets_crew_beacon",
     ],
-    recipeOverride: { prism_crystal: 750, void_ore: 200, star_core: 50 },
+    recipeOverride: { void_ore: 47, star_core: 6 },
     apply: (stats, level) => {
       stats.demolitionComboEnabled = level > 0;
       stats.demolitionComboMarkDuration = 3;
@@ -1886,6 +1945,7 @@ const toolUpgrades = [
     baseCost: 7,
     growth: 1.32,
     requires: ["core_first_descent"],
+    firstRecipeOverride: { copper: 1 },
     levelRecipeOverrides: [
       null, null, null, null,
       { gold: 4, amethyst: 1 },
@@ -1903,7 +1963,7 @@ const toolUpgrades = [
     baseCost: 32,
     growth: 1,
     requires: ["tools_balanced_handle"],
-    recipeOverride: { copper: 2, coal: 3, iron: 2 },
+    recipeOverride: { copper: 2, coal: 3, iron: 1 },
     apply: (stats, level) => {
       if (level > 0) {
         stats.tool = "ironPick";
@@ -1923,7 +1983,7 @@ const toolUpgrades = [
     baseCost: 78,
     growth: 1,
     requires: ["tools_iron_pick", "power_tempered_steel"],
-    recipeOverride: { iron: 4, coal: 8, amber: 2 },
+    recipeOverride: { iron: 4, coal: 8 },
     apply: (stats, level) => {
       if (level > 0) {
         stats.tool = "steelPick";
@@ -1942,7 +2002,7 @@ const toolUpgrades = [
     maxLevel: 1,
     baseCost: 145,
     growth: 1,
-    requires: ["tools_steel_pick", { id: "tools_balanced_handle", level: 4 }],
+    requires: ["tools_steel_pick", { id: "tools_balanced_handle", level: 3 }],
     recipeOverride: { silver: 4, amber: 9 },
     apply: (stats, level) => {
       if (level > 0) {
@@ -1957,21 +2017,22 @@ const toolUpgrades = [
   defineUpgrade({
     id: "tools_super_pick",
     name: "Суперкирка",
-    description: "Инструмент V ранга: огромная сила и два удара за замах.",
+    description: "Инструмент V ранга: сила +65%, скорость +10% и два удара за замах.",
     category: "tools",
     icon: "★",
     maxLevel: 1,
     baseCost: 420,
     growth: 1,
-    requires: ["tools_pneumatic_pick", "power_diamond_tip", "power_sample_calibration"],
-    recipeOverride: { silver: 10, gold: 6, amethyst: 4 },
+    requires: ["tools_pneumatic_pick", "power_diamond_tip", "dig_omni_swing"],
+    recipeOverride: { silver: 30, gold: 20, amber: 8 },
     apply: (stats, level) => {
       if (level > 0) {
         stats.tool = "superPick";
         stats.toolTier = Math.max(stats.toolTier, 5);
         stats.superPickUnlocked = true;
       }
-      add(stats, "pickPowerMultiplier", 0.35 * level);
+      add(stats, "pickPowerMultiplier", 0.65 * level);
+      add(stats, "digSpeedMultiplier", 0.1 * level);
       add(stats, "multiHitCount", level);
     },
   }),
@@ -1987,10 +2048,10 @@ const toolUpgrades = [
     growth: 1.76,
     requires: ["tools_super_pick"],
     levelRecipeOverrides: [
-      { prism_crystal: 2, silver: 3 },
-      { prism_crystal: 3, void_ore: 1, silver: 4 },
-      { void_ore: 2, prism_crystal: 8, amethyst: 10 },
-      { void_ore: 5, prism_crystal: 12, amethyst: 14 },
+      { amethyst: 4, gold: 4 },
+      { prism_crystal: 2, amethyst: 3 },
+      { void_ore: 35, prism_crystal: 55, amethyst: 45 },
+      { void_ore: 70, prism_crystal: 105, star_core: 15 },
     ],
     apply: (stats, level) => add(stats, "digSpeedMultiplier", 0.09 * level),
   }),
@@ -2006,10 +2067,10 @@ const toolUpgrades = [
     growth: 1.78,
     requires: ["tools_super_pick"],
     levelRecipeOverrides: [
-      { prism_crystal: 2, silver: 4 },
-      { prism_crystal: 3, void_ore: 1, silver: 5 },
-      { void_ore: 3, prism_crystal: 9, amethyst: 11 },
-      { void_ore: 6, prism_crystal: 13, amethyst: 15 },
+      { amethyst: 4, gold: 5 },
+      { prism_crystal: 2, amethyst: 3 },
+      { void_ore: 40, prism_crystal: 60, amethyst: 50 },
+      { void_ore: 80, prism_crystal: 120, star_core: 20 },
     ],
     apply: (stats, level) => add(stats, "pickPowerMultiplier", 0.13 * level),
   }),
@@ -2023,15 +2084,15 @@ const toolUpgrades = [
     baseCost: 430,
     growth: 1.82,
     requires: [
-      { id: "tools_super_motor", level: 2 },
-      { id: "tools_super_teeth", level: 2 },
+      { id: "tools_super_motor", level: 1 },
+      { id: "tools_super_teeth", level: 1 },
     ],
-    requiresOreDiscovery: "void_ore",
+    requiresOreDiscovery: "amethyst",
     levelRecipeOverrides: [
-      { void_ore: 3, prism_crystal: 6, amethyst: 6 },
-      { void_ore: 6, prism_crystal: 10, amethyst: 12 },
-      { void_ore: 9, prism_crystal: 14, amethyst: 16 },
-      { void_ore: 13, prism_crystal: 19, amethyst: 22 },
+      { amethyst: 8, gold: 6 },
+      { void_ore: 2, prism_crystal: 2, amethyst: 3 },
+      { void_ore: 45, prism_crystal: 70, star_core: 12 },
+      { void_ore: 95, prism_crystal: 140, star_core: 25 },
     ],
     apply: (stats, level) => {
       stats.superFieldEnabled = true;
@@ -2051,13 +2112,13 @@ const toolUpgrades = [
     baseCost: 1500,
     growth: 1,
     requires: [
-      { id: "tools_super_field", level: 4 },
+      { id: "tools_super_field", level: 2 },
       "sense_far_echo",
       "tools_super_pick",
       "sense_frequency_swing",
     ],
     requiresOreDiscovery: "void_ore",
-    recipeOverride: { void_ore: 10, prism_crystal: 18, amethyst: 18 },
+    recipeOverride: { void_ore: 3, prism_crystal: 6, amethyst: 6 },
     apply: (stats, level) => {
       if (level > 0) {
         stats.tool = "miningLaser";
@@ -2079,7 +2140,13 @@ const toolUpgrades = [
     growth: 1.5,
     requires: ["tools_laser_emitter"],
     maximumGeneratedTier: 8,
-    firstRecipeOverride: { void_ore: 40, prism_crystal: 60, gold: 30 },
+    levelRecipeOverrides: [
+      { void_ore: 6, prism_crystal: 10 },
+      { void_ore: 14, prism_crystal: 24 },
+      { void_ore: 25, prism_crystal: 40 },
+      { void_ore: 55, prism_crystal: 80 },
+      { void_ore: 100, prism_crystal: 140 },
+    ],
     apply: (stats, level) => add(stats, "laserRange", 35 * level),
   }),
   defineUpgrade({
@@ -2093,7 +2160,13 @@ const toolUpgrades = [
     baseCost: 2100,
     growth: 1.59,
     requires: ["tools_laser_emitter"],
-    firstRecipeOverride: { void_ore: 55, prism_crystal: 70, gold: 35 },
+    levelRecipeOverrides: [
+      { void_ore: 7, prism_crystal: 13 },
+      { void_ore: 17, prism_crystal: 29 },
+      { void_ore: 30, prism_crystal: 45, star_core: 6 },
+      { void_ore: 60, prism_crystal: 85, star_core: 15 },
+      { void_ore: 110, prism_crystal: 150, star_core: 30 },
+    ],
     apply: (stats, level) => add(stats, "laserPower", 0.18 * level),
   }),
   defineUpgrade({
@@ -2106,8 +2179,13 @@ const toolUpgrades = [
     effectLevelMultiplier: 1.25,
     baseCost: 2400,
     growth: 1.61,
-    requires: ["tools_laser_power", "time_thirty_second_oath"],
-    firstRecipeOverride: { void_ore: 70, prism_crystal: 90, gold: 40 },
+    requires: ["tools_laser_power", { id: "time_capsule", level: 3 }],
+    levelRecipeOverrides: [
+      { void_ore: 8, prism_crystal: 14 },
+      { void_ore: 20, prism_crystal: 32 },
+      { void_ore: 40, prism_crystal: 55, star_core: 8 },
+      { void_ore: 80, prism_crystal: 105, star_core: 20 },
+    ],
     apply: (stats, level) => {
       add(stats, "laserWidth", 3 * level);
       stats.laserHeatEdgePower = 0.2 + 0.05 * level;
@@ -2125,7 +2203,11 @@ const toolUpgrades = [
     baseCost: 2800,
     growth: 1.35,
     requires: ["tools_laser_range", "tools_laser_width"],
-    firstRecipeOverride: { void_ore: 90, prism_crystal: 120, gold: 50 },
+    levelRecipeOverrides: [
+      { void_ore: 9, prism_crystal: 16 },
+      { void_ore: 12, prism_crystal: 18, star_core: 5 },
+      { void_ore: 55, prism_crystal: 80, star_core: 20 },
+    ],
     apply: (stats, level) => {
       add(stats, "laserBeams", level);
       add(stats, "laserPierce", 0.18 * level);
@@ -2140,12 +2222,16 @@ const toolUpgrades = [
     maxLevel: 2,
     baseCost: 2100,
     growth: 1.72,
+    requiresBestDepth: 1200,
     requires: [
       "tools_laser_emitter",
       "sense_ore_focus",
       { id: "tools_laser_range", level: 1 },
     ],
-    firstRecipeOverride: { void_ore: 45, prism_crystal: 60, amethyst: 40 },
+    levelRecipeOverrides: [
+      { void_ore: 18, prism_crystal: 28 },
+      { void_ore: 35, prism_crystal: 50, star_core: 12 },
+    ],
     apply: (stats, level) => {
       add(stats, "laserRicochetCount", level);
       stats.laserFirstRicochetMultiplier = 0.65;
@@ -2163,8 +2249,8 @@ const toolUpgrades = [
     growth: 1.74,
     requires: ["tools_laser_splitter", "dig_omni_swing"],
     levelRecipeOverrides: [
-      { void_ore: 40, prism_crystal: 40, silver: 15 },
-      { void_ore: 22, prism_crystal: 32, amethyst: 30 },
+      { void_ore: 8, prism_crystal: 14, star_core: 3 },
+      { void_ore: 40, prism_crystal: 55, star_core: 14 },
     ],
     apply: (stats, level) => {
       stats.laserSuperPickEchoEvery = [0, 6, 4][level] || 6;
@@ -2188,7 +2274,7 @@ const toolUpgrades = [
       "tools_mirror_crystal",
       "tools_super_pick_echo",
     ],
-    recipeOverride: { prism_crystal: 250, void_ore: 100, star_core: 50 },
+    recipeOverride: { prism_crystal: 47, void_ore: 29 },
     apply: (stats, level) => {
       if (level > 0) {
         stats.tool = "prismaticLaser";
@@ -2213,6 +2299,7 @@ const fortuneUpgrades = [
     baseCost: 5,
     growth: 1.3,
     requires: ["core_first_descent"],
+    firstRecipeOverride: { copper: 1 },
     levelRecipeOverrides: [
       null, null, null, null, null, null,
       { gold: 6, amethyst: 2 },
@@ -2257,7 +2344,7 @@ const fortuneUpgrades = [
     effectLevelMultiplier: 1.2,
     baseCost: 58,
     growth: 1.47,
-    requires: [{ id: "fortune_prospector_ledger", level: 3 }],
+    requires: [{ id: "fortune_prospector_ledger", level: 2 }],
     firstRecipeOverride: { coal: 3, iron: 1 },
     apply: (stats, level) => add(stats, "gemValueMultiplier", 0.09 * level),
   }),
@@ -2289,7 +2376,7 @@ const fortuneUpgrades = [
     effectLevelMultiplier: 1.25,
     baseCost: 112,
     growth: 1.5,
-    requires: [{ id: "fortune_prospector_ledger", level: 3 }],
+    requires: [{ id: "fortune_prospector_ledger", level: 2 }],
     firstRecipeOverride: { coal: 2, iron: 1 },
     apply: (stats, level) => add(stats, "doubleDropChance", 0.036 * level),
   }),
@@ -2324,7 +2411,7 @@ const fortuneUpgrades = [
     baseCost: 230,
     growth: 1.54,
     requires: ["fortune_gem_polish", "power_shatterpoint"],
-    firstRecipeOverride: { iron: 3, amber: 2, silver: 1 },
+    firstRecipeOverride: { gold: 2, silver: 3, amber: 3 },
     apply: (stats, level) => {
       stats.trueOverkillEnabled = true;
       stats.overkillReservoirRatio = [0, 0.25, 0.4, 0.55, 0.7, 0.85][level] || 0.25;
@@ -2342,6 +2429,7 @@ const fortuneUpgrades = [
     baseCost: 285,
     growth: 1.56,
     requires: ["fortune_gem_polish"],
+    firstRecipeOverride: { amethyst: 2, gold: 4, silver: 5 },
     apply: (stats, level) => {
       stats.depthContractStep = 100;
       add(stats, "depthContractBonusPerStack", 0.03 * level);
@@ -2388,6 +2476,7 @@ const fortuneUpgrades = [
     baseCost: 720,
     growth: 1.64,
     requires: ["fortune_deep_market", "fortune_golden_touch"],
+    firstRecipeOverride: { amethyst: 3, gold: 6, silver: 8 },
     apply: (stats, level) => {
       add(stats, "oreValueMultiplier", 0.12 * level);
       add(stats, "extraYieldChance", 0.05 * level);
@@ -2403,6 +2492,7 @@ const fortuneUpgrades = [
     baseCost: 960,
     growth: 1.67,
     requires: ["fortune_relic_magnet", "fortune_kings_ransom"],
+    firstRecipeOverride: { prism_crystal: 3, amethyst: 5, gold: 6 },
     apply: (stats, level) => {
       stats.fortuneWheelEnabled = true;
       stats.fortunePityThreshold = [0, 8, 7, 6, 5][level] || 8;
@@ -2419,6 +2509,7 @@ const fortuneUpgrades = [
     baseCost: 550,
     growth: 1.62,
     requires: ["fortune_deep_market", "sense_vein_whisper", "sense_ore_focus"],
+    firstRecipeOverride: { amethyst: 2, gold: 5, silver: 6 },
     apply: (stats, level) => add(stats, "oreDiversityBonusPerType", 0.02 * level),
   }),
   defineUpgrade({
@@ -2431,7 +2522,7 @@ const fortuneUpgrades = [
     baseCost: 2600,
     growth: 1,
     requires: ["fortune_wheel", "fortune_alchemist_scales", "fortune_findings_catalog"],
-    recipeOverride: { prism_crystal: 550, void_ore: 360, star_core: 70 },
+    recipeOverride: { prism_crystal: 76, star_core: 6 },
     apply: (stats, level) => {
       stats.motherlodeGuaranteed = level > 0;
       stats.motherlodeTriggerBreaks = 20;
@@ -2445,12 +2536,13 @@ const fortuneUpgrades = [
 const coreFinalUpgrade = defineUpgrade({
   id: "core_bon_voyage",
   name: "Солнечный бур",
-  description: "Объединяет вершины всех путей. Каждый пятый выстрел удерживает солнечный луч 0,7 секунды; только его финальный импульс способен пробить Печать планеты на предельной глубине.",
+  description: "Объединяет вершины всех путей и сразу ведёт к Печати планеты. Каждый пятый реальный контакт луча с породой удерживает солнечный луч 0,7 секунды и расширяет тоннель мощным импульсом; только близкий импульс способен пробить саму Печать.",
   category: "core",
   icon: "☀",
   maxLevel: 1,
   baseCost: 24000,
   growth: 1,
+  requiresBestDepth: 1600,
   requires: [
     "sense_earth_call",
     "dig_quarry_presence",
@@ -2461,9 +2553,9 @@ const coreFinalUpgrade = defineUpgrade({
     "fortune_motherlode_covenant",
   ],
   recipeOverride: {
-    prism_crystal: 5300,
-    void_ore: 1800,
-    star_core: 260,
+    prism_crystal: 40,
+    void_ore: 22,
+    star_core: 5,
   },
   apply: (stats, level) => {
     if (level > 0) {
@@ -2473,7 +2565,13 @@ const coreFinalUpgrade = defineUpgrade({
       stats.solarDrillEnabled = true;
       stats.solarDrillProcEvery = 5;
       stats.solarDrillBeamDuration = 0.7;
-      stats.solarDrillFinalBurstPower = 0.9;
+      // The final tool must create a short, visibly decisive descent rather
+      // than another 20-45 minute rock plateau after the tree is complete.
+      // The pulse is strong enough to finish every local deep-rock block and
+      // broad enough to open a real tunnel instead of wasting more overkill
+      // on the same target. Every earlier tool remains unchanged.
+      stats.solarDrillFinalBurstPower = 18;
+      stats.solarDrillFinalBurstRadiusTiles = 3.25;
     }
   },
 });
@@ -2515,9 +2613,10 @@ function createBaseMetaStats() {
     veinTrailEnabled: false,
     veinTrailRangeMultiplier: 1,
     veinTrailMoveSpeedBonus: 0,
-    veinLockEnabled: false,
-    veinLockRangeMultiplier: 1,
-    veinLockMoveSpeedBonus: 0,
+    descentTargetBias: 0,
+    descentMoveSpeedBonus: 0,
+    openingDescentMoveSpeedBonus: 0,
+    openingDepthPowerBonus: 0,
     targetLockSpeed: 1,
     targetValueBias: 0.12,
     backupTargetSlots: 0,
@@ -2645,9 +2744,9 @@ function createBaseMetaStats() {
     pickupRadius: 46,
     droneUnlocked: false,
     droneCount: 0,
-    dronePower: 0.35,
-    droneSpeed: 1,
-    droneLifetime: 0.45,
+    dronePower: 0.75,
+    droneSpeed: 1.3,
+    droneLifetime: 0.75,
     droneBombChance: 0,
     crewBeaconUnlocked: false,
     crewBeaconOverkillCarry: 0,
@@ -2690,6 +2789,7 @@ function createBaseMetaStats() {
     solarDrillProcEvery: 0,
     solarDrillBeamDuration: 0,
     solarDrillFinalBurstPower: 0,
+    solarDrillFinalBurstRadiusTiles: 0,
 
     // Rewards and procedural fortune. Consumers combine `luck` and explicit
     // proc chances; this module does not roll random values itself.
@@ -2773,8 +2873,8 @@ function normalizeMetaStats(stats) {
   stats.echoPingTargetHold = Math.max(0, stats.echoPingTargetHold);
   stats.veinTrailRangeMultiplier = Math.max(1, stats.veinTrailRangeMultiplier);
   stats.veinTrailMoveSpeedBonus = Math.max(0, stats.veinTrailMoveSpeedBonus);
-  stats.veinLockRangeMultiplier = Math.max(1, stats.veinLockRangeMultiplier);
-  stats.veinLockMoveSpeedBonus = Math.max(0, stats.veinLockMoveSpeedBonus);
+  stats.descentTargetBias = Math.max(0, stats.descentTargetBias);
+  stats.descentMoveSpeedBonus = Math.max(0, stats.descentMoveSpeedBonus);
   stats.seismicRouteSlots = Math.max(0, Math.floor(stats.seismicRouteSlots));
   stats.ghostTrailDuration = Math.max(0, stats.ghostTrailDuration);
   stats.ghostTrailMaxLayers = Math.max(0, Math.floor(stats.ghostTrailMaxLayers));
@@ -2858,7 +2958,7 @@ function normalizeMetaStats(stats) {
   stats.triangularFixOreMemory = Math.max(0, stats.triangularFixOreMemory);
   stats.triangularFixGadgetDamageBonus = Math.max(0, stats.triangularFixGadgetDamageBonus);
   stats.triangularFixRangeBonus = Math.max(0, stats.triangularFixRangeBonus);
-  stats.mineLiftRecordDepthRatio = clamp(stats.mineLiftRecordDepthRatio, 0, 0.9);
+  stats.mineLiftRecordDepthRatio = clamp(stats.mineLiftRecordDepthRatio, 0, 1);
   stats.oreDiversityBonusPerType = Math.max(0, stats.oreDiversityBonusPerType);
   stats.laserSuperPickEchoEvery = Math.max(0, Math.floor(stats.laserSuperPickEchoEvery));
   stats.laserSuperPickEchoRadiusTiles = Math.max(0, stats.laserSuperPickEchoRadiusTiles);
@@ -2872,6 +2972,7 @@ function normalizeMetaStats(stats) {
   stats.solarDrillProcEvery = Math.max(0, Math.floor(stats.solarDrillProcEvery));
   stats.solarDrillBeamDuration = Math.max(0, stats.solarDrillBeamDuration);
   stats.solarDrillFinalBurstPower = Math.max(0, stats.solarDrillFinalBurstPower);
+  stats.solarDrillFinalBurstRadiusTiles = Math.max(0, stats.solarDrillFinalBurstRadiusTiles);
   stats.richVeinYieldBonus = Math.max(0, stats.richVeinYieldBonus);
   stats.richVeinCompletionBonus = Math.max(0, Math.floor(stats.richVeinCompletionBonus));
   stats.tripleSampleEvery = Math.max(0, Math.floor(stats.tripleSampleEvery));
