@@ -62,7 +62,7 @@ assert.ok(html.includes('class="menu-hero-art"'), "responsive hero picture is mi
 assert.ok(html.includes('media="(max-width: 1199px)"'), "mobile hero source is missing");
 assert.ok(html.includes('class="brand-command"'), "mobile command block is missing");
 assert.ok(!html.includes('class="briefing-art"'), "separate rocket panel must stay removed");
-assert.ok(html.includes("deep-shaft-9-sense1"), "sense-render cache version was not updated");
+assert.ok(html.includes("deep-shaft-10-static-icons"), "static-icon cache version was not updated");
 assert.ok(html.includes("СПРАВКА"), "the tertiary help action is missing");
 const startRunMarkup = html.match(/<button id="startRun"[\s\S]*?<\/button>/u)?.[0] || "";
 assert.match(startRunMarkup, /class="btn-icon btn-icon--play"[^>]*><\/span>/u, "Dig must use the font-independent play icon");
