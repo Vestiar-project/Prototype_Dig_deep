@@ -121,10 +121,10 @@ const FIELD_VEIN_ATLAS_LAYOUT = Object.freeze({
   void_ore: Object.freeze({ x: 1536, y: 512, width: 512, height: 512, portWidthRatio: 0.23 }),
   star_core: Object.freeze({ x: 2048, y: 512, width: 512, height: 512, portWidthRatio: 0.20 }),
 });
-const FIELD_ORE_NODE_MIN_SIZE = 25.75;
-const FIELD_ORE_NODE_TIER_STEP = 0.36;
-const FIELD_ORE_NODE_MAX_SIZE = 29;
-const FIELD_ORE_FALLBACK_SCALE = 1.08;
+const FIELD_ORE_NODE_MIN_SIZE = 32.5;
+const FIELD_ORE_NODE_TIER_STEP = 0.5;
+const FIELD_ORE_NODE_MAX_SIZE = 37;
+const FIELD_ORE_FALLBACK_SCALE = 1.32;
 const FIELD_VEIN_WIDTH_SCALE = 0.72;
 const FIELD_VEIN_MIN_WIDTH = 2.2;
 const FIELD_VEIN_MAX_WIDTH = 4.6;
@@ -4066,7 +4066,12 @@ function renderUpgrades() {
   const query = state.upgradeQuery.trim().toLocaleLowerCase('ru');
   const mobileControls = usesMobileUpgradeControls();
   let matchingNodes = 0;
-  const nodeFragment = document.createDocumentFragment();
+  const existingNodes = new Map(
+    Array.from(ui.upgradeNodes.children || [])
+      .filter((node) => node?.dataset?.upgradeId)
+      .map((node) => [node.dataset.upgradeId, node]),
+  );
+  const orderedNodes = [];
   for (const definition of visible) {
     const level = getUpgradeLevel(definition);
     const atMax = level >= definition.maxLevel;
@@ -4082,7 +4087,9 @@ function renderUpgrades() {
     const categoryMatch = true;
     if (searchMatch && categoryMatch) matchingNodes += 1;
     const position = layout.positions.get(definition.id);
-    const node = document.createElement('button');
+    let node = existingNodes.get(definition.id);
+    const isNewNode = !node;
+    if (!node) node = document.createElement('button');
     node.type = 'button';
     node.className = [
       'upgrade-node',
@@ -4102,8 +4109,11 @@ function renderUpgrades() {
     node.dataset.category = definition.category;
     node.dataset.state = atMax ? 'maxed' : preview ? 'preview' : pending ? 'pending' : owned ? 'owned' : 'available';
     if (pendingReason) node.dataset.pendingReason = pendingReason;
+    else delete node.dataset.pendingReason;
     if (available && !atMax) node.dataset.buyUpgrade = definition.id;
+    else delete node.dataset.buyUpgrade;
     if (position.x + getUpgradeNodeSize(definition).width * 0.5 > layout.centerX) node.dataset.tooltipSide = 'left';
+    else delete node.dataset.tooltipSide;
     node.style.setProperty('--node-x', `${position.x}px`);
     node.style.setProperty('--node-y', `${position.y}px`);
     const requirements = definition.requires?.length
@@ -4128,7 +4138,8 @@ function renderUpgrades() {
             : `Нажмите, чтобы установить${definition.maxLevel - level > 1 ? '; Shift + клик — купить максимум' : ''}`
           : 'Не хватает руды — недостающие позиции отмечены красным';
     node.setAttribute('aria-label', `${definition.name}. ${definition.description}. Уровень ${level} из ${definition.maxLevel}. ${requirements}. ${priceText}. ${actionHint}`);
-    node.innerHTML = `
+    if (isNewNode) {
+      node.innerHTML = `
       <span class="upgrade-node__icon" aria-hidden="true">
         <span class="upgrade-node__icon-fallback">${definition.icon || '◆'}</span>
         <img
@@ -4150,11 +4161,37 @@ function renderUpgrades() {
         <span class="tooltip__recipe">${atMax ? '<span class="upgrade-installed">УСТАНОВЛЕНО</span>' : recipeMarkup(recipe)}</span>
         <span class="tooltip__hint">${actionHint}</span>
       </span>
-    `;
-    prepareUpgradeIconImage(node);
-    nodeFragment.append(node);
+      `;
+      prepareUpgradeIconImage(node);
+    } else {
+      const levelLabel = node.querySelector('.upgrade-node__level');
+      const tooltipTitle = node.querySelector('.tooltip__title');
+      const tooltipDescription = node.querySelector('.tooltip__description');
+      const tooltipRequirements = node.querySelector('.tooltip__requirements');
+      const tooltipRecipe = node.querySelector('.tooltip__recipe');
+      const tooltipHint = node.querySelector('.tooltip__hint');
+      if (levelLabel) levelLabel.textContent = atMax && definition.maxLevel === 1 ? '✓' : `${level}/${definition.maxLevel}`;
+      if (tooltipTitle) tooltipTitle.textContent = definition.name;
+      if (tooltipDescription) tooltipDescription.textContent = definition.description;
+      if (tooltipRequirements) tooltipRequirements.textContent = requirements;
+      if (tooltipRecipe) {
+        tooltipRecipe.innerHTML = atMax
+          ? '<span class="upgrade-installed">УСТАНОВЛЕНО</span>'
+          : recipeMarkup(recipe);
+      }
+      if (tooltipHint) tooltipHint.textContent = actionHint;
+    }
+    orderedNodes.push(node);
   }
-  ui.upgradeNodes.replaceChildren(nodeFragment);
+  for (const mountedNode of Array.from(ui.upgradeNodes.children || [])) {
+    if (visibleIds.has(mountedNode?.dataset?.upgradeId)) continue;
+    mountedNode.remove();
+  }
+  for (let index = 0; index < orderedNodes.length; index += 1) {
+    const node = orderedNodes[index];
+    const mountedAtIndex = ui.upgradeNodes.children[index] || null;
+    if (mountedAtIndex !== node) ui.upgradeNodes.insertBefore(node, mountedAtIndex);
+  }
 
   const svgNamespace = 'http://www.w3.org/2000/svg';
   const defs = ui.upgradeEdges.querySelector('defs')?.cloneNode(true);
