@@ -32,7 +32,8 @@ class StubElement {
     this.children = [];
     this.parentElement = null;
     this.textContent = "";
-    this.innerHTML = "";
+    this._innerHTML = "";
+    this.innerHTMLWrites = 0;
     this.value = "";
     this.title = "";
     this.tabIndex = -1;
@@ -46,9 +47,33 @@ class StubElement {
   }
   append(...children) {
     for (const child of children) {
-      if (child && typeof child === "object") child.parentElement = this;
+      if (child && typeof child === "object") {
+        if (child.parentElement && child.parentElement !== this) child.remove?.();
+        child.parentElement = this;
+      }
       this.children.push(child);
     }
+  }
+  insertBefore(child, reference = null) {
+    if (!child || typeof child !== "object") return child;
+    if (child.parentElement) {
+      const previousIndex = child.parentElement.children.indexOf(child);
+      if (previousIndex >= 0) child.parentElement.children.splice(previousIndex, 1);
+    }
+    const referenceIndex = reference ? this.children.indexOf(reference) : -1;
+    const insertIndex = referenceIndex >= 0 ? referenceIndex : this.children.length;
+    child.parentElement = this;
+    this.children.splice(insertIndex, 0, child);
+    return child;
+  }
+  removeChild(child) {
+    const index = this.children.indexOf(child);
+    if (index >= 0) this.children.splice(index, 1);
+    if (child?.parentElement === this) child.parentElement = null;
+    return child;
+  }
+  remove() {
+    this.parentElement?.removeChild?.(this);
   }
   replaceChildren(...children) {
     this.replaceChildrenCalls += 1;
@@ -66,6 +91,11 @@ class StubElement {
   }
   setAttribute(name, value) { this.attributes.set(name, String(value)); }
   getAttribute(name) { return this.attributes.get(name) ?? null; }
+  set innerHTML(value) {
+    this._innerHTML = String(value);
+    this.innerHTMLWrites += 1;
+  }
+  get innerHTML() { return this._innerHTML; }
   querySelector() { return null; }
   querySelectorAll() { return []; }
   closest() { return null; }
@@ -219,8 +249,8 @@ for (const metric of fieldArtMetrics) {
     `${metric.oreId} vein width must stay inside the intended readable range`,
   );
   assert.ok(
-    metric.node.maximumSize >= 25.75 && metric.node.maximumSize <= 29,
-    `${metric.oreId} ore-node size must stay inside the intended tile-scale range`,
+    metric.node.maximumSize >= 32.5 && metric.node.maximumSize <= 37,
+    `${metric.oreId} ore-node size must stay inside the enlarged overlap-friendly range`,
   );
   assert.ok(
     metric.veinWidth * 0.9 >= 1.5,
@@ -632,12 +662,46 @@ assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'core_firs
 assert.equal(elementFor('#buyMaxSelectedUpgrade').textContent, 'КУПИТЬ', 'mobile must expose an explicit single-rank purchase button');
 assert.equal(elementFor('#buyMaxSelectedUpgrade').dataset.purchaseMode, 'single');
 const mobileTreeRenderBeforePurchase = elementFor('#upgradeNodes').replaceChildrenCalls;
+const mountedUpgradeNodesBeforePurchase = new Map(
+  elementFor('#upgradeNodes').children
+    .filter((node) => node?.dataset?.upgradeId)
+    .map((node) => [node.dataset.upgradeId, node]),
+);
+const mountedUpgradeNodeWritesBeforePurchase = new Map(
+  [...mountedUpgradeNodesBeforePurchase].map(([id, node]) => [id, node.innerHTMLWrites]),
+);
 elementFor('#buyMaxSelectedUpgrade').click();
 assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'core_first_descent').level, 1, 'the explicit mobile purchase button must install the selected node');
-assert.ok(
-  elementFor('#upgradeNodes').replaceChildrenCalls > mobileTreeRenderBeforePurchase,
-  'a real purchase must still synchronize levels, availability, and newly visible nodes',
+assert.equal(
+  elementFor('#upgradeNodes').replaceChildrenCalls,
+  mobileTreeRenderBeforePurchase,
+  'a purchase must reconcile the tree without replacing every mounted icon',
 );
+const mountedUpgradeNodesAfterPurchase = new Map(
+  elementFor('#upgradeNodes').children
+    .filter((node) => node?.dataset?.upgradeId)
+    .map((node) => [node.dataset.upgradeId, node]),
+);
+for (const [id, node] of mountedUpgradeNodesBeforePurchase) {
+  assert.equal(
+    mountedUpgradeNodesAfterPurchase.get(id),
+    node,
+    `purchasing a perk must preserve the mounted ${id} node and its decoded image`,
+  );
+  assert.equal(
+    node.innerHTMLWrites,
+    mountedUpgradeNodeWritesBeforePurchase.get(id),
+    `purchasing a perk must not rewrite ${id} innerHTML and remount its image`,
+  );
+}
+assert.ok(
+  [...mountedUpgradeNodesAfterPurchase.keys()].some((id) => !mountedUpgradeNodesBeforePurchase.has(id)),
+  'a root purchase must append newly visible perks without rebuilding existing ones',
+);
+const purchasedRootNode = mountedUpgradeNodesAfterPurchase.get('core_first_descent');
+assert.match(purchasedRootNode.className, /\bis-maxed\b/, 'the purchased root must update its visual state in place');
+assert.equal(purchasedRootNode.dataset.buyUpgrade, undefined, 'a completed node must lose its purchase shortcut in place');
+assert.match(purchasedRootNode.getAttribute('aria-label'), /1[^0-9]+1/, 'the mounted node accessibility label must report its new level');
 
 api.startRun({ seed: 'mobile-purchase-button' });
 api.stepRun(8);
@@ -793,8 +857,8 @@ grantWorkshopBudget(api);
 const prioritizedWorkshopPurchase = api.debugAutoBuyAffordable(1);
 assert.deepEqual(
   prioritizedWorkshopPurchase.bought,
-  ["sense_instinct_spark"],
-  "with multiple first-rank slots left, auto-buy must preserve the original economic ordering",
+  ["time_extra_breath"],
+  "the benchmark buyer should secure enough early shift time before spending on scalar side branches",
 );
 maxWorkshopUpgrade(api, "sense_instinct_spark");
 assert.equal(api.buyUpgrade("dig_arm_swing"), true);
@@ -941,6 +1005,59 @@ assert.equal(api.getSnapshot().focusedOreId, "copper", "the workshop/debug selec
 assert.match(runFocusHud.title, /радиус/i, "the passive HUD must communicate the current focus bonus");
 api.finishRun();
 
+// The one budget-neutral frontier vein for a new tier must not be skipped just
+// because it sits beyond the ordinary opening sense radius. It becomes a
+// one-time priority only once the miner has reached that tier's natural depth.
+api.debugResetProgress();
+api.setAllUpgrades(false);
+api.setFocusedOre(null);
+api.startRun({ seed: "runtime-frontier-reserve-priority", sectorId: "stable_strata" });
+api.debugPatchTile(15, 174, {
+  kind: "stone",
+  oreId: "prism_crystal",
+  veinId: "frontier-prism-fixture",
+  frontierReserveOreId: "prism_crystal",
+  hp: 100,
+  maxHp: 100,
+  discovered: false,
+  cracked: 0,
+});
+api.debugSetPlayerTile(5, 160);
+const earlyFrontierTarget = api.acquireTargets();
+assert.notDeepEqual(
+  earlyFrontierTarget?.primary,
+  { tx: 15, ty: 174 },
+  "a frontier reserve must not leak a deep tier before its authored boundary",
+);
+api.debugSetPlayerTile(5, 173);
+const frontierFxBefore = api.getSnapshot().visualEffects;
+const readyFrontierTarget = api.acquireTargets();
+assert.deepEqual(
+  readyFrontierTarget?.primary,
+  { tx: 15, ty: 174 },
+  "reaching a new tier must prioritize its nearby reserve even beyond ordinary sense",
+);
+assert.equal(api.debugGetTile(15, 174).discovered, true, "the frontier priority should visibly reveal its selected node");
+const frontierFxAfter = api.getSnapshot().visualEffects;
+assert.equal(
+  frontierFxAfter.shocks,
+  frontierFxBefore.shocks + 1,
+  "the extended frontier scan must draw its own local pulse instead of pretending to use the normal sense ring",
+);
+assert.equal(
+  frontierFxAfter.beams,
+  frontierFxBefore.beams + 1,
+  "the frontier pulse must visibly point from the miner to the newly reached tier",
+);
+api.acquireTargets();
+const repeatedFrontierFx = api.getSnapshot().visualEffects;
+assert.deepEqual(
+  repeatedFrontierFx,
+  frontierFxAfter,
+  "one frontier vein must not spam the extended scan effect on every targeting tick",
+);
+api.finishRun();
+
 // Discovery is permanent visual knowledge, independent of the live sense
 // radius. A locked target is also readable immediately even before discovery.
 api.debugResetProgress();
@@ -1009,7 +1126,7 @@ function assertExpandedExplorationContinues(tool) {
 
   const firstTarget = { tx: explorationSnapshot.target.tx, ty: explorationSnapshot.target.ty };
   clearTile(firstTarget.tx, firstTarget.ty);
-  api.stepRun(0.1);
+  api.stepRun(0.05);
   explorationSnapshot = api.getSnapshot();
   assert.ok(explorationSnapshot.target, `${tool}: clearing the outer target must immediately acquire more work`);
   assert.notDeepEqual(
@@ -1039,6 +1156,7 @@ for (let ty = 18; ty <= 22; ty += 1) {
 }
 placeOre(44, 20, "star_core", "solar-burst-target", 1_000);
 placeRock(44, 21, 1);
+placeRock(44, 23, 1);
 assert.ok(api.debugSetTargetTile(44, 20));
 const solarBurstsBefore = api.getSnapshot().metrics.solarDrillBursts;
 for (let shot = 0; shot < 4; shot += 1) assert.ok(api.attackNow());
@@ -1047,25 +1165,68 @@ assert.ok(api.attackNow());
 let solarSnapshot = api.getSnapshot();
 assert.equal(solarSnapshot.metrics.solarDrillBursts, solarBurstsBefore + 1, "the fifth laser shot must queue Solar Drill");
 assert.equal(api.debugGetTile(44, 21).hp, 1, "the perpendicular fixture must not be hit by the direct laser");
+assert.equal(api.debugGetTile(44, 23).hp, 1, "the outer burst fixture must not be hit by the direct laser");
 const solarTargetAfterShot = api.debugGetTile(44, 20).hp;
 api.debugSetAttackCooldown(100);
 api.stepRun(0.8);
 solarSnapshot = api.getSnapshot();
 assert.ok(api.debugGetTile(44, 20).hp < solarTargetAfterShot, "the delayed Solar Drill beam must damage its target");
 assert.equal(api.debugGetTile(44, 21).kind, "air", "the Solar Drill final burst must damage its local area");
+assert.equal(api.debugGetTile(44, 23).kind, "air", "the Solar Drill final burst must span its authored 3.25-tile radius");
 assert.ok((solarSnapshot.metrics.sourceBreaks.solar || 0) > 0, "Solar Drill breaks must be attributed to the solar source");
 api.finishRun();
 
 // The finale is reached by breaching the indestructible planetary seal with
 // three completed Solar Drill bursts, not by a separate qualification counter.
 api.debugResetProgress();
-api.setAllUpgrades(true);
+api.setAllUpgrades(false);
+api.setUpgradeLevel("tools_laser_emitter", 1);
+api.setUpgradeLevel("core_bon_voyage", 1);
 api.startRun({ seed: "runtime-final-seal-breach", sectorId: "stable_strata" });
 const finalLayerTy = global.DepthZeroWorld.FINAL_LAYER_TY;
 const finalLayerTx = Math.floor(global.DepthZeroWorld.WORLD_CONFIG.WIDTH / 2);
+api.debugSetPlayerTile(finalLayerTx, finalLayerTy - 25);
+api.stepRun(0.05);
+assert.equal(
+  api.getSnapshot().target?.kind,
+  "final_seal",
+  "the completed Solar Drill must lock the final route immediately instead of returning to ordinary ore",
+);
+for (let ty = finalLayerTy - 25; ty <= finalLayerTy - 20; ty += 1) {
+  for (let tx = finalLayerTx - 3; tx <= finalLayerTx + 3; tx += 1) clearTile(tx, ty);
+}
+placeRock(finalLayerTx, finalLayerTy - 22, 1_000_000);
+placeRock(finalLayerTx + 2, finalLayerTy - 22, 1);
+const approachBurstsBefore = api.getSnapshot().metrics.solarDrillBursts;
+for (let shot = 0; shot < 5; shot += 1) assert.ok(api.attackNow(), "the far final route must count real terrain contacts");
+assert.equal(
+  api.getSnapshot().metrics.solarDrillBursts,
+  approachBurstsBefore + 1,
+  "the fifth approach contact must queue a Solar Drill tunnel burst",
+);
+assert.equal(api.debugGetTile(finalLayerTx + 2, finalLayerTy - 22).hp, 1, "the direct approach laser must leave the side fixture intact");
+api.debugSetAttackCooldown(100);
+api.stepRun(0.8);
+assert.equal(
+  api.debugGetTile(finalLayerTx + 2, finalLayerTy - 22).kind,
+  "air",
+  "the queued Solar Drill burst must widen the actual approach impact into a tunnel",
+);
+assert.equal(
+  api.debugGetTile(finalLayerTx, finalLayerTy).kind,
+  "final_seal",
+  "an approach burst must not strike the distant final seal remotely",
+);
 api.debugSetPlayerTile(finalLayerTx, finalLayerTy - 1);
+api.debugSetDescentCadenceState({
+  deepest: 1_800,
+  anchorDepth: 1_800,
+  goalDepth: 1_805,
+  startedAt: 0,
+});
 api.stepRun(0.05);
 assert.equal(api.getSnapshot().target?.kind, "final_seal", "Solar Drill must prioritize the final layer when it is reached");
+assert.equal(api.getSnapshot().descentCadence.active, false, "the final seal must cancel ordinary descent cadence");
 for (let strike = 0; strike < 3; strike += 1) {
   for (let shot = 0; shot < 5; shot += 1) assert.ok(api.attackNow(), "the Solar Drill must receive its fifth shot");
   api.debugSetAttackCooldown(100);
@@ -1098,13 +1259,111 @@ assert.ok(
 api.finishRun();
 api.debugResetProgress();
 
+// Beyond 300 metres, a bounded cadence may finish the current ore and ask for
+// one deeper row. It must stay dormant above the threshold, remember the exact
+// ore it queued behind, yield to pause/special targets and fully clear at the
+// end of a shift.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("time_extra_breath", 8);
+api.startRun({ seed: "runtime-descent-cadence", sectorId: "stable_strata" });
+let cadence = api.debugSetDescentCadenceState({
+  deepest: 295,
+  anchorDepth: 295,
+  stallElapsed: 0,
+  goalDepth: 0,
+  startedAt: -1,
+  graceRemaining: 0,
+  queued: false,
+  queuedAt: -1,
+  queuedTargetKey: null,
+});
+api.debugAdvanceDescentCadence(8);
+cadence = api.getSnapshot().descentCadence;
+assert.equal(cadence.active, false, "descent cadence must stay off before 300 metres");
+assert.equal(cadence.queued, false, "descent cadence must not queue before 300 metres");
+
+const cadencePlayer = api.getSnapshot().player;
+const cadenceTileSize = global.DepthZeroWorld.WORLD_CONFIG.TILE_SIZE;
+const cadenceOriginTile = {
+  tx: Math.floor(cadencePlayer.x / cadenceTileSize),
+  ty: Math.floor(cadencePlayer.y / cadenceTileSize),
+};
+const cadenceTy = cadenceOriginTile.ty + 62;
+api.debugSetPlayerTile(cadenceOriginTile.tx, cadenceTy);
+clearTile(cadenceOriginTile.tx, cadenceTy);
+clearTile(cadenceOriginTile.tx + 1, cadenceTy);
+placeOre(cadenceOriginTile.tx + 1, cadenceTy, "amethyst", "cadence-held-ore", 1_000_000);
+assert.ok(api.debugSetTargetTile(cadenceOriginTile.tx + 1, cadenceTy));
+api.debugSetAttackCooldown(100);
+cadence = api.debugSetDescentCadenceState({
+  deepest: 310,
+  anchorDepth: 310,
+  stallElapsed: api.getSnapshot().descentCadence.delay - 0.05,
+  goalDepth: 0,
+  startedAt: -1,
+  graceRemaining: 0,
+  queued: false,
+  queuedAt: -1,
+  queuedTargetKey: null,
+});
+api.debugAdvanceDescentCadence(0.06);
+cadence = api.getSnapshot().descentCadence;
+assert.equal(cadence.queued, true, "a stalled deep run must queue one descent pulse");
+assert.equal(cadence.active, false, "the pulse must initially preserve the live ore target");
+assert.equal(
+  cadence.queuedTargetKey,
+  `${cadenceOriginTile.tx + 1}:${cadenceTy}`,
+  "the queue must remember the exact ore node it promised to finish",
+);
+api.debugAdvanceDescentCadence(1.4);
+assert.equal(api.getSnapshot().descentCadence.active, false, "the held ore must keep its 1.5-second grace");
+clearTile(cadenceOriginTile.tx + 1, cadenceTy);
+api.debugAdvanceDescentCadence(0.01);
+cadence = api.getSnapshot().descentCadence;
+assert.equal(cadence.active, true, "breaking the queued ore must begin descent immediately");
+assert.equal(cadence.goalDepth, 315, "one cadence pulse must ask for exactly one five-metre row");
+const cadenceCompletionsBefore = api.getSnapshot().metrics.descentCadenceCompletions;
+api.debugSetDescentCadenceState({ deepest: cadence.goalDepth });
+api.debugAdvanceDescentCadence(0.01);
+let cadenceSnapshot = api.getSnapshot();
+assert.equal(cadenceSnapshot.descentCadence.active, false, "reaching the cadence goal must finish the pulse");
+assert.equal(cadenceSnapshot.metrics.descentCadenceCompletions, cadenceCompletionsBefore + 1);
+assert.ok(cadenceSnapshot.descentCadence.graceRemaining > 0, "a completed pulse must return time to ordinary ore collection");
+
+api.debugSetDescentCadenceState({
+  deepest: 310,
+  anchorDepth: 310,
+  goalDepth: 315,
+  startedAt: 0,
+  graceRemaining: 0,
+});
+assert.equal(api.getSnapshot().descentCadence.active, true, "a pulse started at timestamp zero must still be active");
+const cadenceBeforePause = api.getSnapshot();
+document.hidden = true;
+dispatchDocumentEvent("visibilitychange");
+assert.equal(api.getSnapshot().paused, true);
+api.debugAdvanceDescentCadence(2);
+cadenceSnapshot = api.getSnapshot();
+assert.equal(cadenceSnapshot.descentCadence.startedAt, cadenceBeforePause.descentCadence.startedAt);
+assert.equal(cadenceSnapshot.metrics.descentCadenceSeconds, cadenceBeforePause.metrics.descentCadenceSeconds);
+document.hidden = false;
+elementFor("#resumeRun").click();
+api.finishRun();
+cadenceSnapshot = api.getSnapshot();
+assert.equal(cadenceSnapshot.descentCadence.active, false, "finishing a run must clear cadence activity");
+assert.equal(cadenceSnapshot.descentCadence.queued, false);
+assert.equal(cadenceSnapshot.descentCadence.goalDepth, 0);
+assert.equal(cadenceSnapshot.descentCadence.graceRemaining, 0);
+api.debugResetProgress();
+assert.equal(api.getSnapshot().descentCadence.active, false, "debug progress reset must not retain cadence state");
+
 api.setAllUpgrades(true);
 const fullStats = api.getStats();
 assert.equal(fullStats.runDuration, 45, "direct timer upgrades must stop at 45 seconds");
 assert.equal(fullStats.bonusRunDurationCap, 60, "bonus runtime cap must be 60 seconds");
 assert.equal(fullStats.backupTargetSlots, 1);
 assert.equal(fullStats.oreFocusEscalationBonus, 0.75);
-assert.equal(fullStats.mineLiftRecordDepthRatio, 0.45);
+assert.equal(fullStats.mineLiftRecordDepthRatio, 1);
 assert.equal(fullStats.discoveryTimeBonus, 0.48);
 assert.equal(fullStats.directionalBombConeTiles, 3);
 assert.equal(fullStats.laserRicochetCount, 2);
@@ -1147,15 +1406,15 @@ const expectedRuntimePerkStats = {
   echoPingCooldown: 3,
   echoPingRadiusMultiplier: 1.55,
   echoPingTargetHold: 1.2,
+  descentTargetBias: 0.25,
+  descentMoveSpeedBonus: 0.32,
+  veinTrailEnabled: true,
   veinTrailRangeMultiplier: 1.65,
   veinTrailMoveSpeedBonus: 0.2,
   seismicRouteSlots: 3,
   ghostTrailDuration: 4,
   ghostTrailMaxLayers: 3,
   ghostTrailThroughWalls: true,
-  veinLockEnabled: true,
-  veinLockRangeMultiplier: 1.6,
-  veinLockMoveSpeedBonus: 0.2,
   approachStrikeTravelTime: 0.9,
   approachStrikePower: 1,
   approachStrikeSideChip: 0.45,
@@ -1200,7 +1459,8 @@ const expectedRuntimePerkStats = {
   solarDrillEnabled: true,
   solarDrillProcEvery: 5,
   solarDrillBeamDuration: 0.7,
-  solarDrillFinalBurstPower: 0.9,
+  solarDrillFinalBurstPower: 18,
+  solarDrillFinalBurstRadiusTiles: 3.25,
   rareOreAdditiveChance: 0.18,
   goldenOreAdditiveChance: 0.075,
   richVeinWholeChance: 0.18,
@@ -1263,8 +1523,26 @@ assert.ok(
   `radial upgrade boxes need ${radialLayout.minimumGap}px of clear space; closest is ${closestRadialBoxGap}px (${closestRadialBoxPair})`,
 );
 
+// Lift resupply belongs to the player's live tree, not the route used by the
+// headless campaign buyer. Keep one strategic target affordable while a
+// different selected upgrade is missing three opening materials: the selected
+// recipe must still drive the landing sample.
+api.debugResetProgress();
+api.setAllUpgrades(true);
+api.setUpgradeLevel("time_extra_breath", 2);
+api.setUpgradeLevel("sense_greed_compass", 0);
+api.grantOre("copper", 3);
+assert.equal(api.debugSetSelectedUpgrade("sense_greed_compass"), true);
+assert.deepEqual(
+  api.debugGetLiftResupplyPreferences(3).slice(0, 3),
+  ["iron", "coal", "amber"],
+  "lift resupply must rank shortages from the selected live upgrade even when the campaign route has another pending target",
+);
+api.setAllUpgrades(true);
+api.debugSetSelectedUpgrade(null);
+
 api.setFocusedOre("copper");
-api.setBestDepth(100);
+api.setBestDepth(200);
 api.grantOre("gold", 1);
 api.startRun({ seed: "runtime-lift", sectorId: "stable_strata" });
 let snapshot = api.getSnapshot();
@@ -1278,23 +1556,33 @@ assert.ok(
 const liftLandingTx = Math.floor(snapshot.player.x / global.DepthZeroWorld.WORLD_CONFIG.TILE_SIZE);
 const liftLandingTy = Math.floor(snapshot.player.y / global.DepthZeroWorld.WORLD_CONFIG.TILE_SIZE);
 const liftExplorationFloor = liftLandingTy - 2;
+const activeDepthFloor = api.debugGetActiveDepthFloorTy();
+assert.equal(
+  activeDepthFloor,
+  liftExplorationFloor,
+  "a 200 m record with a 95% lift must retain exactly 90% (180 m), or 36 five-metre rows",
+);
+assert.ok(
+  activeDepthFloor >= liftExplorationFloor,
+  "the 90% retreat frontier may be stricter than the legacy lift floor",
+);
 assert.equal(
   api.debugGetExplorationSearchMinTy(18, false),
-  liftExplorationFloor,
-  "local exploration must not scan ordinary terrain above a lift landing",
+  activeDepthFloor,
+  "local exploration must not scan ordinary terrain above the active retreat frontier",
 );
 assert.equal(
   api.debugGetExplorationSearchMinTy(Math.hypot(
     global.DepthZeroWorld.WORLD_CONFIG.WIDTH,
     global.DepthZeroWorld.WORLD_CONFIG.HEIGHT,
   ), true),
-  liftExplorationFloor,
-  "the full-world exploration fallback must preserve the lift floor",
+  activeDepthFloor,
+  "the full-world exploration fallback must preserve the active retreat frontier",
 );
 const liftExplorationTarget = api.debugFindExplorationTarget();
 assert.ok(
-  !liftExplorationTarget || liftExplorationTarget.ty >= liftExplorationFloor,
-  "ordinary exploration routing must never climb into strata skipped by the lift",
+  !liftExplorationTarget || liftExplorationTarget.ty >= activeDepthFloor,
+  "ordinary exploration routing must never climb more than 10% above achieved depth",
 );
 const worldPixelWidth = global.DepthZeroWorld.WORLD_CONFIG.WIDTH
   * global.DepthZeroWorld.WORLD_CONFIG.TILE_SIZE;
@@ -1312,15 +1600,37 @@ assert.deepEqual(
   },
   "a zoomed-out viewport wider than the mine must center equal letterbox margins",
 );
-placeOre(liftLandingTx - 3, liftLandingTy - 4, "copper", "skipped-upper-strata", 1);
+api.setFocusedOre("star_core");
+placeOre(liftLandingTx - 3, activeDepthFloor - 2, "star_core", "skipped-upper-strata", 1);
+placeOre(liftLandingTx - 2, activeDepthFloor, "star_core", "retreat-boundary", 1);
+placeOre(liftLandingTx - 1, activeDepthFloor + 1, "star_core", "retreat-below-boundary", 1);
 
 const escalated = api.forceFocusMiss(3.5);
 assert.ok(escalated > 2.15, "focus search radius should escalate after the delay");
 
 const targetPair = api.acquireTargets();
 assert.ok(targetPair?.primary && targetPair?.backup, "second fix should keep a distinct backup target");
-assert.ok(targetPair.primary.ty >= liftLandingTy - 2, "the miner must not route back above a lift landing");
-assert.ok(targetPair.backup.ty >= liftLandingTy - 2, "the backup route must respect the same lift floor");
+assert.ok(targetPair.primary.ty >= activeDepthFloor, "the miner must not route more than 10% above achieved depth");
+assert.ok(targetPair.backup.ty >= activeDepthFloor, "the backup route must respect the same retreat frontier");
+const retreatTargetKeys = new Set([
+  `${targetPair.primary.tx}:${targetPair.primary.ty}`,
+  `${targetPair.backup.tx}:${targetPair.backup.ty}`,
+]);
+assert.equal(
+  retreatTargetKeys.has(`${liftLandingTx - 3}:${activeDepthFloor - 2}`),
+  false,
+  "an ore above the 10% retreat frontier must be ignored even when it matches the active focus",
+);
+assert.equal(
+  retreatTargetKeys.has(`${liftLandingTx - 2}:${activeDepthFloor}`),
+  true,
+  "an ore exactly on the 10% retreat frontier must remain a legal target",
+);
+// Keep the surrounding discovery-bonus contract unchanged: the temporary
+// top-tier focus exists only to isolate these three authored candidates.
+api.debugPatchTile(targetPair.primary.tx, targetPair.primary.ty, { oreId: "copper" });
+api.debugPatchTile(targetPair.backup.tx, targetPair.backup.ty, { oreId: "copper" });
+api.setFocusedOre(null);
 const cooldownBeforePulse = api.debugSetAttackCooldown(0.42);
 api.triggerSensePulse();
 const pulseSnapshot = api.getSnapshot();
@@ -1572,6 +1882,56 @@ assert.ok(
   `focused calibration must scale aggregate beam damage: ${uncalibratedLaserDamage}/${calibratedLaserDamage}/${expectedCalibrationMultiplier}`,
 );
 
+// Splitter ranks widen the excavated fan; they must not stack two hidden side
+// hits onto the selected block. The central target therefore takes the same
+// direct damage with one or three emitted beams.
+const measureSplitterMainTarget = (splitterLevel) => {
+  api.setAllUpgrades(true);
+  for (const upgradeId of [
+    "dig_sweeping_arc",
+    "dig_precision_path",
+    "dig_omni_swing",
+    "dig_quarry_presence",
+    "power_mountain_splitter",
+    "time_thirty_second_oath",
+    "tools_super_field",
+    "tools_laser_width",
+    "tools_mirror_crystal",
+    "tools_super_pick_echo",
+    "tools_solar_drill",
+    "fortune_alchemist_scales",
+  ]) api.setUpgradeLevel(upgradeId, 0);
+  api.setUpgradeLevel("tools_laser_splitter", splitterLevel);
+  api.setFocusedOre(null);
+  api.startRun({ seed: `runtime-laser-splitter-${splitterLevel}`, sectorId: "stable_strata" });
+  api.debugSetPlayerTile(40, 20);
+  for (let ty = 17; ty <= 23; ty += 1) {
+    for (let tx = 39; tx <= 49; tx += 1) clearTile(tx, ty);
+  }
+  placeOre(47, 20, "star_core", `splitter-main-${splitterLevel}`, 100_000);
+  assert.ok(api.debugSetTargetTile(47, 20));
+  const before = api.debugGetTile(47, 20).hp;
+  api.attackNow();
+  const result = {
+    damage: before - api.debugGetTile(47, 20).hp,
+    beams: api.getSnapshot().visualEffects.beams,
+    pierce: api.getStats().laserPierce,
+  };
+  api.finishRun();
+  return result;
+};
+const singleBeamMainHit = measureSplitterMainTarget(0);
+const splitBeamMainHit = measureSplitterMainTarget(2);
+assert.equal(singleBeamMainHit.beams, 1);
+assert.equal(splitBeamMainHit.beams, 3);
+assert.ok(
+  Math.abs(
+    singleBeamMainHit.damage / (1 + singleBeamMainHit.pierce * 0.08)
+    - splitBeamMainHit.damage / (1 + splitBeamMainHit.pierce * 0.08)
+  ) < 1e-6,
+  `side rays must widen coverage without multiplying main-target damage: ${singleBeamMainHit.damage}/${splitBeamMainHit.damage}`,
+);
+
 const measureFocusedRicochetDamage = (calibrationLevel) => {
   api.setAllUpgrades(true);
   for (const upgradeId of [
@@ -1614,6 +1974,7 @@ assert.ok(
 // that same simulation tick.
 api.setAllUpgrades(true);
 api.setFocusedOre("star_core");
+api.setBestDepth(0);
 api.startRun({ seed: "runtime-beacon-exhaustion", sectorId: "stable_strata" });
 api.debugSetPlayerTile(40, 20);
 placeOre(41, 20, "star_core", "exhausted-beacon-vein", 1);
@@ -1635,6 +1996,7 @@ api.finishRun();
 // proc: chain lightning and drones fall back to ordinary focused targeting.
 api.setAllUpgrades(true);
 api.setFocusedOre("star_core");
+api.setBestDepth(0);
 api.startRun({ seed: "runtime-beacon-range", sectorId: "stable_strata" });
 api.debugSetPlayerTile(20, 20);
 for (let ty = 0; ty < global.DepthZeroWorld.WORLD_CONFIG.HEIGHT; ty += 1) {
@@ -1794,7 +2156,7 @@ api.setUpgradeLevel("sense_triangular_fix", 1);
 api.startRun({ seed: "triangle-semantics", sectorId: "stable_strata" });
 api.debugSetPlayerTile(40, 14);
 for (let ty = 10; ty <= 19; ty += 1) {
-  for (let tx = 37; tx <= 45; tx += 1) clearTile(tx, ty);
+  for (let tx = 35; tx <= 50; tx += 1) clearTile(tx, ty);
 }
 placeOre(43, 14, "copper", "triangle-main", 1_000_000_000);
 placeOre(41, 17, "copper", "triangle-backup", 1_000_000_000);
@@ -1881,6 +2243,30 @@ api.stepRun(0.01);
 snapshot = api.getSnapshot();
 assert.equal(snapshot.target?.kind, "micro_event", "a chest entering the scanner must override ordinary ore targets");
 assert.deepEqual([snapshot.target.tx, snapshot.target.ty], [priorityChest.tx, priorityChest.ty]);
+const chestCadencePulsesBefore = snapshot.metrics.descentCadencePulses;
+api.debugSetDescentCadenceState({
+  deepest: 310,
+  anchorDepth: 310,
+  stallElapsed: snapshot.descentCadence.delay,
+  goalDepth: 0,
+  startedAt: -1,
+  graceRemaining: 0,
+  queued: false,
+});
+api.debugAdvanceDescentCadence(snapshot.descentCadence.delay + 1);
+snapshot = api.getSnapshot();
+assert.equal(snapshot.target?.kind, "micro_event", "descent cadence must not replace a priority chest");
+assert.equal(snapshot.descentCadence.active, false, "the cadence clock must pause while a priority chest is active");
+assert.equal(snapshot.metrics.descentCadencePulses, chestCadencePulsesBefore);
+api.debugSetDescentCadenceState({
+  deepest: 0,
+  anchorDepth: 0,
+  stallElapsed: 0,
+  goalDepth: 0,
+  startedAt: -1,
+  graceRemaining: 0,
+  queued: false,
+});
 assert.equal(api.debugTriggerMicroEvent("fragile_cavity"), true);
 api.stepRun(0.2);
 snapshot = api.getSnapshot();
@@ -1987,7 +2373,7 @@ for (let ty = 15; ty <= 25; ty += 1) {
 }
 placeOre(44, 20, "copper", "echo-ping-vein", 1000);
 api.forceFocusMiss(0);
-api.stepRun(0.05);
+api.stepRun(0.1);
 snapshot = api.getSnapshot();
 assert.equal(snapshot.target?.tx, 44, "resonant ping should acquire ore beyond the ordinary sense radius");
 assert.equal(snapshot.target?.ty, 20);
@@ -2095,7 +2481,7 @@ const measureOpeningSprint = (level, seed) => {
   assert.ok(api.debugSetTargetTile(42, 20));
   api.debugSetAttackCooldown(5);
   const before = api.getSnapshot().player;
-  api.stepRun(0.1);
+  api.stepRun(0.05);
   const moving = api.getSnapshot();
   const distanceMoved = Math.hypot(moving.player.x - before.x, moving.player.y - before.y);
   let endedAfterImpact = !moving.openingSprintActive;
@@ -2113,7 +2499,7 @@ assert.equal(ordinaryFootwork.moving.openingSprintActive, false);
 assert.equal(openingSprint.moving.openingSprintActive, true);
 assert.ok(
   openingSprint.distanceMoved > ordinaryFootwork.distanceMoved * 1.35,
-  "rank-two opening movement should be unmistakably faster than rank one",
+  `rank-two opening movement should be unmistakably faster than rank one: ${ordinaryFootwork.distanceMoved} -> ${openingSprint.distanceMoved}`,
 );
 assert.ok(openingSprint.moving.visualEffects.particles > 0, "the sprint must leave a local luminous trail");
 assert.ok(openingSprint.moving.perkStatus.some((entry) => entry.value === "+40%"), "the active sprint must be named in the status rail");
@@ -2263,6 +2649,22 @@ assert.ok(api.debugGetTile(42, 19).hp < 10, "the upper side block should receive
 assert.ok(api.debugGetTile(42, 21).hp < 10, "the lower side block should receive chip damage");
 api.finishRun();
 
+// A deep landing sample replaces an ordinary node instead of increasing node
+// density, so its larger payload is the entire protection against backtracking
+// for an obsolete shallow material.
+api.setAllUpgrades(false);
+api.startRun({ seed: "runtime-lift-supply-yield", sectorId: "stable_strata" });
+placeOre(40, 20, "copper", "lift-supply-yield", 1);
+api.debugPatchTile(40, 20, { liftSupply: true });
+const liftSupplyRunOreBefore = api.getSnapshot().runOre;
+assert.ok(api.debugBreakTileWithSource(40, 20, "debug"));
+assert.equal(
+  api.getSnapshot().runOre,
+  liftSupplyRunOreBefore + 6,
+  "one lift supply node must return six base chunks without adding another ore node",
+);
+api.finishRun();
+
 // Bonus seconds above the direct 45-second cap charge Chrono Overdrive. Its
 // fifth strike is identified by the break source, so the test covers both the
 // overflow state and the promised deterministic cadence.
@@ -2289,6 +2691,7 @@ api.finishRun();
 api.setAllUpgrades(false);
 api.setUpgradeLevel("gadgets_scout_drone", 1);
 api.setUpgradeLevel("gadgets_drone_battery", 3);
+api.setBestDepth(0);
 api.startRun({ seed: "runtime-drone-bonus-autonomy", sectorId: "stable_strata" });
 assert.equal(api.getStats().droneLifetime, 1);
 assert.ok(api.grantBonusTime(4) > 0);
@@ -2298,6 +2701,41 @@ assert.ok(api.getSnapshot().timeLeft > 0, "bonus seconds must keep the shift ali
 assert.equal(api.debugDronesAreActive(), true, "full-autonomy drones must remain active in bonus time");
 api.setUpgradeLevel("gadgets_drone_battery", 2);
 assert.equal(api.debugDronesAreActive(), false, "a partial battery must still use its advertised duration share");
+api.finishRun();
+
+// A two-unit swarm must divide useful local work instead of stacking both
+// beams onto one node or duplicating the miner's live target. The beam, impact
+// ring and sparks are the deliberately local, readable feedback for that split.
+api.setAllUpgrades(false);
+api.setUpgradeLevel("gadgets_scout_drone", 1);
+api.setUpgradeLevel("gadgets_drone_swarm", 1);
+api.setFocusedOre(null);
+api.setBestDepth(0);
+api.startRun({ seed: "runtime-drone-target-split", sectorId: "stable_strata" });
+api.debugSetPlayerTile(40, 20);
+for (let ty = 10; ty <= 30; ty += 1) {
+  for (let tx = 30; tx <= 52; tx += 1) clearTile(tx, ty);
+}
+placeOre(42, 20, "copper", "drone-player-target", 1_000_000);
+placeOre(42, 18, "copper", "drone-split-a", 1_000_000);
+placeOre(38, 22, "copper", "drone-split-b", 1_000_000);
+assert.ok(api.debugSetTargetTile(42, 20));
+const dronePlayerTargetHp = api.debugGetTile(42, 20).hp;
+const droneSplitAHp = api.debugGetTile(42, 18).hp;
+const droneSplitBHp = api.debugGetTile(38, 22).hp;
+const droneFxBefore = api.getSnapshot().visualEffects;
+assert.ok(api.debugForceDrones());
+const droneFxAfter = api.getSnapshot().visualEffects;
+assert.equal(
+  api.debugGetTile(42, 20).hp,
+  dronePlayerTargetHp,
+  "two available side targets must keep the swarm from duplicating the miner's live target",
+);
+assert.ok(api.debugGetTile(42, 18).hp < droneSplitAHp, "the first drone must claim one available side target");
+assert.ok(api.debugGetTile(38, 22).hp < droneSplitBHp, "the second drone must claim a different side target");
+assert.ok(droneFxAfter.beams >= droneFxBefore.beams + 2, "each drone attack needs its own visible beam");
+assert.ok(droneFxAfter.shocks >= droneFxBefore.shocks + 2, "each drone target needs a visible local impact ring");
+assert.ok(droneFxAfter.particles > droneFxBefore.particles, "the split attack must emit local impact sparks");
 api.finishRun();
 
 // Fortune Wheel is a visible pity cycle, not another hidden percentage roll:
@@ -2830,6 +3268,7 @@ console.log(JSON.stringify({
   checkedMechanics: [
     "mine-lift",
     "lift-floor-exploration",
+    "retreat-frontier-boundary",
     "wide-viewport-camera-centering",
     "focus-escalation",
     "backup-target",
@@ -2840,6 +3279,7 @@ console.log(JSON.stringify({
     "pressed-ore-full-contact",
     "focused-calibration",
     "aggregate-laser-calibration",
+    "splitter-fan-no-main-stack",
     "independent-ricochet-power",
     "no-remote-focused-damage",
     "discovery-time",
@@ -2867,12 +3307,16 @@ console.log(JSON.stringify({
     "vein-memory-through-rock",
     "stress-map-outside-sense",
     "expanded-exploration-reacquisition",
+    "frontier-reserve-priority",
+    "descent-cadence",
     "solar-drill-delayed-burst",
     "solar-drill-final-seal-comic",
+    "final-seal-directed-approach",
     "target-aware-density-pierce",
     "side-chip",
     "chrono-overdrive",
     "drone-bonus-autonomy",
+    "drone-target-split",
     "fortune-pity-cycle",
     "motherlode-covenant",
     "golden-touch-gating",
