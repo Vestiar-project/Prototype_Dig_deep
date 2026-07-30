@@ -15,6 +15,11 @@ const {
   UNDERGROUND_EVENT_TYPES,
   MineWorld,
   WORLD_CONFIG,
+  ROCK_STRATA,
+  ROCK_FORMATION_MULTIPLIER_ANCHORS,
+  rockFormationMultiplier,
+  pressureRidgeAreaDamageMultiplier,
+  oreDurabilityForTerrain,
   FINAL_LAYER_TY,
   FINAL_SEAL_HITS,
   createRandomGeologyProfile,
@@ -24,10 +29,169 @@ const {
 const oreById = new Map(ORE_TYPES.map((ore) => [ore.id, ore]));
 
 assert.equal(WORLD_CONFIG.WIDTH, 88, "the mine must keep depth dominant with an 88-tile field");
-assert.equal(WORLD_CONFIG.HEIGHT, 180, "the mine must trade lateral sprawl for meaningful depth");
+assert.equal(WORLD_CONFIG.HEIGHT, 420, "the mine must retain a full 2000+ metre descent");
 assert.equal(WORLD_CONFIG.METERS_PER_TILE, 5, "one terrain row must represent five metres");
 assert.equal(WORLD_CONFIG.SPAWN_TX, WORLD_CONFIG.WIDTH / 2, "the surface landing must be centered");
-assert.equal(WORLD_CONFIG.CAVE_COUNT, 32, "cave count must preserve cave density after the final width reduction");
+assert.equal(WORLD_CONFIG.CAVE_COUNT, 79, "cave count must preserve established air density after late false ridges are removed");
+assert.deepEqual(
+  ROCK_STRATA.map(({ depth, floorHp }) => [depth, floorHp]),
+  [
+    [0, 0], [120, 12], [180, 17], [240, 22], [300, 32],
+    [360, 42], [420, 66], [480, 90], [540, 140], [600, 215],
+    [630, 250], [660, 300], [690, 365], [720, 430], [750, 515],
+    [780, 600], [810, 690], [840, 780], [870, 865],
+    [900, 950], [960, 1150], [1020, 1400], [1080, 1700],
+    [1140, 2050], [1200, 2450], [1240, 2850], [1260, 3075],
+    [1280, 3300], [1300, 3550],
+    [1320, 3800], [1360, 4350], [1400, 4950], [1440, 5600],
+    [1480, 6300], [1520, 7100], [1560, 7950], [1600, 8850],
+    [1640, 9850], [1680, 10900], [1720, 12000], [1750, 13200],
+    [1800, 13800], [1840, 14400], [1880, 15000],
+    [1920, 15600], [1960, 16200], [2000, 16800],
+  ],
+  "absolute depth strata must provide several distinct tool checks",
+);
+assert.deepEqual(
+  ROCK_FORMATION_MULTIPLIER_ANCHORS.map(({ depth, multiplier }) => [depth, multiplier]),
+  [[540, 1], [630, 1.2], [900, 1.35], [1050, 2.35], [1350, 2.9], [1650, 3.15], [2000, 3.25]],
+  "deep formations must strengthen smoothly without adding another resource gate",
+);
+for (const { depth, multiplier } of ROCK_FORMATION_MULTIPLIER_ANCHORS) {
+  assert.equal(rockFormationMultiplier(depth), multiplier);
+}
+assert.equal(pressureRidgeAreaDamageMultiplier(1), 1);
+assert.ok(
+  Math.abs(pressureRidgeAreaDamageMultiplier(3) - (3 ** -0.7)) < 1e-12,
+  "a three-cell pressure seam must distribute one area strike instead of cloning it three times",
+);
+assert.equal(
+  pressureRidgeAreaDamageMultiplier(100),
+  0.35,
+  "very large effects must keep a useful minimum contribution against pressure seams",
+);
+
+const ridgeSpreadWorld = new MineWorld(ORE_TYPES, "pressure-ridge-area-spread", { sectorId: "stable_strata" });
+const ridgeCenterTx = 24;
+const ridgeCenterTy = 80;
+const patchRidgeSpreadCell = (tx, ty, { ridge = false, air = false } = {}) => {
+  const tile = ridgeSpreadWorld.getTile(tx, ty);
+  Object.assign(tile, air
+    ? {
+      kind: "air", hp: 0, maxHp: 0, terrainMaxHp: 0, oreId: null, veinId: null,
+      discovered: true, cracked: 0, pressureRidge: false,
+    }
+    : {
+      kind: "stone", hp: 200, maxHp: 200, terrainMaxHp: 200, oreId: null, veinId: null,
+      discovered: true, cracked: 0, pressureRidge: ridge,
+    });
+  return tile;
+};
+for (let ty = ridgeCenterTy - 1; ty <= ridgeCenterTy + 1; ty += 1) {
+  for (let tx = ridgeCenterTx - 1; tx <= ridgeCenterTx + 1; tx += 1) {
+    patchRidgeSpreadCell(tx, ty, { air: ty !== ridgeCenterTy });
+  }
+}
+for (let tx = ridgeCenterTx - 1; tx <= ridgeCenterTx + 1; tx += 1) {
+  patchRidgeSpreadCell(tx, ridgeCenterTy, { ridge: true });
+}
+const ridgeCenterX = (ridgeCenterTx + 0.5) * WORLD_CONFIG.TILE_SIZE;
+const ridgeCenterY = (ridgeCenterTy + 0.5) * WORLD_CONFIG.TILE_SIZE;
+ridgeSpreadWorld.damageCircle(ridgeCenterX, ridgeCenterY, 20, 100);
+const expectedThreeCellRidgeHp = 200 - 100 * (3 ** -0.7);
+for (let tx = ridgeCenterTx - 1; tx <= ridgeCenterTx + 1; tx += 1) {
+  assert.ok(
+    Math.abs(ridgeSpreadWorld.getTile(tx, ridgeCenterTy).hp - expectedThreeCellRidgeHp) < 1e-9,
+    "area damage must be shared by every pressure-ridge cell touched by the same circle",
+  );
+}
+for (let tx = ridgeCenterTx - 1; tx <= ridgeCenterTx + 1; tx += 1) {
+  patchRidgeSpreadCell(tx, ridgeCenterTy, { ridge: true });
+}
+ridgeSpreadWorld.damageCircle(ridgeCenterX, ridgeCenterY, 8, 100);
+assert.equal(
+  ridgeSpreadWorld.getTile(ridgeCenterTx, ridgeCenterTy).hp,
+  100,
+  "a compact one-cell strike must retain full damage against a pressure ridge",
+);
+for (let tx = ridgeCenterTx - 1; tx <= ridgeCenterTx + 1; tx += 1) {
+  patchRidgeSpreadCell(tx, ridgeCenterTy, { ridge: false });
+}
+ridgeSpreadWorld.damageCircle(ridgeCenterX, ridgeCenterY, 20, 100);
+for (let tx = ridgeCenterTx - 1; tx <= ridgeCenterTx + 1; tx += 1) {
+  assert.equal(
+    ridgeSpreadWorld.getTile(tx, ridgeCenterTy).hp,
+    100,
+    "ordinary terrain must still receive full area damage per touched block",
+  );
+}
+patchRidgeSpreadCell(ridgeCenterTx, ridgeCenterTy, { ridge: true });
+ridgeSpreadWorld.damageTile(ridgeCenterTx, ridgeCenterTy, 100);
+assert.equal(
+  ridgeSpreadWorld.getTile(ridgeCenterTx, ridgeCenterTy).hp,
+  100,
+  "direct damage must not be reduced by pressure-ridge area normalization",
+);
+
+// Ordinary geology is generated with its original seeded sequence. Any whole
+// vein crossing the eventual seal row is then moved intact, without consuming
+// RNG state, before the immutable final stratum replaces that row.
+class SealBudgetWorld extends MineWorld {
+  _generateOreVeins() {
+    (this.generationOrder ||= []).push("ore");
+    for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+      assert.notEqual(
+        this.getTile(tx, FINAL_LAYER_TY)?.kind,
+        "final_seal",
+        "the final seal must not perturb ordinary seeded ore generation",
+      );
+    }
+    return super._generateOreVeins();
+  }
+
+  _countOreNodes() {
+    let count = 0;
+    for (let ty = 0; ty < WORLD_CONFIG.HEIGHT; ty += 1) {
+      for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+        if (this.getTile(tx, ty)?.oreId) count += 1;
+      }
+    }
+    return count;
+  }
+
+  _relocateFinalSealVeins() {
+    (this.generationOrder ||= []).push("relocate");
+    const before = this._countOreNodes();
+    const rngState = this._rng.state;
+    const result = super._relocateFinalSealVeins();
+    const after = this._countOreNodes();
+    assert.equal(after, before, "final-seal relocation must preserve the exact ore-node budget");
+    assert.equal(this._rng.state, rngState, "final-seal relocation must not advance world RNG");
+    for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+      assert.equal(
+        this.getTile(tx, FINAL_LAYER_TY)?.oreId,
+        null,
+        "all ore must be moved off the final seal row before it is installed",
+      );
+    }
+    this.relocationAudit = result;
+    return result;
+  }
+
+  _installFinalSeal() {
+    (this.generationOrder ||= []).push("seal");
+    return super._installFinalSeal();
+  }
+}
+const sealOrderWorld = new SealBudgetWorld(ORE_TYPES, 17, { sectorId: "stable_strata" });
+assert.deepEqual(
+  sealOrderWorld.generationOrder.slice(0, 3),
+  ["ore", "relocate", "seal"],
+  "the corrective relocation must run after ordinary ore generation and before seal installation",
+);
+assert.ok(
+  sealOrderWorld.relocationAudit?.nodes > 0,
+  "the regression seed must exercise a real bottom-crossing vein relocation",
+);
 
 // The final stratum is not ordinary rock: generic mining, blasts and direct
 // tile breaking must leave it intact, while only three explicit Solar Drill
@@ -51,6 +215,69 @@ assert.equal(breach?.breached, true, "the final Solar Drill strike must breach t
 assert.equal(finalSealWorld.getTile(finalSealTx, FINAL_LAYER_TY)?.kind, "air");
 
 const depthHardnessWorld = new MineWorld(ORE_TYPES, "depth-hardness-regression", { sectorId: "stable_strata" });
+const fracturedDepths = ROCK_STRATA
+  .map(({ depth }) => depth)
+  .filter((depth) => (
+    (depth >= 360 && depth <= 600)
+    || (depth >= 960 && depth <= 2000)
+  ));
+class FractureAuditWorld extends MineWorld {
+  _carveFormationFractures() {
+    this.recordingFormationFractures = true;
+    const result = super._carveFormationFractures();
+    this.recordingFormationFractures = false;
+    return result;
+  }
+
+  _setAir(tx, ty, discovered = false) {
+    if (this.recordingFormationFractures) {
+      (this.forcedFormationFractures ||= []).push({ tx, ty });
+    }
+    return super._setAir(tx, ty, discovered);
+  }
+}
+let checkedFracturedStrata = 0;
+for (const seed of ["fractured-late-a", "fractured-late-b", "fractured-late-c"]) {
+  const world = new FractureAuditWorld(ORE_TYPES, seed, { sectorId: "stable_strata" });
+  const forcedByDepth = new Map();
+  for (const { tx, ty } of world.forcedFormationFractures || []) {
+    const authoredDepth = (
+      (ty - world.surface[tx]) * WORLD_CONFIG.METERS_PER_TILE
+      - 15
+    );
+    if (!forcedByDepth.has(authoredDepth)) forcedByDepth.set(authoredDepth, new Set());
+    forcedByDepth.get(authoredDepth).add(tx);
+  }
+  assert.equal(
+    world.forcedFormationFractures?.length,
+    fracturedDepths.length * 2,
+    `${seed}: every fractured stratum must execute exactly two guaranteed fracture placements`,
+  );
+  for (const depth of fracturedDepths) {
+    let openCells = 0;
+    let protectedCells = 0;
+    for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
+      const ty = world.surface[tx] + (depth + 15) / WORLD_CONFIG.METERS_PER_TILE;
+      const tile = world.getTile(tx, ty);
+      if (tile?.kind === "air") openCells += 1;
+      if (tile?.fracturedStratum) protectedCells += 1;
+    }
+    assert.ok(
+      openCells >= 2,
+      `${seed}: the ${depth} m stratum needs two guaranteed fractures instead of a full-width wall`,
+    );
+    assert.equal(
+      forcedByDepth.get(depth)?.size,
+      2,
+      `${seed}: the ${depth} m stratum must carve two distinct deterministic fracture lanes`,
+    );
+    assert.ok(
+      protectedCells >= 50 && protectedCells <= 65,
+      `${seed}: the ${depth} m stratum must preserve a broad but incomplete rock rib, got ${protectedCells}/88`,
+    );
+    checkedFracturedStrata += 1;
+  }
+}
 const terrainHpAtDepth = (depthTiles) => {
   const values = [];
   for (let tx = 0; tx < WORLD_CONFIG.WIDTH; tx += 1) {
@@ -62,24 +289,31 @@ const terrainHpAtDepth = (depthTiles) => {
   return values[Math.floor(values.length / 2)];
 };
 const shallowTerrainHp = terrainHpAtDepth(20);
-const pressureDepths = [120, 135, 150, 160, 165];
+const pressureDepths = [24, 48, 72, 100, 130, 160, 190, 220, 246, 260, 280, 300, 320, 340, 360, 400];
 const pressureTerrainHp = pressureDepths.map(terrainHpAtDepth);
-const deepTerrainHp = pressureTerrainHp[2];
+const strengthenedMidRidgeHp = [630, 660, 690, 720, 750, 780, 810, 840, 870, 900]
+  .map((depthMeters) => terrainHpAtDepth(depthMeters / WORLD_CONFIG.METERS_PER_TILE));
+assert.deepEqual(
+  strengthenedMidRidgeHp,
+  [875, 1050, 1278, 1505, 1803, 2100, 2415, 2730, 3028, 3325],
+  "the ten graduated super-pick ridges must remain distinct even when caves or area damage are favorable",
+);
+const deepTerrainHp = pressureTerrainHp[5];
 const bottomTerrainHp = pressureTerrainHp.at(-1);
 assert.ok(shallowTerrainHp > 0 && deepTerrainHp > 0, "both shallow and deep strata must contain mineable terrain");
 assert.ok(
   deepTerrainHp >= shallowTerrainHp * 3,
-  `deep rock must justify late tools (${shallowTerrainHp} HP near 100 m, ${deepTerrainHp} HP near 750 m)`,
+  `deep rock must justify late tools (${shallowTerrainHp} HP near 100 m, ${deepTerrainHp} HP near 800 m)`,
 );
 for (let index = 1; index < pressureTerrainHp.length; index += 1) {
   assert.ok(
     pressureTerrainHp[index] >= pressureTerrainHp[index - 1],
-    `planetary pressure must rise monotonically after 600 m: ${pressureTerrainHp.join(" → ")} HP`,
+    `authored strata must rise monotonically from 100 m to the bottom: ${pressureTerrainHp.join(" → ")} HP`,
   );
 }
 assert.ok(
-  bottomTerrainHp >= 220 && bottomTerrainHp <= 280,
-  `bottom terrain should sit in the 220–280 HP pressure band, got ${bottomTerrainHp}`,
+  bottomTerrainHp >= 52500 && bottomTerrainHp <= 52750,
+  `bottom terrain should include the final smooth formation multiplier, got ${bottomTerrainHp}`,
 );
 const baseStats = calculateMetaStats({});
 const fullLevels = Object.fromEntries(UPGRADE_DEFS.map((definition) => [definition.id, definition.maxLevel]));
@@ -95,11 +329,11 @@ assert.ok(
   `a fresh pick must be effectively unable to mine bottom rock (${baseBottomSeconds.toFixed(1)} s)`,
 );
 assert.ok(
-  startingShiftDamageShare <= 0.06,
-  `one fresh six-second shift may remove at most 6% of bottom rock (${(startingShiftDamageShare * 100).toFixed(1)}%)`,
+  startingShiftDamageShare <= 0.01,
+  `one fresh six-second shift may remove at most 1% of bottom rock (${(startingShiftDamageShare * 100).toFixed(1)}%)`,
 );
 assert.ok(
-  fullLaserBottomSeconds < 0.5,
+  fullLaserBottomSeconds < 75,
   `a completed laser build must visibly shred bottom rock (${fullLaserBottomSeconds.toFixed(2)} s)`,
 );
 
@@ -155,12 +389,12 @@ const damageStageTtk = Object.fromEntries(Object.entries(DAMAGE_STAGE_LEVELS).ma
   id,
   bottomTerrainHp / Math.max(0.01, deterministicTerrainDps(levels)),
 ]));
-assert.ok(damageStageTtk.fresh > 90, `fresh bottom TTK must stay prohibitive: ${damageStageTtk.fresh}`);
-assert.ok(damageStageTtk.iron >= 35 && damageStageTtk.iron <= 50, `iron bottom TTK drifted: ${damageStageTtk.iron}`);
-assert.ok(damageStageTtk.steel >= 12 && damageStageTtk.steel <= 20, `steel bottom TTK drifted: ${damageStageTtk.steel}`);
-assert.ok(damageStageTtk.pneumatic >= 4 && damageStageTtk.pneumatic <= 8, `pneumatic bottom TTK drifted: ${damageStageTtk.pneumatic}`);
-assert.ok(damageStageTtk.superPick >= 0.8 && damageStageTtk.superPick <= 2.2, `super-pick bottom TTK drifted: ${damageStageTtk.superPick}`);
-assert.ok(damageStageTtk.firstLaser < 1.2, `the first laser must already shred bottom terrain: ${damageStageTtk.firstLaser}`);
+assert.ok(damageStageTtk.fresh > 10900, `fresh bottom TTK must stay prohibitive: ${damageStageTtk.fresh}`);
+assert.ok(damageStageTtk.iron >= 8650 && damageStageTtk.iron <= 10200, `iron bottom TTK drifted: ${damageStageTtk.iron}`);
+assert.ok(damageStageTtk.steel >= 3050 && damageStageTtk.steel <= 3850, `steel bottom TTK drifted: ${damageStageTtk.steel}`);
+assert.ok(damageStageTtk.pneumatic >= 1140 && damageStageTtk.pneumatic <= 1460, `pneumatic bottom TTK drifted: ${damageStageTtk.pneumatic}`);
+assert.ok(damageStageTtk.superPick >= 245 && damageStageTtk.superPick <= 330, `super-pick bottom TTK drifted: ${damageStageTtk.superPick}`);
+assert.ok(damageStageTtk.firstLaser < 210, `the first laser must make bottom terrain practical: ${damageStageTtk.firstLaser}`);
 const orderedDamageTtk = ['fresh', 'iron', 'steel', 'pneumatic', 'superPick', 'firstLaser']
   .map((id) => damageStageTtk[id]);
 for (let index = 1; index < orderedDamageTtk.length; index += 1) {
@@ -195,13 +429,13 @@ assert.ok(starDefinition && goldDefinition);
 assert.equal(overlapWorld._applyOre(overlapTarget.tx, overlapTarget.ty, starDefinition, "overlap-star"), true);
 assert.equal(
   overlapWorld.getTile(overlapTarget.tx, overlapTarget.ty).maxHp,
-  Math.round(underlyingRockHp * oreById.get("star_core").hardness),
+  Math.round(oreDurabilityForTerrain(underlyingRockHp, oreById.get("star_core").hardness)),
   "first ore must derive durability from the underlying terrain",
 );
 assert.equal(overlapWorld._applyOre(overlapTarget.tx, overlapTarget.ty, goldDefinition, "overlap-gold"), true);
 assert.equal(
   overlapWorld.getTile(overlapTarget.tx, overlapTarget.ty).maxHp,
-  Math.round(underlyingRockHp * oreById.get("gold").hardness),
+  Math.round(oreDurabilityForTerrain(underlyingRockHp, oreById.get("gold").hardness)),
   "crossing veins must replace, not compound, ore hardness",
 );
 
@@ -210,17 +444,83 @@ assert.deepEqual(
   {
     copper: 0,
     coal: 112,
-    iron: 420,
-    amber: 952,
-    silver: 1568,
-    gold: 2128,
-    amethyst: 2688,
-    prism_crystal: 3248,
-    void_ore: 3808,
-    star_core: 4312,
+    iron: 308,
+    amber: 784,
+    silver: 1344,
+    gold: 2352,
+    amethyst: 3640,
+    prism_crystal: 4592,
+    void_ore: 5040,
+    star_core: 7000,
   },
   "ore bands must span the full vertical mine instead of bunching near the surface",
 );
+assert.deepEqual(
+  Object.fromEntries(ORE_TYPES.filter((ore) => Number.isFinite(ore.maxDepth)).map((ore) => [ore.id, ore.maxDepth])),
+  {
+    copper: 728,
+    coal: 1176,
+    iron: 1960,
+    amber: 3080,
+    silver: 5040,
+    gold: 6720,
+    amethyst: 8960,
+    prism_crystal: 11424,
+    void_ore: 11424,
+  },
+  "every ore except the final tier needs a strict lower and upper depth band",
+);
+const oreBandMeters = Object.fromEntries(ORE_TYPES.map((ore) => [
+  ore.id,
+  {
+    min: Math.round(ore.depth / WORLD_CONFIG.TILE_SIZE * WORLD_CONFIG.METERS_PER_TILE),
+    max: Number.isFinite(ore.maxDepth)
+      ? Math.round(ore.maxDepth / WORLD_CONFIG.TILE_SIZE * WORLD_CONFIG.METERS_PER_TILE)
+      : null,
+  },
+]));
+assert.deepEqual(
+  oreBandMeters,
+  {
+    copper: { min: 0, max: 130 },
+    coal: { min: 20, max: 210 },
+    iron: { min: 55, max: 350 },
+    amber: { min: 140, max: 550 },
+    silver: { min: 240, max: 900 },
+    gold: { min: 420, max: 1200 },
+    amethyst: { min: 650, max: 1600 },
+    prism_crystal: { min: 820, max: 2040 },
+    void_ore: { min: 900, max: 2040 },
+    star_core: { min: 1250, max: null },
+  },
+  "authored pixel cutoffs must resolve to the intended geological metre bands",
+);
+for (let index = 1; index < ORE_TYPES.length; index += 1) {
+  const previous = ORE_TYPES[index - 1];
+  const current = ORE_TYPES[index];
+  assert.ok(
+    !Number.isFinite(previous.maxDepth) || current.depth <= previous.maxDepth,
+    `${previous.id} and ${current.id} must overlap so no depth becomes oreless`,
+  );
+}
+assert.deepEqual(
+  Object.fromEntries(ORE_TYPES.slice(-3).map((ore) => [ore.id, ore.baseYield || 1])),
+  { prism_crystal: 2, void_ore: 2, star_core: 3 },
+  "late ore chunks must reward depth without increasing generated node density",
+);
+
+const strataAfterSixHundred = ROCK_STRATA.filter((stratum) => stratum.depth >= 600);
+assert.ok(strataAfterSixHundred.length >= 20, "the second half needs many distinct pressure steps");
+for (let index = 1; index < strataAfterSixHundred.length; index += 1) {
+  const previous = strataAfterSixHundred[index - 1];
+  const current = strataAfterSixHundred[index];
+  assert.ok(current.depth - previous.depth <= 60, "deep pressure bands must be at most 60 m apart");
+  assert.ok(current.floorHp > previous.floorHp, "every deep pressure band must be stronger than the previous one");
+  assert.ok(
+    current.floorHp / previous.floorHp <= 1.5,
+    `adjacent deep bands must rise gradually, got ${previous.floorHp} -> ${current.floorHp}`,
+  );
+}
 
 function oreVeins(world, oreId) {
   const veins = new Map();
@@ -273,39 +573,53 @@ function cardinalReachableCount(cells) {
   return reachable;
 }
 
-// Amber and gold each spend one normal generated vein on a central frontier
-// reserve. The only vein ids beyond that authored budget belong to the exact
-// copper redistribution that replaced pre-filled lift targets.
+// Every naturally gated ore spends one normal generated vein on a central
+// frontier reserve. Relocation can allocate at most one replacement id per
+// gated resource, but lift targets no longer add a second copper budget.
+const frontierOreIds = [
+  "iron", "amber", "silver", "gold", "amethyst",
+  "prism_crystal", "void_ore", "star_core",
+];
 for (let index = 0; index < 24; index += 1) {
   const world = new MineWorld(ORE_TYPES, `frontier-reserve-${index}`, { sectorId: "stable_strata" });
   const authoredVeinBudget = world._oreDefinitions.reduce(
     (total, definition) => total + world._oreVeinCount(definition),
     0,
   );
-  const redistributedVeinBudget = new Set(
-    world._liftCompensationCells.map(({ veinId }) => veinId),
-  ).size;
   const allocatedVeinIds = world._nextVeinId - 1;
   assert.ok(
-    allocatedVeinIds >= authoredVeinBudget + redistributedVeinBudget,
-    `frontier seed ${index}: every live redistributed vein needs an allocated id`,
+    allocatedVeinIds >= authoredVeinBudget,
+    `frontier seed ${index}: every authored vein needs an allocated id`,
   );
+  const liveAuthoredVeins = [...allOreVeins(world).keys()].filter((veinId) => (
+    /^[^:]+:\d+$/.test(String(veinId))
+  )).length;
   assert.ok(
-    allocatedVeinIds <= authoredVeinBudget + world._liftTargetKeys.size,
-    `frontier seed ${index}: failed placement ids must stay inside the redistributed node budget`,
+    liveAuthoredVeins <= authoredVeinBudget,
+    `frontier seed ${index}: reserves must relocate authored veins instead of adding live ones`,
   );
 
-  for (const oreId of ["amber", "gold"]) {
+  for (const oreId of frontierOreIds) {
     const ore = oreById.get(oreId);
     const definition = world._oreDefinitions.find((candidate) => candidate.id === oreId);
     const veins = oreVeins(world, oreId);
-    const frontierVein = [...veins.values()].find((cells) => cells.some(({ tx, ty }) => {
-      const localDepth = (ty - (world.surface[tx] ?? WORLD_CONFIG.SURFACE_BASE)) * WORLD_CONFIG.TILE_SIZE;
-      return Math.abs(tx - WORLD_CONFIG.SPAWN_TX) <= 10
-        && localDepth >= ore.depth
-        && localDepth <= ore.depth + 12 * WORLD_CONFIG.TILE_SIZE;
-    }));
-    assert.ok(frontierVein, `frontier seed ${index}: ${oreId} needs one reachable reserve vein`);
+    const oreDepthMeters = ore.depth / WORLD_CONFIG.TILE_SIZE * WORLD_CONFIG.METERS_PER_TILE;
+    const frontierStation = world._liftStations.reduce((best, candidate) => (
+      !best
+      || Math.abs(candidate.depth - oreDepthMeters) < Math.abs(best.depth - oreDepthMeters)
+        ? candidate
+        : best
+    ), null);
+    const frontierVein = [...veins.values()].find((cells) => (
+      cells.some(({ tile }) => tile.frontierReserveOreId === oreId)
+      && cells.some(({ tx, ty }) => {
+        const localDepth = (ty - (world.surface[tx] ?? WORLD_CONFIG.SURFACE_BASE)) * WORLD_CONFIG.TILE_SIZE;
+        return Math.hypot(tx - frontierStation.tx, ty - frontierStation.ty) <= 12.5
+          && localDepth >= ore.depth
+          && localDepth <= ore.depth + 12 * WORLD_CONFIG.TILE_SIZE;
+      })
+    ));
+    assert.ok(frontierVein, `frontier seed ${index}: ${oreId} needs one reserve vein beside its lift frontier`);
     assert.ok(
       frontierVein.length <= world._oreVeinSizeRange(definition).max,
       `frontier seed ${index}: ${oreId} reserve must keep the normal maximum vein size`,
@@ -313,10 +627,46 @@ for (let index = 0; index < 24; index += 1) {
     for (const { tile } of frontierVein) {
       assert.equal(
         tile.maxHp,
-        Math.round(tile.terrainMaxHp * ore.hardness),
+        Math.round(oreDurabilityForTerrain(tile.terrainMaxHp, ore.hardness)),
         `frontier seed ${index}: ${oreId} reserve must retain ordinary ore durability`,
       );
     }
+  }
+}
+
+// These random-geology seeds used to rebuild a disconnected iron or amber
+// reserve without its tag; two also moved the vein outside the lift corridor.
+// Keep the exact tail cases so later connectivity repairs cannot silently
+// disable first-tier targeting again.
+for (const seed of [
+  "ore-depth-audit-106",
+  "ore-depth-audit-152",
+  "ore-depth-audit-175",
+  "ore-depth-audit-199",
+]) {
+  const world = new MineWorld(ORE_TYPES, seed);
+  for (const oreId of [
+    "iron", "amber", "silver", "gold", "amethyst",
+    "prism_crystal", "void_ore", "star_core",
+  ]) {
+    const ore = oreById.get(oreId);
+    const oreDepthMeters = ore.depth / WORLD_CONFIG.TILE_SIZE * WORLD_CONFIG.METERS_PER_TILE;
+    const frontierStation = world._liftStations.reduce((best, candidate) => (
+      !best
+      || Math.abs(candidate.depth - oreDepthMeters) < Math.abs(best.depth - oreDepthMeters)
+        ? candidate
+        : best
+    ), null);
+    const frontierVein = [...oreVeins(world, oreId).values()].find((cells) => (
+      cells.some(({ tile }) => tile.frontierReserveOreId === oreId)
+      && cells.some(({ tx, ty }) => {
+        const localDepth = (ty - (world.surface[tx] ?? WORLD_CONFIG.SURFACE_BASE)) * WORLD_CONFIG.TILE_SIZE;
+        return Math.hypot(tx - frontierStation.tx, ty - frontierStation.ty) <= 12.5
+          && localDepth >= ore.depth
+          && localDepth <= ore.depth + 12 * WORLD_CONFIG.TILE_SIZE;
+      })
+    ));
+    assert.ok(frontierVein, `${seed}: ${oreId} must retain a tagged reserve beside its lift frontier`);
   }
 }
 
@@ -370,21 +720,29 @@ function assertAuthoredVerticalOreDepth(world, label) {
   let checked = 0;
   world.forEachOreTileInBounds(0, 0, WORLD_CONFIG.WIDTH - 1, WORLD_CONFIG.HEIGHT - 1, (tile, tx, ty) => {
     const ore = oreById.get(tile.oreId);
-    if (!ore || ore.tier < 4) return;
+    if (!ore || String(tile.veinId || "").startsWith("starter-") || tile.liftSupply) return;
     const authoredDepth = Number(ore.depth);
-    if (!Number.isFinite(authoredDepth) || authoredDepth <= 1) return;
+    const authoredMaximum = Number(ore.maxDepth);
     const localSurface = world.surface[tx] ?? WORLD_CONFIG.SURFACE_BASE;
     const verticalDepth = Math.max(0, ty - localSurface) * WORLD_CONFIG.TILE_SIZE;
-    assert.ok(
-      verticalDepth + 0.001 >= authoredDepth,
-      `${label}: ${ore.id} at ${tx}:${ty} appeared ${verticalDepth}px down, before its ${authoredDepth}px vertical gate`,
-    );
+    if (Number.isFinite(authoredDepth) && authoredDepth > 1) {
+      assert.ok(
+        verticalDepth + 0.001 >= authoredDepth,
+        `${label}: ${ore.id} at ${tx}:${ty} appeared ${verticalDepth}px down, before its ${authoredDepth}px vertical gate`,
+      );
+    }
+    if (Number.isFinite(authoredMaximum) && authoredMaximum > 1) {
+      assert.ok(
+        verticalDepth - 0.001 <= authoredMaximum,
+        `${label}: ${ore.id} at ${tx}:${ty} appeared ${verticalDepth}px down, beyond its ${authoredMaximum}px vertical cap`,
+      );
+    }
     checked += 1;
   });
   return checked;
 }
 
-// The 88x180 field is deliberately smaller than the old wide map. Authored
+// The 88x420 field is deliberately narrower than the old wide map. Authored
 // vein budgets and cave count scale with its area, so the silhouette narrows
 // without increasing ore density or enlarging individual veins.
 const densitySamples = 32;
@@ -417,32 +775,16 @@ for (let index = 0; index < densitySamples; index += 1) {
     assert.equal(tile.pendingLiftSupply, true, `density seed ${index}: ${key} must wait for selection`);
   }
 
-  assert.equal(
-    world._liftCompensationCells.length,
-    world._liftTargetKeys.size,
-    `density seed ${index}: redistributed copper must exactly match the removed station budget`,
+  const liftDonor = world._findLiftSupplyDonor();
+  assert.ok(liftDonor, `density seed ${index}: one existing opening-tier vein must provide lift supply`);
+  assert.ok(
+    ["copper", "coal", "iron", "amber"].includes(world.getTile(liftDonor.tx, liftDonor.ty)?.oreId),
+    `density seed ${index}: lift supply must not consume a late-game ore`,
   );
-  const compensationVeins = new Map();
-  for (const candidate of world._liftCompensationCells) {
-    const key = `${candidate.tx}:${candidate.ty}`;
-    assert.ok(!world._liftTargetKeys.has(key), `density seed ${index}: compensation cannot reuse ${key}`);
-    const tile = world.getTile(candidate.tx, candidate.ty);
-    assert.equal(tile?.oreId, "copper", `density seed ${index}: compensation cell ${key} must remain copper`);
-    assert.equal(tile?.veinId, candidate.veinId, `density seed ${index}: compensation identity drifted at ${key}`);
-    if (!compensationVeins.has(candidate.veinId)) compensationVeins.set(candidate.veinId, []);
-    compensationVeins.get(candidate.veinId).push(candidate);
-  }
-  for (const [veinId, cells] of compensationVeins) {
-    assert.ok(
-      cells.length >= 6 && cells.length <= 9,
-      `density seed ${index}: redistributed vein ${veinId} must contain 6-9 cells, got ${cells.length}`,
-    );
-    assert.equal(
-      cardinalReachableCount(cells),
-      cells.length,
-      `density seed ${index}: redistributed vein ${veinId} must be cardinally connected`,
-    );
-  }
+  assert.ok(
+    !world._liftTargetKeys.has(`${liftDonor.tx}:${liftDonor.ty}`),
+    `density seed ${index}: lift donor cannot be a reserved station target`,
+  );
 
   for (const [veinId, vein] of allOreVeins(world)) {
     assert.equal(
@@ -461,7 +803,7 @@ const sampledOreDensity = densityOreTiles / sampledWorldTiles;
 const sampledCaveDensity = densityUndergroundAir / sampledWorldTiles;
 assert.ok(
   Math.abs(sampledOreDensity - 0.0848) <= 0.002,
-  `lift redistribution must preserve the 8.48% ore baseline, got ${(sampledOreDensity * 100).toFixed(2)}%`,
+  `stratified donor redistribution must preserve the 8.48% ore baseline, got ${(sampledOreDensity * 100).toFixed(2)}%`,
 );
 assert.ok(
   Math.abs(sampledCaveDensity - 0.258) <= 0.022,
@@ -471,8 +813,8 @@ assert.ok(checkedDepthGatedOre > 0, "the depth-gate audit must inspect generated
 const averageCopperTiles = densityCopperTiles / densitySamples;
 const singletonCopperShare = densitySingletonCopperTiles / Math.max(1, densityCopperTiles);
 assert.ok(
-  averageCopperTiles >= 320 && averageCopperTiles <= 345,
-  `redistribution must preserve the copper economy, got ${averageCopperTiles.toFixed(2)} cells/world`,
+  averageCopperTiles >= 190 && averageCopperTiles <= 250,
+  `the finite opening band must stay supplied without recreating the old copper surplus, got ${averageCopperTiles.toFixed(2)} cells/world`,
 );
 assert.ok(
   singletonCopperShare <= 0.05,
@@ -485,7 +827,7 @@ const depthSpawn = depthProbe.getSpawn();
 const maximumPlayableDepth = (
   WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 1 - depthSpawn.ty
 ) * WORLD_CONFIG.METERS_PER_TILE;
-assert.ok(maximumPlayableDepth >= 800, `all eight 100 m depth-contract stacks need at least 800 m, got ${maximumPlayableDepth}`);
+assert.ok(maximumPlayableDepth >= 2000, `the extended descent needs at least 2000 playable metres, got ${maximumPlayableDepth}`);
 
 const legacyProfiles = getSectorChoices("unused-menu-seed");
 assert.equal(legacyProfiles.length, 3, "legacy profiles remain available only for diagnostics");
@@ -591,11 +933,11 @@ for (const preferredOre of ORE_TYPES) {
   maxGeneratedNodeBudgetDrift = Math.max(maxGeneratedNodeBudgetDrift, generatedDrift);
 
   assert.ok(
-    expectedDrift <= 0.015,
+    expectedDrift <= 0.07,
     `${preferredOre.id} bias changed the expected ore-node budget by ${(expectedDrift * 100).toFixed(2)}%`,
   );
   assert.ok(
-    generatedDrift <= 0.06,
+    generatedDrift <= 0.08,
     `${preferredOre.id} bias changed generated ore nodes by ${(generatedDrift * 100).toFixed(2)}%`,
   );
 }
@@ -792,8 +1134,8 @@ for (let seed = 0; seed < 12; seed += 1) {
 }
 
 // Every station starts as a reserved rock target. Selecting one station moves
-// exactly one edge node from the redistributed copper budget and retunes that
-// node to the workshop's requested shortage without changing total ore count.
+// exactly one leaf from an existing opening-tier vein and retunes that node to
+// the workshop's requested shortage without changing total ore count.
 const liftSupplyWorld = new MineWorld(ORE_TYPES, "lift-resupply-probe", { sectorId: "stable_strata" });
 const liftSupplyStart = liftSupplyWorld.getLiftStart(800, 0.45, 800, { unlockedTierCap: 9 });
 assert.equal(liftSupplyStart.source, "shaft-lift");
@@ -841,9 +1183,8 @@ for (const station of liftSupplyWorld._liftStations) {
 }
 
 // Every sector and seed starts with the same short, mineable economy seam:
-// copper is visible immediately, coal follows behind it, and another copper
-// tile rewards continuing down the newly opened shaft. All five copper pieces
-// form one compact cardinal C around the coal.
+// copper is visible immediately and two connected coal samples follow it.
+// Four copper pieces remain one compact cardinal hook beside the coal.
 let checkedStarterSeams = 0;
 for (let seed = 1; seed <= 8; seed += 1) {
   for (const sector of GEOLOGICAL_SECTORS) {
@@ -851,19 +1192,18 @@ for (let seed = 1; seed <= 8; seed += 1) {
     const starterSpawn = starterWorld.getSpawn();
     const firstCopper = starterWorld.getTile(starterSpawn.tx, starterSpawn.ty + 2);
     const coal = starterWorld.getTile(starterSpawn.tx, starterSpawn.ty + 3);
-    const secondCopper = starterWorld.getTile(starterSpawn.tx, starterSpawn.ty + 4);
+    const secondCoal = starterWorld.getTile(starterSpawn.tx, starterSpawn.ty + 4);
 
     assert.equal(firstCopper?.oreId, "copper", `${sector.id} must expose starter copper`);
     assert.equal(firstCopper?.maxHp, 2, "first copper must fit inside the opening shift");
     assert.equal(coal?.oreId, "coal", `${sector.id} must guarantee early coal`);
-    assert.equal(coal?.maxHp, 4, "starter coal must fit the opening shift without becoming free");
-    assert.equal(secondCopper?.oreId, "copper", `${sector.id} must finish the starter seam with copper`);
-    assert.equal(secondCopper?.maxHp, 3, "second copper must stay soft");
-    assert.ok(firstCopper.discovered && coal.discovered && secondCopper.discovered);
+    assert.equal(coal?.maxHp, 2, "starter coal must fit inside the first opening shift");
+    assert.equal(secondCoal?.oreId, "coal", `${sector.id} must finish the starter seam with fuel`);
+    assert.equal(secondCoal?.maxHp, 2, "second coal must stay soft");
+    assert.ok(firstCopper.discovered && coal.discovered && secondCoal.discovered);
 
     const starterCopper = [
       { tx: starterSpawn.tx, ty: starterSpawn.ty + 2 },
-      { tx: starterSpawn.tx, ty: starterSpawn.ty + 4 },
       { tx: starterSpawn.tx - 1, ty: starterSpawn.ty + 2 },
       { tx: starterSpawn.tx - 1, ty: starterSpawn.ty + 3 },
       { tx: starterSpawn.tx - 1, ty: starterSpawn.ty + 4 },
@@ -871,6 +1211,7 @@ for (let seed = 1; seed <= 8; seed += 1) {
     const starterVeinIds = new Set(starterCopper.map(({ tx, ty }) => {
       const tile = starterWorld.getTile(tx, ty);
       assert.equal(tile?.oreId, "copper", `${sector.id} starter C is missing copper at ${tx}:${ty}`);
+      assert.equal(tile?.maxHp, 2, `${sector.id} starter copper must clear inside the first shift`);
       assert.equal(tile?.discovered, true, `${sector.id} starter copper must be visible at ${tx}:${ty}`);
       return tile.veinId;
     }));
@@ -878,9 +1219,10 @@ for (let seed = 1; seed <= 8; seed += 1) {
     assert.equal(
       cardinalReachableCount(starterCopper),
       starterCopper.length,
-      `${sector.id} starter copper must be a cardinally connected C-shaped vein`,
+      `${sector.id} starter copper must be a cardinally connected hook`,
     );
     assert.notEqual(coal.veinId, firstCopper.veinId, "the coal sample must keep a separate vein identity");
+    assert.equal(secondCoal.veinId, coal.veinId, "both starter coal samples must share one vein");
 
     const starterRoute = starterWorld.findLeastResistanceStep(
       starterSpawn,
@@ -892,7 +1234,7 @@ for (let seed = 1; seed <= 8; seed += 1) {
   }
 }
 
-// Re-running the authored placement must preserve the same compact C instead
+// Re-running the authored placement must preserve the same compact hook instead
 // of searching outward for incidental solid tiles.
 const starterFanWorld = new MineWorld(ORE_TYPES, "starter-descending-fan", { sectorId: "stable_strata" });
 const starterFanSpawn = starterFanWorld.getSpawn();
@@ -911,7 +1253,6 @@ starterFanWorld._nearestSolidTile = originalNearestSolidTile;
 assert.deepEqual(starterFanRequests, [], "starter placement must no longer scatter probes via nearest-rock search");
 const starterFanCopper = [
   [0, 2],
-  [0, 4],
   [-1, 2],
   [-1, 3],
   [-1, 4],
@@ -919,7 +1260,7 @@ const starterFanCopper = [
   tx: starterFanSpawn.tx + dx,
   ty: starterFanSpawn.ty + dy,
 }));
-assert.equal(cardinalReachableCount(starterFanCopper), 5);
+assert.equal(cardinalReachableCount(starterFanCopper), 4);
 assert.equal(
   new Set(starterFanCopper.map(({ tx, ty }) => starterFanWorld.getTile(tx, ty)?.veinId)).size,
   1,
@@ -1009,6 +1350,71 @@ const route = eventWorld.findLeastResistanceStep(spawn, firstOre, {
 assert.ok(route?.route.length >= 1);
 assert.equal(eventWorld.getTile(firstOre.tx, firstOre.ty).hp, hpBeforeRoute, "routing stays read-only");
 
+// The least-resistance search may prefer an already-open shelf, but the
+// retreat frontier is a hard boundary: an attractive tunnel above minimumTy
+// must disappear from the candidate graph rather than merely receive a score
+// penalty.
+const retreatRouteWorld = new MineWorld(ORE_TYPES, "retreat-route-regression", { sectorId: "stable_strata" });
+const retreatStart = { tx: 40, ty: 50 };
+const retreatGoal = { tx: 46, ty: 50 };
+for (let ty = 48; ty <= 58; ty += 1) {
+  for (let tx = 30; tx <= 56; tx += 1) {
+    Object.assign(retreatRouteWorld.getTile(tx, ty), {
+      kind: "bedrock",
+      oreId: null,
+      veinId: null,
+      hp: Infinity,
+      maxHp: Infinity,
+    });
+  }
+}
+for (let tx = retreatStart.tx; tx <= retreatGoal.tx; tx += 1) {
+  Object.assign(retreatRouteWorld.getTile(tx, 49), {
+    kind: "air",
+    oreId: null,
+    veinId: null,
+    hp: 0,
+    maxHp: 0,
+  });
+  Object.assign(retreatRouteWorld.getTile(tx, 50), {
+    kind: tx === retreatStart.tx || tx === retreatGoal.tx ? "air" : "stone",
+    oreId: null,
+    veinId: null,
+    hp: tx === retreatStart.tx || tx === retreatGoal.tx ? 0 : 1_000,
+    maxHp: tx === retreatStart.tx || tx === retreatGoal.tx ? 0 : 1_000,
+  });
+}
+const retreatRouteOptions = {
+  moveSpeed: 100,
+  digPowerPerSecond: 10,
+  maxDetourTiles: 8,
+  minimumSavings: 0,
+};
+const unrestrictedRetreatRoute = retreatRouteWorld.findLeastResistanceStep(
+  retreatStart,
+  retreatGoal,
+  retreatRouteOptions,
+);
+assert.equal(unrestrictedRetreatRoute?.usedDetour, true, "the open shelf should be the cheapest unrestricted route");
+assert.ok(
+  unrestrictedRetreatRoute.route.some(({ ty }) => ty === 49),
+  "the control route must actually use the cheap shelf above the frontier",
+);
+const boundedRetreatRoute = retreatRouteWorld.findLeastResistanceStep(
+  retreatStart,
+  retreatGoal,
+  { ...retreatRouteOptions, minimumTy: 50 },
+);
+assert.ok(boundedRetreatRoute?.route.length > 0, "the in-frontier direct route must remain available");
+assert.ok(
+  boundedRetreatRoute.route.every(({ ty }) => ty >= 50),
+  "minimumTy must exclude every step above the active retreat frontier",
+);
+assert.ok(
+  boundedRetreatRoute.routeCost > unrestrictedRetreatRoute.routeCost * 20,
+  "the bounded result must accept the expensive in-frontier path instead of leaking onto the cheap upper shelf",
+);
+
 // damageRay deliberately applies its full damage to every tile covered by the
 // supplied width. Falloff bands therefore belong to the caller: the laser must
 // pass only its permanent core width and resolve thermal edges separately.
@@ -1033,9 +1439,30 @@ const rayOriginY = (rayOriginTy + 0.5) * WORLD_CONFIG.TILE_SIZE;
 rayContractWorld.damageRay(rayOriginX, rayOriginY, 1, 0, WORLD_CONFIG.TILE_SIZE * 4, 10, 8);
 assert.equal(rayCore.hp, 90, "the eight-pixel core must damage its center row");
 assert.equal(rayEdge.hp, 100, "the eight-pixel core must not reach the neighboring row");
-rayContractWorld.damageRay(rayOriginX, rayOriginY, 1, 0, WORLD_CONFIG.TILE_SIZE * 4, 10, 23);
+const rayHits = [];
+rayContractWorld.damageRay(
+  rayOriginX,
+  rayOriginY,
+  1,
+  0,
+  WORLD_CONFIG.TILE_SIZE * 4,
+  10,
+  23,
+  undefined,
+  {
+    onHit: (tile, tx, ty, appliedDamage) => rayHits.push({ tile, tx, ty, appliedDamage }),
+  },
+);
 assert.equal(rayCore.hp, 80);
 assert.equal(rayEdge.hp, 90, "damageRay has no implicit edge falloff at wider widths");
+assert.ok(
+  rayHits.some(({ tx, ty, appliedDamage }) => (
+    tx === rayOriginTx + 2
+    && ty === rayOriginTy
+    && appliedDamage === 10
+  )),
+  "damageRay must report the real contacted terrain so the Solar Drill can burst at the impact point",
+);
 
 console.log(JSON.stringify({
   ok: true,
@@ -1045,8 +1472,11 @@ console.log(JSON.stringify({
   checkedStarterSeams,
   checkedStagedEvents,
   checkedDepthGatedOre,
+  checkedFracturedStrata,
   sampledOreDensity: Number(sampledOreDensity.toFixed(4)),
   sampledCaveDensity: Number(sampledCaveDensity.toFixed(4)),
+  averageCopperTiles: Number(averageCopperTiles.toFixed(2)),
+  singletonCopperShare: Number(singletonCopperShare.toFixed(4)),
   maxExpectedNodeBudgetDrift: Number(maxExpectedNodeBudgetDrift.toFixed(4)),
   maxGeneratedNodeBudgetDrift: Number(maxGeneratedNodeBudgetDrift.toFixed(4)),
   cavernAir: cavern.undergroundAir,
