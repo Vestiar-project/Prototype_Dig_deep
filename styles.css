@@ -3004,7 +3004,14 @@ button.upgrade-node { font: inherit; }
   color: var(--gold-hi);
 }
 
-.next-breakthrough__max:disabled { opacity: 0.4; cursor: not-allowed; }
+.next-breakthrough__max:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+  border-color: #697270;
+  color: #f0eee5;
+  background: #3b4544;
+  text-shadow: 0 1px 0 #111819;
+}
 
 .diagnosis-advice {
   display: grid;
@@ -4659,6 +4666,22 @@ button.upgrade-node { font: inherit; }
   #gameShell.theme-rust-comic .briefing {
     box-shadow: inset 9px 0 0 var(--comic-rust-dark), inset 13px 0 0 var(--comic-rust-hi);
   }
+}
+
+#gameShell.theme-rust-comic .next-breakthrough__max:disabled {
+  opacity: 1;
+  filter: none;
+  cursor: not-allowed;
+  border-color: #8f9691;
+  color: #f4ecd8;
+  background:
+    repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.035) 0 5px, transparent 5px 10px),
+    linear-gradient(#596261, #303838);
+  text-shadow: 0 2px 0 #111819;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.09),
+    0 3px 0 #161c1c,
+    0 0 0 1px rgba(10, 16, 17, 0.7);
 }
 
 @media (max-width: 640px) {
