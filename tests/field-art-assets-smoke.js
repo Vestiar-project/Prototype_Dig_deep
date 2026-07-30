@@ -324,8 +324,10 @@ assert.match(gameSource, /function getOreNodeTransform\(/);
 assert.doesNotMatch(gameSource, /function addVeinConnectorArmClip\(/);
 assert.match(gameSource, /const runtimeTextureDrawn = drawRuntimeTerrainTexture\(/);
 assert.match(gameSource, /if \(!drawRuntimeOreNode\(/);
-assert.match(gameSource, /FIELD_ORE_NODE_MIN_SIZE = 25\.75/);
-assert.match(gameSource, /FIELD_ORE_NODE_MAX_SIZE = 29/);
+assert.match(gameSource, /FIELD_ORE_NODE_MIN_SIZE = 32\.5/);
+assert.match(gameSource, /FIELD_ORE_NODE_TIER_STEP = 0\.5/);
+assert.match(gameSource, /FIELD_ORE_NODE_MAX_SIZE = 37/);
+assert.match(gameSource, /FIELD_ORE_FALLBACK_SCALE = 1\.32/);
 assert.match(gameSource, /FIELD_VEIN_WIDTH_SCALE = 0\.72/);
 assert.match(
   gameSource,
