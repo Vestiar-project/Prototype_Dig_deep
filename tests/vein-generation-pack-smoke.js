@@ -33,7 +33,7 @@ assert.match(gameSource, /cachedVisualState[\s\S]*cachedVisualState\.visible/);
 assert.match(gameSource, /for \(const entry of visible\) drawTile\(entry, now, 'terrain'/);
 assert.match(gameSource, /drawVisibleVeinNetwork\(visible, oreVisualStates\)/);
 assert.match(gameSource, /for \(const entry of visible\) drawTile\(entry, now, 'overlay'/);
-assert.match(indexSource, /deep-shaft-9-sense1/, "browser cache key was not advanced");
+assert.match(indexSource, /deep-shaft-10-static-icons/, "browser cache key was not advanced");
 
 assert.equal(runtimeAtlas.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
 assert.equal(runtimeAtlas.readUInt32BE(16), 2560);
