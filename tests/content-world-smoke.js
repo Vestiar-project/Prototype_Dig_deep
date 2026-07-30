@@ -74,6 +74,10 @@ assert.equal(fullStats.openingSprintMultiplier, 1.4);
 assert.equal(fullStats.targetRelaySprintMultiplier, 1.18);
 assert.equal(fullStats.targetRelaySprintDuration, 0.65);
 assert.equal(fullStats.faultFinderCadenceEvery, 15);
+assert.equal(fullStats.descentTargetBias, 0.25);
+assert.equal(fullStats.descentMoveSpeedBonus, 0.32);
+assert.equal(fullStats.openingDescentMoveSpeedBonus, 0.65);
+assert.equal(fullStats.openingDepthPowerBonus, 0.7);
 assert.equal(fullStats.veinTrailRangeMultiplier, 1.65);
 assert.equal(fullStats.seismicRouteSlots, 3);
 assert.equal(fullStats.ghostTrailDuration, 4);
@@ -102,10 +106,11 @@ assert.equal(calculateMetaStats({ core_bon_voyage: 1 }).solarDrillProcEvery, 5, 
 assert.equal(calculateMetaStats({ core_bon_voyage: 1 }).solarDrillEnabled, true, "only the final tool may target the planetary seal");
 const oreFocus = UPGRADE_DEFS.find((definition) => definition.id === "sense_ore_focus");
 assert.equal(oreFocus?.requiresOreDiscovery, "silver", "ore focus must unlock after the first T5 sample");
+assert.equal(oreFocus?.requiresBestDepth, 750, "ore focus must stay beyond the opening act even if a chest teases silver");
 assert.deepEqual(
   oreFocus?.recipeOverride,
-  { silver: 5, iron: 4 },
-  "ore focus should turn an existing silver sample into the tool that solves amber shortages",
+  { gold: 2, silver: 2 },
+  "ore focus should use its current depth band instead of asking for exhausted opening iron",
 );
 const priorityTuning = UPGRADE_DEFS.find((definition) => definition.id === "sense_priority_tuning");
 assert.deepEqual(
@@ -117,7 +122,7 @@ assert.deepEqual(
   [0, 1, 2, 3].map((level) => getUpgradeRecipe(priorityTuning, level)),
   [
     { silver: 9 },
-    { amethyst: 1, gold: 1, silver: 2 },
+    { gold: 3, silver: 8 },
     { prism_crystal: 1, amethyst: 1, gold: 2 },
     { prism_crystal: 8, amethyst: 10, gold: 12 },
   ],
@@ -150,27 +155,59 @@ const requirementLevel = (upgradeId, requirementId) => {
 };
 assert.equal(requirementLevel("sense_frequency_swing", "sense_priority_tuning"), 3, "frequency swing should retain its staged focus-tuning gate");
 assert.equal(requirementLevel("time_capsule", "time_clockwork_heart"), 4, "the capsule should retain its established midgame heart gate");
+assert.equal(requirementLevel("time_clockwork_heart", "dig_light_footwork"), 1, "the heart must not wait for the silver-priced second movement rank");
 assert.equal(requirementLevel("power_mountain_splitter", "power_corebreaker"), 2, "fault-line access should remain behind the second corebreaker rank");
 assert.equal(requirementLevel("tools_mirror_crystal", "sense_earth_call"), 0, "mirror ricochet should bridge the late gap before through-wall sense");
+assert.equal(
+  UPGRADE_DEFS.find((definition) => definition.id === "tools_mirror_crystal")?.requiresBestDepth,
+  1200,
+  "the first mirror must form a distinct late-depth ricochet stage",
+);
+assert.equal(
+  requirementLevel("dig_precision_path", "dig_arm_swing"),
+  2,
+  "the behavioural approach strike must not require four repetitive reach ranks",
+);
+assert.equal(
+  requirementLevel("fortune_gem_polish", "fortune_prospector_ledger"),
+  2,
+  "the fortune path must branch before a third shallow-resource ledger rank",
+);
+assert.equal(
+  requirementLevel("fortune_double_yield", "fortune_prospector_ledger"),
+  2,
+  "double yield must share the same shortened fortune branch gate",
+);
+const firstRecipeById = (id) => getUpgradeRecipe(
+  UPGRADE_DEFS.find((definition) => definition.id === id),
+  0,
+);
+assert.deepEqual(firstRecipeById("dig_precision_path"), { amber: 3, iron: 3 });
+assert.deepEqual(firstRecipeById("dig_stone_dance"), { gold: 2, silver: 4, amber: 4 });
+assert.deepEqual(firstRecipeById("fortune_alchemist_scales"), { gold: 2, silver: 3, amber: 3 });
+assert.deepEqual(firstRecipeById("fortune_deep_market"), { amethyst: 2, gold: 4, silver: 5 });
+assert.deepEqual(firstRecipeById("fortune_kings_ransom"), { amethyst: 3, gold: 6, silver: 8 });
+assert.deepEqual(firstRecipeById("fortune_wheel"), { prism_crystal: 3, amethyst: 5, gold: 6 });
+assert.deepEqual(firstRecipeById("fortune_findings_catalog"), { amethyst: 2, gold: 5, silver: 6 });
 assert.deepEqual(
   getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "time_capsule"), 0),
-  { amber: 7, iron: 9, coal: 8 },
-  "the first capsule should retain its calibrated mixed opening recipe",
+  { silver: 3, amber: 4 },
+  "the capsule path must begin in its current midgame layer instead of reserving extinct opening coal",
 );
 assert.deepEqual(
   getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "sense_seismic_memory"), 0),
-  { silver: 3, amber: 1, iron: 7 },
-  "seismic memory should not join every other midgame mechanic behind the same amber cache",
+  { gold: 1, silver: 2, amber: 3 },
+  "seismic memory should stay inside the active middle-depth economy",
 );
 assert.deepEqual(
   getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "sense_deep_resonance"), 0),
-  { silver: 2, amber: 1, iron: 5 },
-  "deep resonance should keep its value while replacing the stochastic four-amber wall",
+  { silver: 3, amber: 2 },
+  "deep resonance should not depend on iron after its natural layer is exhausted",
 );
 assert.deepEqual(
   getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "sense_deep_resonance"), 1),
-  { silver: 30, amber: 40, iron: 68 },
-  "the second depth-sector rank should keep its value without waiting for the first gold cache",
+  { gold: 10, silver: 27, amber: 40 },
+  "the second depth-sector rank should keep its value without a late 68-iron sink",
 );
 const lightFootwork = UPGRADE_DEFS.find((definition) => definition.id === "dig_light_footwork");
 assert.deepEqual(
@@ -185,8 +222,8 @@ assert.deepEqual(
 );
 assert.deepEqual(
   getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "gadgets_sticky_charge"), 0),
-  { silver: 3, amber: 1, iron: 5 },
-  "sticky charges should trade the amber bottleneck for an equivalently valuable silver-led recipe",
+  { silver: 4, amber: 1 },
+  "sticky charges should use an affordable current-layer package without opening iron",
 );
 assert.deepEqual(
   getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "time_clockwork_heart"), 3),
@@ -210,8 +247,8 @@ assert.deepEqual(
 );
 assert.deepEqual(
   getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "tools_mirror_crystal"), 0),
-  { void_ore: 45, prism_crystal: 60, amethyst: 40 },
-  "mirror crystal should retain the calibrated resource order before the final tool tier",
+  { void_ore: 18, prism_crystal: 28 },
+  "the first mirror should form a real pre-star-core ricochet stage instead of bundling with the echo",
 );
 const leastResistance = UPGRADE_DEFS.find((definition) => definition.id === "dig_least_resistance");
 assert.deepEqual(
@@ -221,36 +258,214 @@ assert.deepEqual(
 );
 assert.deepEqual(
   getUpgradeRecipe(leastResistance, 0),
-  { copper: 6, coal: 6, iron: 1 },
-  "route planning should use an affordable early mixed recipe",
+  { silver: 1, amber: 1 },
+  "route planning should remain affordable without forcing a return to exhausted opening layers",
 );
 assert.deepEqual(
   getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "dig_omni_swing"), 0),
-  { iron: 4, amber: 1, silver: 4 },
-  "impact mining should keep its weighted price without inheriting the amber drought",
+  { silver: 5, amber: 1 },
+  "impact mining should keep its weighted price in the active middle-depth economy",
 );
 const mineLift = UPGRADE_DEFS.find((definition) => definition.id === "dig_mine_lift");
 assert.ok(
-  mineLift?.requires.some((requirement) => typeof requirement === "object" && requirement.id === "time_clockwork_heart" && requirement.level === 1),
-  "the first lift rank should arrive with the pneumatic/T5 package",
+  !mineLift?.requires.some((requirement) => typeof requirement === "object" && requirement.id === "time_clockwork_heart"),
+  "the first lift must not wait for a separate time branch while shifts still restart at the surface",
 );
+assert.ok(
+  mineLift?.requires.includes("tools_iron_pick") && !mineLift?.requires.includes("tools_steel_pick"),
+  "the first lift must end repeated surface traversal before the steel-pick phase",
+);
+assert.ok(
+  mineLift?.requires.includes("tools_iron_pick") && !mineLift?.requires.includes("dig_light_footwork"),
+  "the first lift should branch directly from the iron pick instead of waiting for an optional movement branch",
+);
+assert.equal(mineLift?.requiresBestDepth, 35, "the first lift should end repeated surface returns before the opening hundred metres");
 assert.deepEqual(
   getUpgradeRecipe(mineLift, 0),
-  { silver: 3, amber: 5 },
-  "the first lift rank must shorten repeated descent before the endgame",
+  { coal: 2 },
+  "the iron-pick prerequisite already proves the tier; the first lift must not charge the same scarce iron twice",
+);
+assert.deepEqual(
+  [1, 2, 3].map((level) => calculateMetaStats({ dig_mine_lift: level }).mineLiftRecordDepthRatio),
+  [0.95, 0.99, 1],
+  "lift ranks must remove repeated ascents while preserving three distinct landing upgrades",
 );
 const superPick = UPGRADE_DEFS.find((definition) => definition.id === "tools_super_pick");
 assert.ok(superPick?.requires.includes("power_diamond_tip"), "the super pick must keep its thematic diamond-tip gate");
+assert.ok(superPick?.requires.includes("dig_omni_swing"), "the super pick should bridge from the midgame digging branch");
+assert.ok(
+  !superPick?.requires.includes("power_sample_calibration"),
+  "the super pick must not wait for ore focus and its late depth gate",
+);
 assert.equal(superPick?.requiresOreDiscovery, undefined, "the super pick's explicit prerequisites should be its only discovery gate");
 assert.deepEqual(
   getUpgradeRecipe(superPick, 0),
-  { silver: 10, gold: 6, amethyst: 4 },
-  "the super pick should bridge into deep tools without requiring prism before it can be reached",
+  { silver: 30, gold: 20, amber: 8 },
+  "the super pick must arrive before the amethyst wall it is meant to solve",
 );
+const laserEmitter = UPGRADE_DEFS.find((definition) => definition.id === "tools_laser_emitter");
+const superField = UPGRADE_DEFS.find((definition) => definition.id === "tools_super_field");
+assert.equal(
+  superField?.requiresOreDiscovery,
+  "amethyst",
+  "the first super-field rank must break up the amethyst act instead of arriving in a prism bundle",
+);
+assert.equal(requirementLevel("tools_super_field", "tools_super_motor"), 1);
+assert.equal(requirementLevel("tools_super_field", "tools_super_teeth"), 1);
+assert.equal(
+  requirementLevel("tools_laser_emitter", "tools_super_field"),
+  2,
+  "the laser should branch from the second field rank; the remaining field ranks must stay useful after the tool transition",
+);
+assert.ok(laserEmitter?.requires.includes("tools_super_pick"), "the laser must still follow the super-pick tool stage");
+const laserWidth = UPGRADE_DEFS.find((definition) => definition.id === "tools_laser_width");
+assert.ok(
+  laserWidth?.requires.some((requirement) => (
+    typeof requirement === "object"
+    && requirement.id === "time_capsule"
+    && requirement.level === 3
+  )),
+  "the wide-laser path must prepare alongside the finale instead of waiting behind the chrono capstone",
+);
+assert.ok(
+  !laserWidth?.requires.includes("time_thirty_second_oath"),
+  "a final capstone must not serialize every laser finisher behind itself",
+);
+const exactRecipeLevels = {
+  sense_deep_resonance: [
+    { silver: 3, amber: 2 },
+    { gold: 10, silver: 27, amber: 40 },
+    { gold: 28, silver: 40, amber: 34 },
+  ],
+  sense_seismic_memory: [
+    { gold: 1, silver: 2, amber: 3 },
+    { gold: 3, silver: 5, amber: 6 },
+    { gold: 6, silver: 10, amber: 12 },
+  ],
+  sense_panoramic_intuition: [
+    { gold: 1, silver: 2, amber: 3 },
+    { amethyst: 22, gold: 32, silver: 28 },
+    { amethyst: 40, gold: 59, silver: 50 },
+  ],
+  sense_ore_focus: [{ gold: 2, silver: 2 }],
+  dig_omni_swing: [
+    { silver: 5, amber: 1 },
+    { gold: 10, silver: 13, amber: 12 },
+    { gold: 23, silver: 32, amber: 28 },
+  ],
+  dig_least_resistance: [{ silver: 1, amber: 1 }],
+  power_sharpened_edge: [
+    { copper: 1 }, { amber: 2 }, { silver: 1, amber: 2 },
+    { silver: 2, amber: 3 }, { gold: 2, silver: 2, amber: 5 },
+    { gold: 3, silver: 4, amber: 4 },
+    { gold: 5, amethyst: 3 }, { gold: 9, amethyst: 3 },
+  ],
+  power_diamond_tip: [
+    { silver: 6, amber: 3 },
+    { gold: 17, silver: 23, amber: 20 },
+    { gold: 80, silver: 111, amber: 95 },
+    { gold: 165, silver: 231, amber: 198 },
+  ],
+  power_tectonic_blow: [
+    { gold: 3, silver: 4, amber: 5 },
+    { amethyst: 33, gold: 48, silver: 41 },
+    { amethyst: 60, gold: 89, silver: 76 },
+  ],
+  power_overcharge_strike: [
+    { gold: 4, silver: 6, amber: 5 },
+    { amethyst: 20, gold: 29, silver: 25 },
+    { amethyst: 39, gold: 57, silver: 49 },
+  ],
+  gadgets_sticky_charge: [
+    { silver: 4, amber: 1 },
+    { gold: 22, silver: 31, amber: 27 },
+    { gold: 39, silver: 55, amber: 47 },
+  ],
+  gadgets_chain_links: [
+    { gold: 2, silver: 4, amber: 4 },
+    { gold: 5, silver: 8, amber: 7 },
+    { gold: 14, silver: 19, amber: 16 },
+    { gold: 26, silver: 36, amber: 31 },
+  ],
+  time_extra_breath: [
+    { copper: 1 }, { copper: 3 }, { copper: 3 }, { copper: 4 }, { copper: 5 },
+    { silver: 3, amber: 4 }, { gold: 3, silver: 5 }, { amethyst: 3, gold: 5 },
+  ],
+  time_clockwork_heart: [
+    { coal: 2, copper: 3 }, { coal: 4, iron: 2, copper: 4 },
+    { iron: 4, coal: 6, copper: 6 }, { iron: 3, coal: 4 },
+    { silver: 4, amber: 6 }, { gold: 4, silver: 6 },
+    { amethyst: 8, gold: 12 }, { prism_crystal: 8, amethyst: 14 },
+  ],
+  time_capsule: [
+    { silver: 3, amber: 4 }, { gold: 3, silver: 5 },
+    { amethyst: 3, gold: 5 }, { prism_crystal: 3, amethyst: 5 },
+    { void_ore: 3, prism_crystal: 6 }, { void_ore: 8, star_core: 2 },
+  ],
+  tools_super_motor: [
+    { amethyst: 4, gold: 4 }, { prism_crystal: 2, amethyst: 3 },
+    { void_ore: 35, prism_crystal: 55, amethyst: 45 },
+    { void_ore: 70, prism_crystal: 105, star_core: 15 },
+  ],
+  tools_super_teeth: [
+    { amethyst: 4, gold: 5 }, { prism_crystal: 2, amethyst: 3 },
+    { void_ore: 40, prism_crystal: 60, amethyst: 50 },
+    { void_ore: 80, prism_crystal: 120, star_core: 20 },
+  ],
+  tools_super_field: [
+    { amethyst: 8, gold: 6 },
+    { void_ore: 2, prism_crystal: 2, amethyst: 3 },
+    { void_ore: 45, prism_crystal: 70, star_core: 12 },
+    { void_ore: 95, prism_crystal: 140, star_core: 25 },
+  ],
+  tools_laser_emitter: [{ void_ore: 3, prism_crystal: 6, amethyst: 6 }],
+  tools_laser_range: [
+    { void_ore: 6, prism_crystal: 10 }, { void_ore: 14, prism_crystal: 24 },
+    { void_ore: 25, prism_crystal: 40 }, { void_ore: 55, prism_crystal: 80 },
+    { void_ore: 100, prism_crystal: 140 },
+  ],
+  tools_laser_power: [
+    { void_ore: 7, prism_crystal: 13 }, { void_ore: 17, prism_crystal: 29 },
+    { void_ore: 30, prism_crystal: 45, star_core: 6 },
+    { void_ore: 60, prism_crystal: 85, star_core: 15 },
+    { void_ore: 110, prism_crystal: 150, star_core: 30 },
+  ],
+  tools_laser_width: [
+    { void_ore: 8, prism_crystal: 14 }, { void_ore: 20, prism_crystal: 32 },
+    { void_ore: 40, prism_crystal: 55, star_core: 8 },
+    { void_ore: 80, prism_crystal: 105, star_core: 20 },
+  ],
+  tools_laser_splitter: [
+    { void_ore: 9, prism_crystal: 16 },
+    { void_ore: 12, prism_crystal: 18, star_core: 5 },
+    { void_ore: 55, prism_crystal: 80, star_core: 20 },
+  ],
+  tools_mirror_crystal: [
+    { void_ore: 18, prism_crystal: 28 },
+    { void_ore: 35, prism_crystal: 50, star_core: 12 },
+  ],
+  tools_super_pick_echo: [
+    { void_ore: 8, prism_crystal: 14, star_core: 3 },
+    { void_ore: 40, prism_crystal: 55, star_core: 14 },
+  ],
+};
+for (const [id, expectedRecipes] of Object.entries(exactRecipeLevels)) {
+  const definition = UPGRADE_DEFS.find((upgrade) => upgrade.id === id);
+  assert.deepEqual(
+    Array.from({ length: definition.maxLevel }, (_unused, level) => getUpgradeRecipe(definition, level)),
+    expectedRecipes,
+    `${id} must retain its staged exact-material balance`,
+  );
+}
 assert.deepEqual(
   getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "tools_iron_pick"), 0),
-  { copper: 2, coal: 3, iron: 2 },
+  { copper: 2, coal: 3, iron: 1 },
   "the first tool tier must soften the opening iron/copper bottleneck",
+);
+assert.deepEqual(
+  getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "tools_steel_pick"), 0),
+  { iron: 4, coal: 8 },
+  "the steel pick must end the iron wait without depending on a later material",
 );
 assert.deepEqual(
   getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "tools_pneumatic_pick"), 0),
@@ -291,10 +506,44 @@ assert.ok(
   "repeatable laser tuning must not wait and collapse into the first star-core haul",
 );
 const finalUpgrade = UPGRADE_DEFS.find((definition) => definition.id === "core_bon_voyage");
+assert.equal(
+  finalUpgrade.requiresBestDepth,
+  1600,
+  "the Solar Drill must join the descent near the final formation instead of idling through half the laser act",
+);
+const capstoneRecipes = {
+  sense_earth_call: { prism_crystal: 56, void_ore: 24 },
+  dig_quarry_presence: { prism_crystal: 69, star_core: 6 },
+  power_mountain_splitter: { prism_crystal: 64, void_ore: 26 },
+  time_thirty_second_oath: { void_ore: 30, star_core: 7 },
+  gadgets_demolition_orchestra: { void_ore: 47, star_core: 6 },
+  tools_solar_drill: { prism_crystal: 47, void_ore: 29 },
+  fortune_motherlode_covenant: { prism_crystal: 76, star_core: 6 },
+};
+const capstoneTotals = { prism_crystal: 0, void_ore: 0, star_core: 0 };
+for (const [id, expectedRecipe] of Object.entries(capstoneRecipes)) {
+  const recipe = getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === id), 0);
+  assert.deepEqual(recipe, expectedRecipe, `${id} must retain its deep-only capstone recipe`);
+  for (const oreId of Object.keys(capstoneTotals)) capstoneTotals[oreId] += recipe[oreId] || 0;
+}
+assert.deepEqual(
+  capstoneTotals,
+  { prism_crystal: 312, void_ore: 156, star_core: 25 },
+  "the seven capstone waves must keep their aggregate late-ore budget",
+);
 assert.deepEqual(
   getUpgradeRecipe(finalUpgrade, 0),
-  { prism_crystal: 5300, void_ore: 1800, star_core: 260 },
-  "the final recipe must preserve the calibrated multi-ore accumulation tail",
+  { prism_crystal: 40, void_ore: 22, star_core: 5 },
+  "the final recipe must stay multi-ore without creating a second late grind after seven capstones",
+);
+assert.deepEqual(
+  {
+    prism_crystal: capstoneTotals.prism_crystal + getUpgradeRecipe(finalUpgrade, 0).prism_crystal,
+    void_ore: capstoneTotals.void_ore + getUpgradeRecipe(finalUpgrade, 0).void_ore,
+    star_core: capstoneTotals.star_core + getUpgradeRecipe(finalUpgrade, 0).star_core,
+  },
+  { prism_crystal: 352, void_ore: 178, star_core: 30 },
+  "capstones plus Solar Drill must retain the final accumulation budget",
 );
 const prismCondenser = UPGRADE_DEFS.find((definition) => definition.id === "tools_solar_drill");
 assert.ok(prismCondenser && finalUpgrade, "the late tool branch must retain both the Prism Condenser and Solar Drill");
@@ -303,7 +552,7 @@ assert.equal(FINAL_LAYER_TY, WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 1
 assert.equal(FINAL_SEAL_HITS, 3, "the planetary seal must require three Solar Drill finishes");
 assert.deepEqual(
   getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "tools_super_pick_echo"), 0),
-  { void_ore: 40, prism_crystal: 40, silver: 15 },
+  { void_ore: 8, prism_crystal: 14, star_core: 3 },
   "the echo should not lose a full shift behind cheaper cleanup ranks before the solar drill",
 );
 
@@ -312,7 +561,6 @@ for (const id of [
   "power_one_hit_legend",
   "power_sample_calibration",
   "gadgets_shock_capsule",
-  "gadgets_drone_swarm",
   "gadgets_geo_charge",
   "tools_super_pick_echo",
   "fortune_triple_seam",
@@ -326,6 +574,60 @@ for (const id of [
     );
   }
 }
+const scoutDrone = UPGRADE_DEFS.find((definition) => definition.id === "gadgets_scout_drone");
+const droneBattery = UPGRADE_DEFS.find((definition) => definition.id === "gadgets_drone_battery");
+const droneDrill = UPGRADE_DEFS.find((definition) => definition.id === "gadgets_drone_drill");
+const droneSwarm = UPGRADE_DEFS.find((definition) => definition.id === "gadgets_drone_swarm");
+assert.deepEqual(getUpgradeRecipe(scoutDrone, 0), { iron: 1, coal: 3, copper: 4 });
+const baseDroneStats = calculateMetaStats({});
+assert.equal(baseDroneStats.dronePower, 0.75);
+assert.equal(baseDroneStats.droneSpeed, 1.3);
+assert.equal(baseDroneStats.droneLifetime, 0.75);
+const scoutDroneStats = calculateMetaStats({ gadgets_scout_drone: 1 });
+assert.equal(scoutDroneStats.droneUnlocked, true);
+assert.equal(scoutDroneStats.droneCount, 1);
+assert.equal(calculateMetaStats({ gadgets_drone_battery: 3 }).droneLifetime, 1);
+assert.equal(calculateMetaStats({ gadgets_drone_drill: 4 }).dronePower, 2.55);
+const fullDroneStats = calculateMetaStats({
+  gadgets_scout_drone: 1,
+  gadgets_drone_battery: 3,
+  gadgets_drone_drill: 4,
+  gadgets_drone_swarm: 3,
+});
+assert.equal(fullDroneStats.droneCount, 4);
+assert.equal(fullDroneStats.dronePower, 2.55);
+assert.equal(fullDroneStats.droneSpeed, 1.75);
+assert.equal(fullDroneStats.droneLifetime, 1);
+const baseDroneDpsShare = (
+  scoutDroneStats.droneCount
+  * scoutDroneStats.droneSpeed
+  * scoutDroneStats.dronePower
+  * scoutDroneStats.droneLifetime
+) / (scoutDroneStats.pickPower * scoutDroneStats.digSpeed);
+assert.ok(
+  baseDroneDpsShare >= 0.3,
+  `the first visible drone must contribute at least 30% of base miner DPS, got ${baseDroneDpsShare}`,
+);
+assert.deepEqual(
+  Array.from({ length: droneBattery.maxLevel }, (_, level) => getUpgradeRecipe(droneBattery, level)),
+  [{ iron: 3, coal: 5 }, { amber: 5, iron: 8 }, { silver: 4, amber: 8 }],
+  "drone autonomy must grow one geological layer at a time",
+);
+assert.deepEqual(
+  Array.from({ length: droneDrill.maxLevel }, (_, level) => getUpgradeRecipe(droneDrill, level)),
+  [
+    { iron: 4, coal: 5 },
+    { amber: 5, iron: 7 },
+    { silver: 5, amber: 8 },
+    { gold: 3, silver: 8 },
+  ],
+  "drone power ranks must remain relevant from iron through gold",
+);
+assert.deepEqual(
+  Array.from({ length: droneSwarm.maxLevel }, (_, level) => getUpgradeRecipe(droneSwarm, level)),
+  [{ amber: 5, iron: 8 }, { silver: 6, amber: 10 }, { gold: 4, silver: 10 }],
+  "the visible swarm must arrive before the laser economy",
+);
 
 const timerNodes = UPGRADE_DEFS.filter((definition) => definition.category === "time");
 assert.deepEqual(
@@ -415,6 +717,16 @@ assert.match(indexSource, /покупка только кнопкой «КУПИ
 assert.match(stylesSource, /max-width:\s*640px[\s\S]*?filter:\s*none[\s\S]*?width:\s*calc\(100vw[^;]+[\s\S]*?opacity:\s*1[\s\S]*?visibility:\s*visible/, "the selected mobile perk sheet must escape the filtered 62px node and use viewport width");
 assert.match(stylesSource, /font-size:\s*clamp\(11px,\s*3vw,\s*13px\)[\s\S]*?font-weight:\s*400/, "mobile perk descriptions must remain larger and normal-weight");
 assert.match(stylesSource, /next-breakthrough__max[\s\S]*?min-height:\s*44px[\s\S]*?border:\s*2px solid #ffe2a0[\s\S]*?background:\s*linear-gradient\(#ffd875,\s*#d98b35\)/, "the mobile purchase action must remain a large high-contrast CTA");
+assert.match(
+  stylesSource,
+  /#gameShell\.theme-rust-comic \.next-breakthrough__max:disabled\s*\{[\s\S]*?opacity:\s*1[\s\S]*?color:\s*#f4ecd8[\s\S]*?linear-gradient\(#596261,\s*#303838\)[\s\S]*?text-shadow:\s*0 2px 0 #111819/,
+  "the disabled Buy action must stay grey while retaining fully opaque readable text",
+);
+assert.doesNotMatch(
+  stylesSource,
+  /next-breakthrough__max:disabled\s*\{\s*opacity:\s*0\./,
+  "no disabled Buy rule may fade its label back below full opacity",
+);
 assert.doesNotMatch(indexSource, /pinSelectedUpgrade|ЗАКРЕПИТЬ|СНЯТЬ ЦЕЛЬ|СМЕНИТЬ ЦЕЛЬ/u, "perk target pinning must be absent from the workshop UI");
 assert.doesNotMatch(gameSource, /save\.pinnedUpgradeId|ui\.pinSelectedUpgrade|classList\.toggle\(['"]is-pinned/, "perk target pinning must have no runtime behavior");
 assert.doesNotMatch(stylesSource, /next-breakthrough__pin|upgrade-node\.is-pinned/, "removed pin controls must leave no visual state behind");
@@ -450,13 +762,13 @@ assert.doesNotMatch(
 );
 assert.match(stylesSource, /\.result-header h2[\s\S]*?\.micro-event-banner[\s\S]*?\{\s*text-shadow:\s*none/, "the result heading must remain readable without a same-colour duplicate shadow");
 assert.match(indexSource, /class=["'][^"']*theme-rust-comic/);
-assert.match(indexSource, /styles\.css\?v=deep-shaft-9-sense1/);
-assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-9-sense1/);
-assert.match(indexSource, /js\/world\.js\?v=deep-shaft-9-sense1/);
-assert.match(indexSource, /js\/music\.js\?v=deep-shaft-9-sense1/);
-assert.match(indexSource, /js\/game\.js\?v=deep-shaft-9-sense1/);
+assert.match(indexSource, /styles\.css\?v=deep-shaft-10-static-icons/);
+assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-10-static-icons/);
+assert.match(indexSource, /js\/world\.js\?v=deep-shaft-10-static-icons/);
+assert.match(indexSource, /js\/music\.js\?v=deep-shaft-10-static-icons/);
+assert.match(indexSource, /js\/game\.js\?v=deep-shaft-10-static-icons/);
 assert.ok(
-  indexSource.indexOf('js/music.js?v=deep-shaft-9-sense1') < indexSource.indexOf('js/game.js?v=deep-shaft-9-sense1'),
+  indexSource.indexOf('js/music.js?v=deep-shaft-10-static-icons') < indexSource.indexOf('js/game.js?v=deep-shaft-10-static-icons'),
   "the soundtrack singleton must load before the game audio engine",
 );
 assert.match(indexSource, /id=["']soundToggle["'][\s\S]*?aria-pressed=["']true["']/);
@@ -672,7 +984,7 @@ let probeOrigin = null;
 for (let ty = 2; ty < WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 2 && !probeOrigin; ty += 1) {
   for (let tx = 2; tx < WORLD_CONFIG.WIDTH - 2 && !probeOrigin; tx += 1) {
     const tile = duplicateWorld.getTile(tx, ty);
-    if (!tile || tile.kind === "air" || tile.kind === "bedrock") continue;
+    if (!tile || tile.kind === "air" || tile.kind === "bedrock" || tile.oreId) continue;
     if (!duplicateWorld._canOreAppearAt(tx, ty, richestDefinition)) continue;
     let nearbySolid = 0;
     for (let offsetY = -3; offsetY <= 3; offsetY += 1) {
@@ -683,6 +995,7 @@ for (let ty = 2; ty < WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 2 && !pr
           nearby
           && nearby.kind !== "air"
           && nearby.kind !== "bedrock"
+          && !nearby.oreId
           && duplicateWorld._canOreAppearAt(tx + offsetX, ty + offsetY, richestDefinition)
         ) nearbySolid += 1;
       }
