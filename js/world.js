@@ -38,6 +38,12 @@ const FRONTIER_RESERVE_ORE_IDS = new Set([
 ]);
 const FRONTIER_RESERVE_HALF_WIDTH = 6;
 const FRONTIER_RESERVE_DEPTH_ROWS = 6;
+// Keep the first descent readable. Natural caves and random veins start
+// outside this short tapered collar, while the two authored starter seams are
+// placed afterwards. The global cave/ore budgets are unchanged: generation
+// simply spends those attempts elsewhere in the mine.
+const STARTER_GEOLOGY_HALF_WIDTH_TILES = 7;
+const STARTER_GEOLOGY_DEPTH_TILES = 11;
 const CARDINAL_DIRECTIONS = Object.freeze([
   Object.freeze([1, 0]),
   Object.freeze([-1, 0]),
@@ -712,7 +718,10 @@ class MineWorld {
       this._ensureFrontierReserveVein(definition);
     }
     this._rebuildOreIndex();
-    this._revealAround(this._spawn.tx, this._spawn.ty, 6);
+    // Only the immediate chamber starts exposed. Authored starter ore is
+    // discovered by the scanner as the miner advances instead of lighting up
+    // the whole opening collar before the first shift begins.
+    this._revealAround(this._spawn.tx, this._spawn.ty, 2);
     return this;
   }
 
@@ -2250,6 +2259,7 @@ class MineWorld {
 
   _canOreAppearAt(tx, ty, definition) {
     if (this._liftReservedKeys.has(`${Math.floor(tx)}:${Math.floor(ty)}`)) return false;
+    if (this._insideStarterGeologyBuffer(tx, ty)) return false;
     const column = clamp(Math.floor(tx), 0, WORLD_CONFIG.WIDTH - 1);
     const verticalDepth = Math.max(0, Math.floor(ty) - (this.surface[column] ?? WORLD_CONFIG.SURFACE_BASE));
     const verticalDepthPixels = verticalDepth * WORLD_CONFIG.TILE_SIZE;
@@ -2266,6 +2276,16 @@ class MineWorld {
       && verticalDepthPixels - 0.001 > maximumDepth
     ) return false;
     return true;
+  }
+
+  _insideStarterGeologyBuffer(tx, ty) {
+    if (!this._spawn) return false;
+    const dx = Math.abs(Math.floor(tx) - this._spawn.tx);
+    const dy = Math.floor(ty) - this._spawn.ty;
+    if (dy < -1 || dy > STARTER_GEOLOGY_DEPTH_TILES) return false;
+    const taper = Math.max(0, dy - 2) * 0.35;
+    const halfWidth = Math.max(4, STARTER_GEOLOGY_HALF_WIDTH_TILES - taper);
+    return dx <= halfWidth;
   }
 
   _hasAuthoredVerticalBand(definition) {
@@ -2317,6 +2337,7 @@ class MineWorld {
       for (let tx = minTx; tx <= maxTx; tx += 1) {
         if (!this._inBounds(tx, ty)) continue;
         if (preserveCrust && ty <= this.surface[tx] + 1) continue;
+        if (preserveCrust && this._insideStarterGeologyBuffer(tx, ty)) continue;
         if (
           preserveCrust
           && (
@@ -2486,12 +2507,10 @@ class MineWorld {
 
   _starterReservedTileKeys() {
     return new Set([
-      [0, 2],
-      [0, 3],
-      [0, 4],
-      [-1, 2],
-      [-1, 3],
-      [-1, 4],
+      [2, 1],
+      [3, 1],
+      [4, 2],
+      [5, 2],
     ].map(([offsetX, offsetY]) => `${this._spawn.tx + offsetX}:${this._spawn.ty + offsetY}`));
   }
 
@@ -3365,11 +3384,10 @@ class MineWorld {
       const current = this.getTile(tx, ty);
       if (!current || current.kind === "bedrock" || current.pendingLiftSupply || !definition) return false;
 
-      // Caves and the first lift chamber may erase part of the compact opening
-      // seam. Rebuild only the six authored cells; the ore-node budget stays
-      // unchanged while four connected copper pieces flank two connected coal
-      // samples. This gives the opening economy fuel without another copper-only
-      // shift.
+      // The starter collar deliberately restores these authored cells after
+      // cave generation. They remain undiscovered here: the first copper is
+      // inside the base scanner, while the second copper and later coal light
+      // up only as the miner physically advances.
       let tile = current;
       if (tile.kind === "air" || Number.isFinite(hp)) {
         const terrainHp = Number.isFinite(hp) ? hp : 5;
@@ -3382,20 +3400,21 @@ class MineWorld {
         tile.maxHp = hp;
         tile.hp = hp;
       }
-      tile.discovered = true;
+      tile.discovered = false;
+      tile.sensedUntil = 0;
       tile.cracked = 0;
       return true;
     };
 
-    // The first copper is visible from the spawn chamber. Once it opens, the
-    // miner is close enough to smell the coal and then the second copper. The
-    // fixed HP caps keep this useful inside the initial six-second shift.
-    placeStarterTile(0, 2, copper, copperVeinId, 2);
-    placeStarterTile(0, 3, coal, coalVeinId, 2);
-    placeStarterTile(0, 4, coal, coalVeinId, 2);
-    placeStarterTile(-1, 4, copper, copperVeinId, 2);
-    placeStarterTile(-1, 3, copper, copperVeinId, 2);
-    placeStarterTile(-1, 2, copper, copperVeinId, 2);
+    // Only one copper node begins inside ordinary sense range. Its connected
+    // partner pulls the miner sideways. The coal seam stays outside the spawn
+    // scanner, then appears from the end of the copper seam across one solid
+    // corner. This demonstrates sensing and rock traversal without repeating
+    // several copper-only shifts.
+    placeStarterTile(2, 1, copper, copperVeinId, 2);
+    placeStarterTile(3, 1, copper, copperVeinId, 2);
+    placeStarterTile(4, 2, coal, coalVeinId, 3);
+    placeStarterTile(5, 2, coal, coalVeinId, 3);
   }
 
   _nearestSolidTile(originX, originY, radius) {
