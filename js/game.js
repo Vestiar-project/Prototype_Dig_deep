@@ -970,6 +970,10 @@ function createRunMetrics() {
     movementSeconds: 0,
     miningSeconds: 0,
     searchingSeconds: 0,
+    travelDistancePixels: 0,
+    maxDistanceFromSpawnPixels: 0,
+    veinContinuations: 0,
+    veinsCompleted: 0,
     attacks: 0,
     targetSwitches: 0,
     descentCadencePulses: 0,
@@ -1184,6 +1188,9 @@ const state = {
   rememberedVeins: [],
   ghostTarget: null,
   veinRemainingCounts: new Map(),
+  engagedVeinId: null,
+  engagedOreId: null,
+  engagedContinuationTargetKey: null,
   lastBrokenVeinId: null,
   veinBreakStreak: 0,
   approachTravelElapsed: 0,
@@ -1861,6 +1868,9 @@ function startRun(options = {}) {
     rememberedVeins: [],
     ghostTarget: null,
     veinRemainingCounts: collectVeinRemainingCounts(),
+    engagedVeinId: null,
+    engagedOreId: null,
+    engagedContinuationTargetKey: null,
     lastBrokenVeinId: null,
     veinBreakStreak: 0,
     approachTravelElapsed: 0,
@@ -2047,6 +2057,10 @@ function buildRunReport(catalog, haul, activeRunSeconds) {
     movementSeconds: Number(movement.toFixed(2)),
     miningSeconds: Number(mining.toFixed(2)),
     searchingSeconds: Number(searching.toFixed(2)),
+    travelMeters: Number(((state.metrics.travelDistancePixels || 0) / TILE_SIZE * METERS_PER_TILE).toFixed(1)),
+    maxDistanceFromSpawnMeters: Number(((state.metrics.maxDistanceFromSpawnPixels || 0) / TILE_SIZE * METERS_PER_TILE).toFixed(1)),
+    veinContinuations: state.metrics.veinContinuations || 0,
+    veinsCompleted: state.metrics.veinsCompleted || 0,
     bonusTime: Number(state.bonusTimeEarned.toFixed(2)),
     targetSwitches: state.metrics.targetSwitches || 0,
     descentCadencePulses: state.metrics.descentCadencePulses || 0,
@@ -4853,16 +4867,77 @@ function oreTargetIsValid(target, focusedOreId = null) {
   return true;
 }
 
-function chooseOreTargets(x, y, radius, focusedOreId = null) {
-  const frontierReserve = findFrontierReserveTarget(x, y, radius, focusedOreId);
-  if (frontierReserve) {
-    return { primary: decorateRememberedTarget(frontierReserve), backup: null };
+function clearEngagedVein(completed = false) {
+  if (completed && state.engagedVeinId) state.metrics.veinsCompleted += 1;
+  state.engagedVeinId = null;
+  state.engagedOreId = null;
+  state.engagedContinuationTargetKey = null;
+}
+
+function engagedVeinTargets(x, y, radius, focusedOreId = null) {
+  const veinId = state.engagedVeinId;
+  if (!veinId) return null;
+  if (remainingVeinNodes(veinId) <= 0) {
+    clearEngagedVein(true);
+    return null;
   }
+  if (focusedOreId && state.engagedOreId !== focusedOreId) {
+    clearEngagedVein(false);
+    return null;
+  }
+  // Every miner completes a connected seam inside ordinary sense. Vein Trail
+  // keeps its identity by extending that pursuit and accelerating travel.
+  // The small edge allowance prevents one cardinal neighbour on the scanner
+  // circumference from splitting an otherwise continuous seam.
+  const trailMultiplier = stats.veinTrailEnabled
+    ? Math.max(1, stats.veinTrailRangeMultiplier || 1)
+    : 1;
+  const continuationRadius = radius * trailMultiplier + TILE_SIZE * 1.05;
+  const candidates = findBestOreTargets(
+    x,
+    y,
+    continuationRadius,
+    focusedOreId,
+    {
+      veinId,
+      ignoreSenseLine: true,
+      respectLiftFloor: true,
+    },
+    (stats.backupTargetSlots || 0) > 0 ? 2 : 1,
+  );
+  if (!candidates[0]) {
+    clearEngagedVein(false);
+    return null;
+  }
+  const [primary, backup = null] = candidates;
+  primary.engagedVein = true;
+  primary.lockRadius = Math.max(primary.lockRadius || 0, continuationRadius);
+  if (backup) {
+    backup.engagedVein = true;
+    backup.lockRadius = Math.max(backup.lockRadius || 0, continuationRadius);
+  }
+  const continuationKey = `${primary.tx}:${primary.ty}`;
+  if (state.engagedContinuationTargetKey !== continuationKey) {
+    state.metrics.veinContinuations += 1;
+    state.engagedContinuationTargetKey = continuationKey;
+  }
+  return {
+    primary: decorateRememberedTarget(primary),
+    backup: (stats.backupTargetSlots || 0) > 0 ? backup : null,
+  };
+}
+
+function chooseOreTargets(x, y, radius, focusedOreId = null) {
+  const engaged = engagedVeinTargets(x, y, radius, focusedOreId);
+  if (engaged) return engaged;
+  // Vein Trail still bridges a deliberately mined seam across one or more
+  // path-opening rock cells. Actual combat uses engagedVeinId above; this
+  // fallback is fed only by primary pick breaks, so laser/multi-hit collateral
+  // cannot redirect it to an incidental neighbouring vein.
   const trailVeinId = stats.veinTrailEnabled && remainingVeinNodes(state.lastBrokenVeinId) > 0
     ? state.lastBrokenVeinId
     : null;
   if (trailVeinId) {
-    const centerTy = state.world.worldToTile(x, y).ty;
     const veinTargets = findBestOreTargets(
       x,
       y,
@@ -4872,9 +4947,6 @@ function chooseOreTargets(x, y, radius, focusedOreId = null) {
         veinId: trailVeinId,
         ignoreSenseLine: true,
         respectLiftFloor: true,
-        // "След жилы" may continue a downward or level branch immediately,
-        // but an upper remnant competes normally with every deeper target.
-        predicate: (candidate) => candidate.ty >= centerTy,
       },
       (stats.backupTargetSlots || 0) > 0 ? 2 : 1,
     );
@@ -4882,6 +4954,11 @@ function chooseOreTargets(x, y, radius, focusedOreId = null) {
       const [primary, backup = null] = veinTargets;
       return { primary: decorateRememberedTarget(primary), backup };
     }
+  }
+
+  const frontierReserve = findFrontierReserveTarget(x, y, radius, focusedOreId);
+  if (frontierReserve) {
+    return { primary: decorateRememberedTarget(frontierReserve), backup: null };
   }
 
   const routeSampleSize = Math.max(
@@ -5028,6 +5105,16 @@ function noteTargetAcquired(target) {
 }
 
 function promoteBackupTarget(focusedOreId = null) {
+  if (state.engagedVeinId && remainingVeinNodes(state.engagedVeinId) > 0) {
+    const backupVeinId = state.backupTarget?.tile?.veinId
+      || state.world?.getTile(state.backupTarget?.tx, state.backupTarget?.ty)?.veinId
+      || null;
+    if (backupVeinId !== state.engagedVeinId) {
+      state.backupTarget = null;
+      state.targetCooldown = 0;
+      return false;
+    }
+  }
   if (!oreTargetIsValid(state.backupTarget, focusedOreId) || !targetRespectsDepthFloor(state.backupTarget)) {
     state.backupTarget = null;
     return false;
@@ -5441,11 +5528,16 @@ function updateDescentCadence(delta) {
   }
 
   if (state.descentCadenceQueued) {
+    const engagedVeinStillLive = state.engagedVeinId
+      && remainingVeinNodes(state.engagedVeinId) > 0;
     const queuedTargetStillLive = state.descentCadenceQueuedTargetKey
       && currentOreTargetKey() === state.descentCadenceQueuedTargetKey;
     if (
-      !queuedTargetStillLive
-      || state.elapsed - state.descentCadenceQueuedAt >= DESCENT_CADENCE_QUEUE_HOLD_SECONDS
+      (!queuedTargetStillLive && !engagedVeinStillLive)
+      || (
+        !engagedVeinStillLive
+        && state.elapsed - state.descentCadenceQueuedAt >= DESCENT_CADENCE_QUEUE_HOLD_SECONDS
+      )
     ) beginDescentCadence();
     return;
   }
@@ -5998,14 +6090,17 @@ function triggerQuarryFractureAt(x, y) {
 
 function noteToolBreakProgress(tile, x, y, source) {
   const veinId = tile?.veinId || null;
+  let liveVeinNodes = 0;
   if (veinId) {
     const nextCount = Math.max(0, remainingVeinNodes(veinId) - 1);
     state.veinRemainingCounts.set(veinId, nextCount);
+    liveVeinNodes = nextCount;
     if (nextCount <= 0) {
       if (state.lastBrokenVeinId === veinId) {
         state.lastBrokenVeinId = null;
         state.veinBreakStreak = 0;
       }
+      if (state.engagedVeinId === veinId) clearEngagedVein(true);
       if (state.quarryVeinId === veinId) {
         state.quarryModeActive = false;
         state.quarryModeRemaining = 0;
@@ -6016,11 +6111,13 @@ function noteToolBreakProgress(tile, x, y, source) {
   }
   if (!DIRECT_TOOL_BREAK_SOURCES.has(source)) return;
 
-  if (veinId) {
-    if (state.lastBrokenVeinId === veinId) state.veinBreakStreak += 1;
-    else {
-      state.lastBrokenVeinId = veinId;
-      state.veinBreakStreak = 1;
+  if (veinId && liveVeinNodes > 0) {
+    if (source === 'pick') {
+      if (state.lastBrokenVeinId === veinId) state.veinBreakStreak += 1;
+      else {
+        state.lastBrokenVeinId = veinId;
+        state.veinBreakStreak = 1;
+      }
     }
     if ((stats.quarryModeRequiredBreaks || 0) > 0) {
       if (!state.quarryModeActive && state.elapsed > state.quarryStreakExpires) {
@@ -6042,7 +6139,7 @@ function noteToolBreakProgress(tile, x, y, source) {
       }
       if (state.quarryModeActive && remainingVeinNodes(veinId) > 0) triggerQuarryFractureAt(x, y);
     }
-  } else {
+  } else if (!veinId) {
     // Ordinary rock between two ore nodes must not erase the remembered vein.
     // The trail is deliberately cleared only when another vein is mined or the
     // remembered vein is exhausted; otherwise narrow seams lose their benefit
@@ -6995,6 +7092,17 @@ function attack(aimTarget = state.target) {
     && state.world.getTile(aimTarget.tx, aimTarget.ty)?.kind === 'air'
   );
   const primaryOreDestroyed = Boolean(primaryOreId && primaryTargetDestroyed);
+  if (primaryOreId && primaryVeinId && aimReceivedPrimaryHit) {
+    if (remainingVeinNodes(primaryVeinId) > 0) {
+      if (state.engagedVeinId !== primaryVeinId) {
+        state.engagedContinuationTargetKey = null;
+      }
+      state.engagedVeinId = primaryVeinId;
+      state.engagedOreId = primaryOreId;
+    } else if (state.engagedVeinId === primaryVeinId) {
+      clearEngagedVein(true);
+    }
+  }
   if (primaryTargetDestroyed && critical) triggerFaultLine(aimTarget, nx, ny, primaryOverkill);
   if (primaryOreDestroyed && primaryOverkill > 0 && stats.trueOverkillEnabled && (stats.overkillReservoirRatio || 0) > 0) {
     const captured = primaryOverkill * stats.overkillReservoirRatio;
@@ -7813,11 +7921,11 @@ function veinTravelSpeedMultiplier(target = state.target) {
   const tile = state.world.getTile(target.tx, target.ty);
   const veinId = tile?.veinId || null;
   if (!veinId) return 1 + bonus;
-  if (stats.veinTrailEnabled && veinId === state.lastBrokenVeinId) {
+  if (stats.veinTrailEnabled && veinId === (state.engagedVeinId || state.lastBrokenVeinId)) {
     bonus += stats.veinTrailMoveSpeedBonus || 0;
   }
   const focusedOre = getFocusedOre();
-  if (focusedOre?.id === tile.oreId && veinId === state.lastBrokenVeinId) {
+  if (focusedOre?.id === tile.oreId && veinId === (state.engagedVeinId || state.lastBrokenVeinId)) {
     bonus += Math.min(6, state.veinBreakStreak || 0) * (stats.focusMoveSpeedPerNode || 0);
   }
   if (state.quarryModeActive && veinId === state.quarryVeinId) bonus += stats.quarryModeMoveSpeedBonus || 0;
@@ -8128,10 +8236,18 @@ function updateRun(delta, now = performance.now()) {
     const priorityChest = findPriorityChestTarget();
     const priorityFinalSeal = priorityChest ? null : findFinalSealTarget();
     const priorityMotherlode = priorityChest || priorityFinalSeal ? null : findMotherlodePriorityTarget();
-    const priorityDescent = priorityChest || priorityFinalSeal || priorityMotherlode
+    const priorityEngaged = priorityChest || priorityFinalSeal || priorityMotherlode
+      ? null
+      : engagedVeinTargets(
+        state.player.x,
+        state.player.y,
+        searchRadius,
+        focusedOre?.id || null,
+      );
+    const priorityDescent = priorityChest || priorityFinalSeal || priorityMotherlode || priorityEngaged
       ? null
       : findDescentCadenceTarget(state.player.x, state.player.y, focusedOre?.id || null);
-    const incumbentOre = !priorityChest && !priorityFinalSeal && !priorityMotherlode && !priorityDescent
+    const incumbentOre = !priorityChest && !priorityFinalSeal && !priorityMotherlode && !priorityEngaged && !priorityDescent
       && targetRespectsDepthFloor(state.target)
       && oreTargetIsValid(state.target, focusedOre?.id || null)
       ? state.target
@@ -8142,6 +8258,8 @@ function updateRun(delta, now = performance.now()) {
         ? { primary: priorityFinalSeal, backup: null }
       : priorityMotherlode
         ? { primary: priorityMotherlode, backup: state.target?.kind === 'ore' && !state.target.motherlode ? state.target : state.backupTarget }
+        : priorityEngaged
+          ? priorityEngaged
         : priorityDescent
           ? { primary: priorityDescent, backup: null }
         : incumbentOre
@@ -8325,11 +8443,19 @@ function updateRun(delta, now = performance.now()) {
     if (state.targetCooldown <= 0.03) state.ping = Math.max(state.ping, 0.35);
   }
 
+  const frameTravel = distance(diagnosticStartX, diagnosticStartY, state.player.x, state.player.y);
+  state.metrics.travelDistancePixels += frameTravel;
+  if (state.spawn) {
+    state.metrics.maxDistanceFromSpawnPixels = Math.max(
+      state.metrics.maxDistanceFromSpawnPixels || 0,
+      distance(state.spawn.x, state.spawn.y, state.player.x, state.player.y),
+    );
+  }
+
   if (!state.target) {
     state.metrics.searchingSeconds += delta;
   } else if (
-    distance(diagnosticStartX, diagnosticStartY, state.player.x, state.player.y)
-    > 0.05
+    frameTravel > 0.05
   ) {
     state.metrics.movementSeconds += delta;
   } else {
@@ -11973,6 +12099,10 @@ function resetAllProgress() {
     discoveredOreIds: new Set(),
     metrics: createRunMetrics(),
     balanceReport: null,
+    veinRemainingCounts: new Map(),
+    engagedVeinId: null,
+    engagedOreId: null,
+    engagedContinuationTargetKey: null,
     upgradeFilter: 'all',
     upgradeQuery: '',
     selectedUpgradeId: null,
@@ -12240,6 +12370,8 @@ window.__DEPTH_ZERO__ = {
     backupTarget: state.backupTarget ? { tx: state.backupTarget.tx, ty: state.backupTarget.ty } : null,
     pathWaypoint: state.pathWaypoint ? { tx: state.pathWaypoint.tx, ty: state.pathWaypoint.ty, usedDetour: state.pathWaypoint.usedDetour } : null,
     crewBeacon: state.crewBeacon ? { ...state.crewBeacon } : null,
+    engagedVeinId: state.engagedVeinId,
+    engagedOreId: state.engagedOreId,
     metrics: {
       ...state.metrics,
       sourceBreaks: { ...(state.metrics.sourceBreaks || {}) },
@@ -12874,6 +13006,10 @@ window.__DEPTH_ZERO__ = {
       workshopBreakthroughRun: -1,
       workshopBreakthroughTokens: new Set(),
       metrics: createRunMetrics(),
+      veinRemainingCounts: new Map(),
+      engagedVeinId: null,
+      engagedOreId: null,
+      engagedContinuationTargetKey: null,
       descentCadenceAnchorDepth: 0,
       descentCadenceStallElapsed: 0,
       descentCadenceGoalDepth: 0,
