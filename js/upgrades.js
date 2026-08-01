@@ -77,8 +77,8 @@ const ORE_TYPES = Object.freeze(
       value: 1,
       hardness: 1,
       depth: 0,
-      maxDepth: 728,
-      generationWeight: 0.7,
+      maxDepth: 644,
+      generationWeight: 0.5,
     },
     {
       id: "coal",
@@ -89,8 +89,9 @@ const ORE_TYPES = Object.freeze(
       accent: "#9ba5b4",
       value: 2,
       hardness: 1.45,
-      depth: 112,
-      maxDepth: 1176,
+      depth: 196,
+      maxDepth: 1120,
+      generationWeight: 0.6,
     },
     {
       id: "iron",
@@ -101,8 +102,9 @@ const ORE_TYPES = Object.freeze(
       accent: "#e5f0ef",
       value: 4,
       hardness: 2.2,
-      depth: 308,
-      maxDepth: 1960,
+      depth: 476,
+      maxDepth: 2016,
+      generationWeight: 0.7,
     },
     {
       id: "amber",
@@ -113,8 +115,9 @@ const ORE_TYPES = Object.freeze(
       accent: "#fff0a1",
       value: 8,
       hardness: 3.35,
-      depth: 784,
+      depth: 952,
       maxDepth: 3080,
+      generationWeight: 0.85,
     },
     {
       id: "silver",
@@ -634,7 +637,7 @@ const senseUpgrades = [
     baseCost: 310,
     growth: 1.53,
     requires: ["sense_panoramic_intuition"],
-    firstRecipeOverride: { gold: 2, silver: 4, amber: 4 },
+    firstRecipeOverride: { gold: 3, silver: 4 },
     apply: (stats, level) => add(stats, "senseRadius", 32 * level),
   }),
   defineUpgrade({
@@ -988,7 +991,7 @@ const digUpgrades = [
     baseCost: 520,
     growth: 1.82,
     requires: ["tools_iron_pick"],
-    requiresBestDepth: 35,
+    requiresBestDepth: 70,
     levelRecipeOverrides: [
       { coal: 2 },
       { gold: 8, silver: 14, amber: 12 },
@@ -1947,7 +1950,7 @@ const toolUpgrades = [
     requires: ["core_first_descent"],
     firstRecipeOverride: { copper: 1 },
     levelRecipeOverrides: [
-      null, null, null, null,
+      null, null, { iron: 4, amber: 2 }, null,
       { gold: 4, amethyst: 1 },
       { gold: 4, amethyst: 2 },
     ],
@@ -2249,7 +2252,7 @@ const toolUpgrades = [
     growth: 1.74,
     requires: ["tools_laser_splitter", "dig_omni_swing"],
     levelRecipeOverrides: [
-      { void_ore: 8, prism_crystal: 14, star_core: 3 },
+      { void_ore: 8, prism_crystal: 14 },
       { void_ore: 40, prism_crystal: 55, star_core: 14 },
     ],
     apply: (stats, level) => {
