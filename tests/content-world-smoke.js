@@ -183,6 +183,11 @@ const firstRecipeById = (id) => getUpgradeRecipe(
   0,
 );
 assert.deepEqual(firstRecipeById("dig_precision_path"), { amber: 3, iron: 3 });
+assert.deepEqual(
+  firstRecipeById("sense_far_echo"),
+  { gold: 3, silver: 4 },
+  "the mandatory laser route must not require amber after the lift starts below its layer",
+);
 assert.deepEqual(firstRecipeById("dig_stone_dance"), { gold: 2, silver: 4, amber: 4 });
 assert.deepEqual(firstRecipeById("fortune_alchemist_scales"), { gold: 2, silver: 3, amber: 3 });
 assert.deepEqual(firstRecipeById("fortune_deep_market"), { amethyst: 2, gold: 4, silver: 5 });
@@ -279,7 +284,7 @@ assert.ok(
   mineLift?.requires.includes("tools_iron_pick") && !mineLift?.requires.includes("dig_light_footwork"),
   "the first lift should branch directly from the iron pick instead of waiting for an optional movement branch",
 );
-assert.equal(mineLift?.requiresBestDepth, 35, "the first lift should end repeated surface returns before the opening hundred metres");
+assert.equal(mineLift?.requiresBestDepth, 70, "the first lift must follow the opening descent while still preventing repeated pre-100 m surface runs");
 assert.deepEqual(
   getUpgradeRecipe(mineLift, 0),
   { coal: 2 },
@@ -445,7 +450,7 @@ const exactRecipeLevels = {
     { void_ore: 35, prism_crystal: 50, star_core: 12 },
   ],
   tools_super_pick_echo: [
-    { void_ore: 8, prism_crystal: 14, star_core: 3 },
+    { void_ore: 8, prism_crystal: 14 },
     { void_ore: 40, prism_crystal: 55, star_core: 14 },
   ],
 };
@@ -471,6 +476,11 @@ assert.deepEqual(
   getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "tools_pneumatic_pick"), 0),
   { silver: 4, amber: 9 },
   "the pneumatic gate must stop competing for scarce opening iron",
+);
+assert.deepEqual(
+  getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "tools_balanced_handle"), 2),
+  { iron: 4, amber: 2 },
+  "the handle rank shared by pneumatic and time branches must not force a lift run back to copper and coal",
 );
 for (const id of [
   "sense_instinct_spark",
@@ -552,8 +562,8 @@ assert.equal(FINAL_LAYER_TY, WORLD_CONFIG.HEIGHT - WORLD_CONFIG.BEDROCK_ROWS - 1
 assert.equal(FINAL_SEAL_HITS, 3, "the planetary seal must require three Solar Drill finishes");
 assert.deepEqual(
   getUpgradeRecipe(UPGRADE_DEFS.find((definition) => definition.id === "tools_super_pick_echo"), 0),
-  { void_ore: 8, prism_crystal: 14, star_core: 3 },
-  "the echo should not lose a full shift behind cheaper cleanup ranks before the solar drill",
+  { void_ore: 8, prism_crystal: 14 },
+  "the first echo must bridge the void/prism laser act instead of waiting for the first star-core windfall",
 );
 
 for (const id of [
@@ -762,13 +772,13 @@ assert.doesNotMatch(
 );
 assert.match(stylesSource, /\.result-header h2[\s\S]*?\.micro-event-banner[\s\S]*?\{\s*text-shadow:\s*none/, "the result heading must remain readable without a same-colour duplicate shadow");
 assert.match(indexSource, /class=["'][^"']*theme-rust-comic/);
-assert.match(indexSource, /styles\.css\?v=deep-shaft-10-static-icons/);
-assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-10-static-icons/);
-assert.match(indexSource, /js\/world\.js\?v=deep-shaft-10-static-icons/);
-assert.match(indexSource, /js\/music\.js\?v=deep-shaft-10-static-icons/);
-assert.match(indexSource, /js\/game\.js\?v=deep-shaft-10-static-icons/);
+assert.match(indexSource, /styles\.css\?v=deep-shaft-11-vein-route/);
+assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-11-vein-route/);
+assert.match(indexSource, /js\/world\.js\?v=deep-shaft-11-vein-route/);
+assert.match(indexSource, /js\/music\.js\?v=deep-shaft-11-vein-route/);
+assert.match(indexSource, /js\/game\.js\?v=deep-shaft-11-vein-route/);
 assert.ok(
-  indexSource.indexOf('js/music.js?v=deep-shaft-10-static-icons') < indexSource.indexOf('js/game.js?v=deep-shaft-10-static-icons'),
+  indexSource.indexOf('js/music.js?v=deep-shaft-11-vein-route') < indexSource.indexOf('js/game.js?v=deep-shaft-11-vein-route'),
   "the soundtrack singleton must load before the game audio engine",
 );
 assert.match(indexSource, /id=["']soundToggle["'][\s\S]*?aria-pressed=["']true["']/);
