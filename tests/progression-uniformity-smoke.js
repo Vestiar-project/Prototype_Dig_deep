@@ -34,6 +34,8 @@ const NOTABLE_MECHANICS = Object.freeze([
   { id: "dig_precision_path", level: 1, label: "precision path" },
   { id: "dig_wall_bite", level: 1, label: "wall bite" },
   { id: "dig_omni_swing", level: 1, label: "impact mining" },
+  { id: "dig_omni_swing", level: 2, label: "wider impact wave" },
+  { id: "dig_omni_swing", level: 3, label: "rapid impact wave" },
   { id: "dig_least_resistance", level: 1, label: "least-resistance route" },
   { id: "dig_mine_lift", level: 1, label: "mine lift" },
   { id: "dig_mine_lift", level: 2, label: "near-frontier lift" },
@@ -57,12 +59,25 @@ const NOTABLE_MECHANICS = Object.freeze([
   { id: "gadgets_powder_pocket", level: 1, label: "bombs" },
   { id: "gadgets_cluster_shell", level: 1, label: "cluster shell" },
   { id: "gadgets_cluster_shell", level: 2, label: "extra cluster fragment" },
+  { id: "gadgets_cluster_shell", level: 3, label: "third cluster fragment" },
+  { id: "gadgets_wide_fuse", level: 2, label: "expanded blast" },
+  { id: "gadgets_wide_fuse", level: 3, label: "wide blast" },
+  { id: "gadgets_wide_fuse", level: 4, label: "maximum blast" },
   { id: "gadgets_sticky_charge", level: 1, label: "sticky charge" },
   { id: "gadgets_chain_spark", level: 1, label: "chain spark" },
+  { id: "gadgets_chain_links", level: 1, label: "second chain target" },
+  { id: "gadgets_chain_links", level: 2, label: "third chain target" },
+  { id: "gadgets_chain_links", level: 3, label: "fourth chain target" },
+  { id: "gadgets_chain_links", level: 4, label: "fifth chain target" },
   { id: "gadgets_shock_capsule", level: 1, label: "shock capsule" },
   { id: "gadgets_magnet_mine", level: 1, label: "magnetic bomb" },
+  { id: "gadgets_magnet_mine", level: 2, label: "expanded magnetic field" },
+  { id: "gadgets_magnet_mine", level: 3, label: "deep magnetic field" },
+  { id: "gadgets_magnet_mine", level: 4, label: "maximum magnetic field" },
   { id: "gadgets_scout_drone", level: 1, label: "scout drone" },
   { id: "gadgets_drone_swarm", level: 1, label: "drone swarm" },
+  { id: "gadgets_drone_swarm", level: 2, label: "third drone" },
+  { id: "gadgets_drone_swarm", level: 3, label: "fourth drone" },
   { id: "gadgets_volatile_jackpot", level: 1, label: "volatile jackpot" },
   { id: "gadgets_geo_charge", level: 1, label: "geo charge" },
   { id: "gadgets_crew_beacon", level: 1, label: "crew beacon" },
@@ -84,6 +99,7 @@ const NOTABLE_MECHANICS = Object.freeze([
   { id: "fortune_double_yield", level: 1, label: "double yield" },
   { id: "fortune_triple_seam", level: 1, label: "triple sample" },
   { id: "fortune_triple_seam", level: 2, label: "reinforced sample rhythm" },
+  { id: "fortune_triple_seam", level: 3, label: "rapid sample rhythm" },
   { id: "fortune_alchemist_scales", level: 1, label: "alchemist scales" },
   { id: "fortune_deep_market", level: 1, label: "deep market" },
   { id: "fortune_golden_touch", level: 1, label: "golden touch" },
@@ -417,8 +433,10 @@ function simulateCampaign(api, seed, strategy, maxRuns = 480) {
   let firstEventSeconds = null;
   let maxLevelPackage = 0;
   let maxMechanicPackage = 0;
+  let maxVisibleChangePackage = 0;
   let maxLevelPackageDetails = null;
   let maxMechanicPackageDetails = null;
+  let maxVisibleChangePackageDetails = null;
   let lastPurchaseSeconds = 0;
   let maxPurchaseGapSeconds = 0;
   let maxPurchaseGapDetails = null;
@@ -509,6 +527,7 @@ function simulateCampaign(api, seed, strategy, maxRuns = 480) {
     assert.equal(levelPackage, bought.length, `${strategy}/${seed}: buyer must report every purchased level`);
     const currentMechanics = reachedMechanics(levelMap(api));
     const newlyReached = [...currentMechanics].filter((key) => !previousMechanics.has(key));
+    const newlyInstalledMechanics = newlyReached.filter((key) => key.endsWith("@1"));
     if (levelPackage > maxLevelPackage) {
       maxLevelPackage = levelPackage;
       maxLevelPackageDetails = {
@@ -519,13 +538,24 @@ function simulateCampaign(api, seed, strategy, maxRuns = 480) {
         bought: [...bought],
       };
     }
-    if (newlyReached.length > maxMechanicPackage) {
-      maxMechanicPackage = newlyReached.length;
+    if (newlyInstalledMechanics.length > maxMechanicPackage) {
+      maxMechanicPackage = newlyInstalledMechanics.length;
       maxMechanicPackageDetails = {
         run,
         minute: Number((elapsedSeconds / 60).toFixed(2)),
         levels: levelPackage,
-        mechanics: [...newlyReached],
+        mechanics: [...newlyInstalledMechanics],
+        visibleChanges: [...newlyReached],
+        bought: [...bought],
+      };
+    }
+    if (newlyReached.length > maxVisibleChangePackage) {
+      maxVisibleChangePackage = newlyReached.length;
+      maxVisibleChangePackageDetails = {
+        run,
+        minute: Number((elapsedSeconds / 60).toFixed(2)),
+        levels: levelPackage,
+        visibleChanges: [...newlyReached],
         bought: [...bought],
       };
     }
@@ -610,6 +640,22 @@ function simulateCampaign(api, seed, strategy, maxRuns = 480) {
   const finalApproachMinutes = Number.isFinite(finalPerkSeconds)
     ? Number(((elapsedSeconds - finalPerkSeconds) / 60).toFixed(2))
     : null;
+  const finalInventory = { ...(finalSnapshot.inventory || {}) };
+  const remainingFinalPath = api.getUpgradeCatalog()
+    .filter((definition) => definition.level < (finalPath.get(definition.id) || 0))
+    .map((definition) => ({
+      id: definition.id,
+      level: definition.level,
+      targetLevel: finalPath.get(definition.id) || 0,
+      unlocked: Boolean(definition.unlocked),
+      available: Boolean(definition.available),
+      affordable: Boolean(definition.affordable),
+      recipe: { ...(definition.recipe || {}) },
+      deficits: Object.fromEntries(Object.entries(definition.recipe || {}).map(([oreId, amount]) => [
+        oreId,
+        Math.max(0, amount - (finalInventory[oreId] || 0)),
+      ])),
+    }));
 
   return {
     seed,
@@ -627,7 +673,12 @@ function simulateCampaign(api, seed, strategy, maxRuns = 480) {
     maxLevelPackageDetails,
     maxMechanicPackage,
     maxMechanicPackageDetails,
+    maxVisibleChangePackage,
+    maxVisibleChangePackageDetails,
     mechanicsReached: previousMechanics.size,
+    finalInventory,
+    finalFocusedOreId: finalSnapshot.focusedOreId || null,
+    remainingFinalPath,
     milestoneMinutes: Object.fromEntries(mechanicTimes.map((entry) => [
       entry.key,
       Number((entry.seconds / 60).toFixed(2)),
@@ -654,6 +705,7 @@ function summarize(campaigns) {
   const events = numeric("firstEventMinutes");
   const levelPackages = numeric("maxLevelPackage");
   const mechanicPackages = numeric("maxMechanicPackage");
+  const visibleChangePackages = numeric("maxVisibleChangePackage");
   const milestoneMedians = Object.fromEntries(NOTABLE_MECHANICS.map((mechanic) => {
     const key = `${mechanic.id}@${mechanic.level}`;
     const samples = campaigns
@@ -705,6 +757,11 @@ function summarize(campaigns) {
       p50: percentile(mechanicPackages, 0.5),
       p90: percentile(mechanicPackages, 0.9),
       max: Math.max(...mechanicPackages),
+    },
+    maxVisibleChangePackage: {
+      p50: percentile(visibleChangePackages, 0.5),
+      p90: percentile(visibleChangePackages, 0.9),
+      max: Math.max(...visibleChangePackages),
     },
     milestoneMinutes: milestoneMedians,
   };
@@ -838,6 +895,15 @@ if (!isMainThread) {
           maxMechanicPackage,
           details: maxMechanicPackageDetails,
         })),
+      visibleChangePackages: [...campaigns]
+        .sort((left, right) => right.maxVisibleChangePackage - left.maxVisibleChangePackage)
+        .slice(0, 5)
+        .map(({ seed, strategy, maxVisibleChangePackage, maxVisibleChangePackageDetails }) => ({
+          seed,
+          strategy,
+          maxVisibleChangePackage,
+          details: maxVisibleChangePackageDetails,
+        })),
     };
     const diagnostic = {
       uniqueSeeds: new Set(campaigns.map((campaign) => campaign.seed)).size,
@@ -867,6 +933,8 @@ if (!isMainThread) {
       assert.ok(overall.maxPurchaseGapMinutes.max <= 9, `no sampled campaign should go nine minutes without any upgrade purchase: ${JSON.stringify(overall.maxPurchaseGapMinutes)}`);
       assert.ok(overall.maxLevelPackage.p90 <= 35, `late economy must not collapse into giant level packages: ${JSON.stringify(overall.maxLevelPackage)}`);
       assert.ok(overall.maxMechanicPackage.p90 <= 4, `notable mechanics need room to breathe between purchases: ${JSON.stringify(overall.maxMechanicPackage)}`);
+      assert.ok(overall.maxVisibleChangePackage.p90 <= 8, `visible rank changes must not collapse into oversized workshop bursts: ${JSON.stringify(overall.maxVisibleChangePackage)}`);
+      assert.ok(overall.maxVisibleChangePackage.max <= 8, `no sampled workshop should install more than eight visible changes at once: ${JSON.stringify(overall.maxVisibleChangePackage)}`);
       assert.equal(overall.firstEventMinutes.found, overall.campaigns, "every sampled campaign must encounter an underground event");
       assert.ok(overall.firstEventMinutes.p90 <= 15, `events should become visible during the early game: ${JSON.stringify(overall.firstEventMinutes)}`);
       assert.ok(overall.firstEventMinutes.max <= 20, `no seed should hide its first event beyond twenty minutes: ${JSON.stringify(overall.firstEventMinutes)}`);
