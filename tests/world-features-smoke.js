@@ -443,9 +443,9 @@ assert.deepEqual(
   Object.fromEntries(ORE_TYPES.map((ore) => [ore.id, ore.depth])),
   {
     copper: 0,
-    coal: 112,
-    iron: 308,
-    amber: 784,
+    coal: 196,
+    iron: 476,
+    amber: 952,
     silver: 1344,
     gold: 2352,
     amethyst: 3640,
@@ -458,9 +458,9 @@ assert.deepEqual(
 assert.deepEqual(
   Object.fromEntries(ORE_TYPES.filter((ore) => Number.isFinite(ore.maxDepth)).map((ore) => [ore.id, ore.maxDepth])),
   {
-    copper: 728,
-    coal: 1176,
-    iron: 1960,
+    copper: 644,
+    coal: 1120,
+    iron: 2016,
     amber: 3080,
     silver: 5040,
     gold: 6720,
@@ -482,10 +482,10 @@ const oreBandMeters = Object.fromEntries(ORE_TYPES.map((ore) => [
 assert.deepEqual(
   oreBandMeters,
   {
-    copper: { min: 0, max: 130 },
-    coal: { min: 20, max: 210 },
-    iron: { min: 55, max: 350 },
-    amber: { min: 140, max: 550 },
+    copper: { min: 0, max: 115 },
+    coal: { min: 35, max: 200 },
+    iron: { min: 85, max: 360 },
+    amber: { min: 170, max: 550 },
     silver: { min: 240, max: 900 },
     gold: { min: 420, max: 1200 },
     amethyst: { min: 650, max: 1600 },
@@ -494,6 +494,11 @@ assert.deepEqual(
     star_core: { min: 1250, max: null },
   },
   "authored pixel cutoffs must resolve to the intended geological metre bands",
+);
+assert.deepEqual(
+  Object.fromEntries(ORE_TYPES.slice(0, 4).map((ore) => [ore.id, ore.generationWeight])),
+  { copper: 0.5, coal: 0.6, iron: 0.7, amber: 0.85 },
+  "opening ore weights must soften early abundance without changing per-node density",
 );
 for (let index = 1; index < ORE_TYPES.length; index += 1) {
   const previous = ORE_TYPES[index - 1];
@@ -802,8 +807,8 @@ const sampledWorldTiles = densitySamples * WORLD_CONFIG.WIDTH * WORLD_CONFIG.HEI
 const sampledOreDensity = densityOreTiles / sampledWorldTiles;
 const sampledCaveDensity = densityUndergroundAir / sampledWorldTiles;
 assert.ok(
-  Math.abs(sampledOreDensity - 0.0848) <= 0.002,
-  `stratified donor redistribution must preserve the 8.48% ore baseline, got ${(sampledOreDensity * 100).toFixed(2)}%`,
+  Math.abs(sampledOreDensity - 0.071) <= 0.002,
+  `the softened opening bands must stay near the measured 7.1% ore baseline, got ${(sampledOreDensity * 100).toFixed(2)}%`,
 );
 assert.ok(
   Math.abs(sampledCaveDensity - 0.258) <= 0.022,
@@ -813,8 +818,8 @@ assert.ok(checkedDepthGatedOre > 0, "the depth-gate audit must inspect generated
 const averageCopperTiles = densityCopperTiles / densitySamples;
 const singletonCopperShare = densitySingletonCopperTiles / Math.max(1, densityCopperTiles);
 assert.ok(
-  averageCopperTiles >= 190 && averageCopperTiles <= 250,
-  `the finite opening band must stay supplied without recreating the old copper surplus, got ${averageCopperTiles.toFixed(2)} cells/world`,
+  averageCopperTiles >= 145 && averageCopperTiles <= 165,
+  `the 115-metre opening band must stay near its measured copper supply without recreating the old surplus, got ${averageCopperTiles.toFixed(2)} cells/world`,
 );
 assert.ok(
   singletonCopperShare <= 0.05,
@@ -1182,59 +1187,88 @@ for (const station of liftSupplyWorld._liftStations) {
   assert.equal(tile?.pendingLiftSupply, true, `unused target ${key} must remain pending`);
 }
 
-// Every sector and seed starts with the same short, mineable economy seam:
-// copper is visible immediately and two connected coal samples follow it.
-// Four copper pieces remain one compact cardinal hook beside the coal.
+// Every sector and seed starts with the same two compact, mineable economy
+// seams. The scanner reveals them during play rather than pre-lighting them,
+// while the surrounding tapered collar stays free of random caves and ore.
 let checkedStarterSeams = 0;
+let checkedStarterBufferTiles = 0;
 for (let seed = 1; seed <= 8; seed += 1) {
   for (const sector of GEOLOGICAL_SECTORS) {
     const starterWorld = new MineWorld(ORE_TYPES, `starter-seam-${seed}`, { sectorId: sector.id });
     const starterSpawn = starterWorld.getSpawn();
-    const firstCopper = starterWorld.getTile(starterSpawn.tx, starterSpawn.ty + 2);
-    const coal = starterWorld.getTile(starterSpawn.tx, starterSpawn.ty + 3);
-    const secondCoal = starterWorld.getTile(starterSpawn.tx, starterSpawn.ty + 4);
-
-    assert.equal(firstCopper?.oreId, "copper", `${sector.id} must expose starter copper`);
-    assert.equal(firstCopper?.maxHp, 2, "first copper must fit inside the opening shift");
-    assert.equal(coal?.oreId, "coal", `${sector.id} must guarantee early coal`);
-    assert.equal(coal?.maxHp, 2, "starter coal must fit inside the first opening shift");
-    assert.equal(secondCoal?.oreId, "coal", `${sector.id} must finish the starter seam with fuel`);
-    assert.equal(secondCoal?.maxHp, 2, "second coal must stay soft");
-    assert.ok(firstCopper.discovered && coal.discovered && secondCoal.discovered);
-
     const starterCopper = [
-      { tx: starterSpawn.tx, ty: starterSpawn.ty + 2 },
-      { tx: starterSpawn.tx - 1, ty: starterSpawn.ty + 2 },
-      { tx: starterSpawn.tx - 1, ty: starterSpawn.ty + 3 },
-      { tx: starterSpawn.tx - 1, ty: starterSpawn.ty + 4 },
+      { tx: starterSpawn.tx + 2, ty: starterSpawn.ty + 1 },
+      { tx: starterSpawn.tx + 3, ty: starterSpawn.ty + 1 },
     ];
-    const starterVeinIds = new Set(starterCopper.map(({ tx, ty }) => {
+    const starterCoal = [
+      { tx: starterSpawn.tx + 4, ty: starterSpawn.ty + 2 },
+      { tx: starterSpawn.tx + 5, ty: starterSpawn.ty + 2 },
+    ];
+    const starterCopperVeinIds = new Set(starterCopper.map(({ tx, ty }) => {
       const tile = starterWorld.getTile(tx, ty);
-      assert.equal(tile?.oreId, "copper", `${sector.id} starter C is missing copper at ${tx}:${ty}`);
+      assert.equal(tile?.oreId, "copper", `${sector.id} starter copper is missing at ${tx}:${ty}`);
       assert.equal(tile?.maxHp, 2, `${sector.id} starter copper must clear inside the first shift`);
-      assert.equal(tile?.discovered, true, `${sector.id} starter copper must be visible at ${tx}:${ty}`);
+      assert.equal(tile?.discovered, false, `${sector.id} starter copper must wait for scanner discovery at ${tx}:${ty}`);
+      assert.equal(tile?.sensedUntil, 0, `${sector.id} starter copper must not begin temporarily sensed at ${tx}:${ty}`);
       return tile.veinId;
     }));
-    assert.equal(starterVeinIds.size, 1, `${sector.id} starter copper must share one vein id`);
+    const starterCoalVeinIds = new Set(starterCoal.map(({ tx, ty }) => {
+      const tile = starterWorld.getTile(tx, ty);
+      assert.equal(tile?.oreId, "coal", `${sector.id} starter coal is missing at ${tx}:${ty}`);
+      assert.equal(tile?.maxHp, 3, `${sector.id} starter coal must remain a short second-step seam`);
+      assert.equal(tile?.discovered, false, `${sector.id} starter coal must wait for scanner discovery at ${tx}:${ty}`);
+      assert.equal(tile?.sensedUntil, 0, `${sector.id} starter coal must not begin temporarily sensed at ${tx}:${ty}`);
+      return tile.veinId;
+    }));
+    assert.equal(starterCopperVeinIds.size, 1, `${sector.id} starter copper must share one vein id`);
+    assert.equal(starterCoalVeinIds.size, 1, `${sector.id} starter coal must share one vein id`);
     assert.equal(
       cardinalReachableCount(starterCopper),
       starterCopper.length,
-      `${sector.id} starter copper must be a cardinally connected hook`,
+      `${sector.id} starter copper must be one cardinal pair`,
     );
-    assert.notEqual(coal.veinId, firstCopper.veinId, "the coal sample must keep a separate vein identity");
-    assert.equal(secondCoal.veinId, coal.veinId, "both starter coal samples must share one vein");
+    assert.equal(
+      cardinalReachableCount(starterCoal),
+      starterCoal.length,
+      `${sector.id} starter coal must be one cardinal pair`,
+    );
+    assert.notEqual(
+      starterCopperVeinIds.values().next().value,
+      starterCoalVeinIds.values().next().value,
+      "the copper and coal samples must keep separate vein identities",
+    );
+
+    const authoredStarterKeys = new Set([...starterCopper, ...starterCoal].map(({ tx, ty }) => `${tx}:${ty}`));
+    for (let dy = -1; dy <= 11; dy += 1) {
+      for (let dx = -7; dx <= 7; dx += 1) {
+        const tx = starterSpawn.tx + dx;
+        const ty = starterSpawn.ty + dy;
+        if (!starterWorld._insideStarterGeologyBuffer(tx, ty)) continue;
+        const tile = starterWorld.getTile(tx, ty);
+        if (!authoredStarterKeys.has(`${tx}:${ty}`)) {
+          assert.equal(tile?.oreId, null, `${sector.id} starter buffer must reject random ore at ${tx}:${ty}`);
+          assert.equal(tile?.veinId, null, `${sector.id} starter buffer must reject random veins at ${tx}:${ty}`);
+        }
+        if (dy >= 5) {
+          assert.notEqual(tile?.kind, "air", `${sector.id} lower starter buffer must reject random caves at ${tx}:${ty}`);
+        }
+        checkedStarterBufferTiles += 1;
+      }
+    }
 
     const starterRoute = starterWorld.findLeastResistanceStep(
       starterSpawn,
-      { tx: starterSpawn.tx, ty: starterSpawn.ty + 4 },
+      starterCoal[1],
       { moveSpeed: 100, digPowerPerSecond: 2.25, maxDetourTiles: 8 },
     );
-    assert.ok(starterRoute?.route.length >= 3, "the complete starter seam must be reachable");
+    assert.ok(starterRoute?.route.length >= 4, "the complete staged starter seam must be reachable");
     checkedStarterSeams += 1;
   }
 }
 
-// Re-running the authored placement must preserve the same compact hook instead
+assert.ok(checkedStarterBufferTiles > 0, "the multi-seed audit must inspect the protected starter geology collar");
+
+// Re-running the authored placement must preserve the same compact pairs instead
 // of searching outward for incidental solid tiles.
 const starterFanWorld = new MineWorld(ORE_TYPES, "starter-descending-fan", { sectorId: "stable_strata" });
 const starterFanSpawn = starterFanWorld.getSpawn();
@@ -1252,19 +1286,30 @@ starterFanWorld._placeStarterOre();
 starterFanWorld._nearestSolidTile = originalNearestSolidTile;
 assert.deepEqual(starterFanRequests, [], "starter placement must no longer scatter probes via nearest-rock search");
 const starterFanCopper = [
-  [0, 2],
-  [-1, 2],
-  [-1, 3],
-  [-1, 4],
+  [2, 1],
+  [3, 1],
 ].map(([dx, dy]) => ({
   tx: starterFanSpawn.tx + dx,
   ty: starterFanSpawn.ty + dy,
 }));
-assert.equal(cardinalReachableCount(starterFanCopper), 4);
+const starterFanCoal = [
+  [4, 2],
+  [5, 2],
+].map(([dx, dy]) => ({
+  tx: starterFanSpawn.tx + dx,
+  ty: starterFanSpawn.ty + dy,
+}));
+assert.equal(cardinalReachableCount(starterFanCopper), 2);
+assert.equal(cardinalReachableCount(starterFanCoal), 2);
 assert.equal(
   new Set(starterFanCopper.map(({ tx, ty }) => starterFanWorld.getTile(tx, ty)?.veinId)).size,
   1,
   "the repeated starter placement must retain one shared copper vein id",
+);
+assert.equal(
+  new Set(starterFanCoal.map(({ tx, ty }) => starterFanWorld.getTile(tx, ty)?.veinId)).size,
+  1,
+  "the repeated starter placement must retain one shared coal vein id",
 );
 
 // A direct diagonal must not squeeze through the seam between two intact
