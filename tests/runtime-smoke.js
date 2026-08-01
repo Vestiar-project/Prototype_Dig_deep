@@ -960,6 +960,33 @@ function clearTile(tx, ty) {
   });
 }
 
+// The opening collar must teach the base scanner instead of showing a pile of
+// ore at the miner's feet. Only the first authored copper enters ordinary
+// sense; its partner and the later coal seam remain hidden until movement.
+api.debugResetProgress();
+api.setAllUpgrades(false);
+api.setFocusedOre(null);
+api.startRun({ seed: "runtime-staged-starter-collar", sectorId: "stable_strata" });
+const stagedStarterSnapshot = api.getSnapshot();
+const starterSpawnTx = Math.floor(stagedStarterSnapshot.player.x / global.DepthZeroWorld.WORLD_CONFIG.TILE_SIZE);
+const starterSpawnTy = Math.floor(stagedStarterSnapshot.player.y / global.DepthZeroWorld.WORLD_CONFIG.TILE_SIZE);
+const starterFirstCopper = [starterSpawnTx + 2, starterSpawnTy + 1];
+const starterSecondCopper = [starterSpawnTx + 3, starterSpawnTy + 1];
+const starterCoal = [starterSpawnTx + 4, starterSpawnTy + 2];
+assert.equal(api.debugGetTile(...starterFirstCopper).discovered, false);
+assert.equal(api.debugGetTile(...starterSecondCopper).discovered, false);
+assert.equal(api.debugGetTile(...starterCoal).discovered, false);
+assert.deepEqual(
+  api.acquireTargets()?.primary,
+  { tx: starterFirstCopper[0], ty: starterFirstCopper[1] },
+  "the first base-sense target must be the single authored copper at the collar edge",
+);
+assert.equal(api.debugGetOreVisualState(...starterFirstCopper).isLockedTarget, true);
+assert.equal(api.debugGetOreVisualState(...starterFirstCopper).visible, true);
+assert.equal(api.debugGetTile(...starterSecondCopper).discovered, false);
+assert.equal(api.debugGetTile(...starterCoal).discovered, false);
+api.finishRun();
+
 // Tool progression must become visibly more forceful even when a late tool
 // one-shots the rock before its crack stages can be seen.
 api.debugResetProgress();
@@ -1528,6 +1555,22 @@ assert.ok(
 // different selected upgrade is missing three opening materials: the selected
 // recipe must still drive the landing sample.
 api.debugResetProgress();
+api.setAllUpgrades(false);
+api.setUpgradeLevel("tools_iron_pick", 1);
+api.setBestDepth(69);
+assert.equal(
+  api.getUpgradeCatalog().find((upgrade) => upgrade.id === "dig_mine_lift").unlocked,
+  false,
+  "the first lift must remain locked just before the 70 m milestone",
+);
+api.setBestDepth(70);
+assert.equal(
+  api.getUpgradeCatalog().find((upgrade) => upgrade.id === "dig_mine_lift").unlocked,
+  true,
+  "the iron pick should unlock the first lift at 70 m",
+);
+
+api.debugResetProgress();
 api.setAllUpgrades(true);
 api.setUpgradeLevel("time_extra_breath", 2);
 api.setUpgradeLevel("sense_greed_compass", 0);
@@ -1801,7 +1844,9 @@ api.setUpgradeLevel("sense_ore_focus", 1);
 api.setUpgradeLevel("power_sample_calibration", 4);
 api.setFocusedOre("copper");
 api.startRun({ seed: "runtime-focused-calibration", sectorId: "stable_strata" });
-assert.ok(api.acquireTargets()?.primary);
+const focusedCalibrationTarget = api.acquireTargets()?.primary;
+assert.ok(focusedCalibrationTarget);
+api.debugSetPlayerTile(focusedCalibrationTarget.tx - 1, focusedCalibrationTarget.ty);
 assert.equal(api.attackNow(), true);
 assert.ok(api.getSnapshot().metrics.focusedCalibrationHits >= 1, "sample calibration should add focused-only damage");
 api.finishRun();
@@ -2552,6 +2597,69 @@ for (let hit = 0; hit < 18; hit += 1) {
 snapshot = api.getSnapshot();
 assert.equal(snapshot.metrics.faultFinderCadenceCrits, 1, "rank three must guarantee exactly every eighteenth strike");
 assert.ok(snapshot.visualEffects.shake >= 6, "the guaranteed crack strike must have critical-impact feedback");
+api.finishRun();
+
+// Finishing a vein is baseline miner behaviour, not a late perk. A real hit
+// engages that vein, ignores a closer decoy and a collateral break, permits a
+// safe one-row climb, and makes the descent cadence wait for the last node.
+api.setAllUpgrades(false);
+api.setFocusedOre(null);
+api.startRun({ seed: "runtime-baseline-finish-engaged-vein", sectorId: "stable_strata" });
+api.debugSetPlayerTile(40, 80);
+for (let ty = 77; ty <= 83; ty += 1) {
+  for (let tx = 37; tx <= 47; tx += 1) clearTile(tx, ty);
+}
+placeOre(41, 80, "copper", "engaged-baseline", 1);
+placeOre(42, 80, "copper", "engaged-baseline", 1);
+placeOre(42, 79, "copper", "engaged-baseline", 1);
+placeOre(40, 81, "copper", "closer-decoy", 20);
+placeOre(45, 80, "copper", "collateral-vein", 1);
+placeOre(46, 80, "copper", "collateral-vein", 20);
+assert.ok(api.debugSetTargetTile(41, 80));
+assert.equal(api.attackNow(), true);
+snapshot = api.getSnapshot();
+assert.equal(snapshot.engagedVeinId, "engaged-baseline");
+assert.equal(snapshot.engagedOreId, "copper");
+assert.ok(api.debugBreakTileWithSource(45, 80, "multi"));
+assert.equal(
+  api.getSnapshot().engagedVeinId,
+  "engaged-baseline",
+  "a collateral direct-tool break must not hijack the actively mined vein",
+);
+let engagedTargets = api.acquireTargets();
+assert.deepEqual(engagedTargets?.primary, { tx: 42, ty: 80 });
+api.debugSetDescentCadenceState({
+  deepest: 350,
+  anchorDepth: 350,
+  stallElapsed: 99,
+  queued: false,
+  queuedAt: -1,
+  queuedTargetKey: null,
+});
+api.debugAdvanceDescentCadence(0.1);
+assert.equal(api.getSnapshot().descentCadence.queued, true);
+api.debugAdvanceDescentCadence(2);
+assert.equal(api.getSnapshot().descentCadence.active, false, "descent cadence must wait while an engaged vein is live");
+api.debugSetPlayerTile(41, 80);
+assert.equal(api.attackNow(), true);
+engagedTargets = api.acquireTargets();
+assert.deepEqual(
+  engagedTargets?.primary,
+  { tx: 42, ty: 79 },
+  "a connected upper node inside the retreat floor must still finish before another vein",
+);
+api.debugSetPlayerTile(41, 79);
+assert.equal(api.attackNow(), true);
+snapshot = api.getSnapshot();
+assert.equal(snapshot.engagedVeinId, null);
+assert.equal(snapshot.metrics.veinsCompleted, 1);
+assert.ok(snapshot.metrics.veinContinuations >= 2);
+api.debugAdvanceDescentCadence(0.1);
+assert.equal(api.getSnapshot().descentCadence.active, true, "descent cadence may resume after the vein is exhausted");
+engagedTargets = api.acquireTargets();
+assert.ok(engagedTargets?.primary, "another nearby vein should become available after completion");
+assert.notEqual(api.debugGetTile(engagedTargets.primary.tx, engagedTargets.primary.ty).veinId, "engaged-baseline");
+assert.equal(api.getSnapshot().metrics.veinsCompleted, 1, "completion must be counted only once");
 api.finishRun();
 
 // Opening one ordinary stone between two nodes must not erase the remembered
