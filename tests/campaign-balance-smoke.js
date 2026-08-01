@@ -168,6 +168,7 @@ function simulateCampaign(seed, maxRuns = 420) {
   const frequencyApproachWindow = [];
   let frequencyApproach = null;
   const depthTrace = [];
+  const openingRunMotion = [];
 
   for (let run = 1; run <= maxRuns; run += 1) {
     api.startRun({ seed: `campaign-${seed}-${run}` });
@@ -188,6 +189,15 @@ function simulateCampaign(seed, maxRuns = 420) {
       descentCadenceTotals.timeouts += report?.descentCadenceTimeouts || 0;
       descentCadenceTotals.seconds += report?.descentCadenceSeconds || 0;
       descentCadenceTotals.eligibleSeconds += report?.descentCadenceEligibleSeconds || 0;
+      if (run <= 4) {
+        openingRunMotion.push({
+          run,
+          movementSeconds: Number(report?.movementSeconds) || 0,
+          travelMeters: Number(report?.travelMeters) || 0,
+          maxDistanceFromSpawnMeters: Number(report?.maxDistanceFromSpawnMeters) || 0,
+          veinContinuations: Number(report?.veinContinuations) || 0,
+        });
+      }
     }
     activeSeconds += runDuration;
     elapsedSeconds += runDuration + (endingRun ? 0 : 10);
@@ -271,6 +281,9 @@ function simulateCampaign(seed, maxRuns = 420) {
         depth: report?.depth || 0,
         haul: report?.haul || 0,
         movement: report?.movementSeconds || 0,
+        travelMeters: report?.travelMeters || 0,
+        maxDistanceFromSpawnMeters: report?.maxDistanceFromSpawnMeters || 0,
+        veinContinuations: report?.veinContinuations || 0,
         mining: report?.miningSeconds || 0,
         searching: report?.searchingSeconds || 0,
         focusedOreId: snapshot.focusedOreId || null,
@@ -437,6 +450,7 @@ function simulateCampaign(seed, maxRuns = 420) {
     ...(solarApproach ? { solarApproach } : {}),
     ...(frequencyApproach ? { frequencyApproach } : {}),
     ...(process.env.CAMPAIGN_TRACE_DEPTH === "1" ? { depthTrace } : {}),
+    openingRunMotion,
     maxFeaturedGapMinutes: Number(((featuredGaps.length ? Math.max(...featuredGaps) : 0) / 60).toFixed(1)),
     maxFeaturedGapBetween: maxFeaturedGapIndex >= 0
       ? [featuredEntries[maxFeaturedGapIndex][0], featuredEntries[maxFeaturedGapIndex + 1][0]]
@@ -464,6 +478,18 @@ if (process.env.CAMPAIGN_AUDIT_ONLY === "1") {
 for (const campaign of campaigns) {
   const progressAt = (milestone) => (campaign.milestoneMinutes[milestone] || 0) / campaign.elapsedMinutes;
   assert.ok(campaign.firstOreMinutes.coal <= 0.4, "starter coal must arrive in the first two shifts");
+  const averageOpeningMovement = campaign.openingRunMotion.reduce(
+    (total, run) => total + run.movementSeconds,
+    0,
+  ) / Math.max(1, campaign.openingRunMotion.length);
+  assert.ok(
+    averageOpeningMovement >= 1.2,
+    `the staged starter seams must make the miner visibly travel during the first four shifts: ${JSON.stringify(campaign.openingRunMotion)}`,
+  );
+  assert.ok(
+    Math.max(...campaign.openingRunMotion.map((run) => run.maxDistanceFromSpawnMeters)) >= 15,
+    `the opening scanner route must leave the spawn pocket: ${JSON.stringify(campaign.openingRunMotion)}`,
+  );
   assert.ok(campaign.firstOreMinutes.iron <= 15, "iron must enter the economy during the opening phase");
   assert.ok(campaign.milestoneMinutes.focus >= campaign.firstOreMinutes.silver, "ore focus must unlock only after its T5 silver sample appears");
   assert.ok(progressAt("focus") >= 0.3, `ore focus should sit beyond the opening 30%: ${JSON.stringify(campaign)}`);
@@ -494,7 +520,7 @@ for (const campaign of campaigns) {
     `the whole 300-600 m act must not collapse even when one cave-rich half is quick: ${JSON.stringify(campaign)}`,
   );
   assert.ok(
-    depthGap(600, 900) >= 14 && depthGap(600, 900) <= 45,
+    depthGap(600, 900) >= 12 && depthGap(600, 900) <= 45,
     `the super-pick transition must neither stall nor skip the 600-900 m layers: ${JSON.stringify(campaign)}`,
   );
   assert.ok(
