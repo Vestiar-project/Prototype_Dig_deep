@@ -1,0 +1,105 @@
+{
+  "format_version": 1,
+  "game": "Глубина Нуль",
+  "asset_set": "miner_equipment_progression",
+  "source_canvas": {
+    "width": 1024,
+    "height": 1024,
+    "format": "PNG",
+    "color_mode": "RGBA"
+  },
+  "canvas": {
+    "width": 512,
+    "height": 512,
+    "format": "PNG",
+    "color_mode": "RGBA",
+    "background": "transparent"
+  },
+  "runtime_resample": "Lanczos",
+  "facing": "right",
+  "baseline_y": 450,
+  "pivot": {
+    "x": 193,
+    "y": 450,
+    "definition": "center_between_boots"
+  },
+  "variants": [
+    {
+      "id": "v01_worn_pick",
+      "label_ru": "Стартовая потёртая кирка",
+      "frames": [
+        "miner_v01_worn_pick_idle.png",
+        "miner_v01_worn_pick_step.png",
+        "miner_v01_worn_pick_prepare.png",
+        "miner_v01_worn_pick_contact.png",
+        "miner_v01_worn_pick_recoil.png"
+      ]
+    },
+    {
+      "id": "v02_iron_pick",
+      "label_ru": "Железная кирка",
+      "frames": [
+        "miner_v02_iron_pick_idle.png",
+        "miner_v02_iron_pick_step.png",
+        "miner_v02_iron_pick_prepare.png",
+        "miner_v02_iron_pick_contact.png",
+        "miner_v02_iron_pick_recoil.png"
+      ]
+    },
+    {
+      "id": "v03_steel_pick",
+      "label_ru": "Стальная кирка",
+      "frames": [
+        "miner_v03_steel_pick_idle.png",
+        "miner_v03_steel_pick_step.png",
+        "miner_v03_steel_pick_prepare.png",
+        "miner_v03_steel_pick_contact.png",
+        "miner_v03_steel_pick_recoil.png"
+      ]
+    },
+    {
+      "id": "v04_pneumatic_pick",
+      "label_ru": "Пневмокирка",
+      "frames": [
+        "miner_v04_pneumatic_pick_idle.png",
+        "miner_v04_pneumatic_pick_step.png",
+        "miner_v04_pneumatic_pick_prepare.png",
+        "miner_v04_pneumatic_pick_contact.png",
+        "miner_v04_pneumatic_pick_recoil.png"
+      ]
+    },
+    {
+      "id": "v05_super_pick",
+      "label_ru": "Суперкирка",
+      "frames": [
+        "miner_v05_super_pick_idle.png",
+        "miner_v05_super_pick_step.png",
+        "miner_v05_super_pick_prepare.png",
+        "miner_v05_super_pick_contact.png",
+        "miner_v05_super_pick_recoil.png"
+      ]
+    },
+    {
+      "id": "v06_mining_laser",
+      "label_ru": "Дальнобойный шахтный лазер",
+      "frames": [
+        "miner_v06_mining_laser_idle.png",
+        "miner_v06_mining_laser_step.png",
+        "miner_v06_mining_laser_aim.png",
+        "miner_v06_mining_laser_fire.png",
+        "miner_v06_mining_laser_recoil.png"
+      ]
+    },
+    {
+      "id": "v07_solar_drill",
+      "label_ru": "Призматический солнечный бур",
+      "frames": [
+        "miner_v07_solar_drill_idle.png",
+        "miner_v07_solar_drill_step.png",
+        "miner_v07_solar_drill_aim.png",
+        "miner_v07_solar_drill_fire.png",
+        "miner_v07_solar_drill_recoil.png"
+      ]
+    }
+  ]
+}

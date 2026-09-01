@@ -1,0 +1,369 @@
+{
+  "schemaVersion": 1,
+  "packageId": "depth-zero-visual-redux-character-generation-pack-v1",
+  "assetId": "miner-runtime-visual-redux-v1",
+  "game": "Глубина: Нуль",
+  "createdDate": "2026-08-31",
+  "purpose": "Generate a silhouette-first schematic industrial-comic runtime miner with one master body across seven equipment tiers and thirty-five action frames",
+  "scope": {
+    "generationOnly": true,
+    "changesRuntimeCode": false,
+    "changesRuntimeAssets": false,
+    "changesGameplay": false,
+    "changesUi": false
+  },
+  "artDirection": {
+    "style": "schematic industrial comic cutout",
+    "projection": "stable side-on three-quarter profile",
+    "facing": "right",
+    "lightDirection": "top-left",
+    "silhouetteFirst": true,
+    "pureBlackSilhouette": false,
+    "pixelArt": false,
+    "photorealistic": false,
+    "targetRuntimeBodyHeightCssPx": 68,
+    "maximumValueStepsPerMaterial": 3,
+    "minimumImportantFeatureSourcePx": 8,
+    "outerContourSourcePx": {
+      "min": 10,
+      "max": 14
+    },
+    "internalContourSourcePx": {
+      "min": 6,
+      "max": 9
+    }
+  },
+  "generation": {
+    "recommendedUnit": "full-seven-tier-contact-sheet",
+    "generateAllTiersTogetherFirst": true,
+    "fullPack": {
+      "preferredWidth": 2560,
+      "preferredHeight": 3584,
+      "columns": 5,
+      "rows": 7,
+      "cellWidth": 512,
+      "cellHeight": 512,
+      "rowOrder": [
+        "v01_worn_pick",
+        "v02_iron_pick",
+        "v03_steel_pick",
+        "v04_pneumatic_pick",
+        "v05_super_pick",
+        "v06_mining_laser",
+        "v07_solar_drill"
+      ],
+      "fallback": "regenerate one complete five-frame tier strip; avoid piecemeal frame edits"
+    },
+    "strip": {
+      "preferredWidth": 2560,
+      "preferredHeight": 512,
+      "columns": 5,
+      "rows": 1,
+      "cellWidth": 512,
+      "cellHeight": 512,
+      "visibleGrid": false,
+      "contentMayCrossCellBoundary": false,
+      "splitMethod": "fixed cell boundaries without per-frame autocrop or recenter"
+    },
+    "fallback": "sequential single-frame generation using the approved redux master idle and accepted neighboring poses as references",
+    "batchOrder": [
+      "v01_worn_pick",
+      "v02_iron_pick",
+      "v03_steel_pick",
+      "v04_pneumatic_pick",
+      "v05_super_pick",
+      "v06_mining_laser",
+      "v07_solar_drill"
+    ]
+  },
+  "output": {
+    "format": "png",
+    "colorMode": "RGBA",
+    "bitDepthPerChannel": 8,
+    "colorSpace": "sRGB",
+    "background": "transparent-alpha",
+    "frameWidth": 512,
+    "frameHeight": 512,
+    "frameCount": 35,
+    "runtimeDirectoryAfterApproval": "assets/characters/miner",
+    "safeAlphaBoundsInclusive": {
+      "minX": 32,
+      "maxX": 480,
+      "minY": 64,
+      "maxY": 451
+    },
+    "fullyTransparentRows": {
+      "fromY": 452,
+      "toY": 511
+    },
+    "groundShadowIncluded": false,
+    "externalActionVfxIncluded": false,
+    "textIncluded": false
+  },
+  "masterBody": {
+    "sourceOfTruth": "MASTER_BODY_AND_ANIMATION_SPEC_RU.md",
+    "baselineY": 450,
+    "pivot": {
+      "x": 193,
+      "y": 450,
+      "definition": "center_between_boot_contacts",
+      "tolerancePx": 0
+    },
+    "idleBodyHeightPx": 274,
+    "idleHelmetTopY": 176,
+    "idleBodyBoundsApprox": {
+      "minX": 98,
+      "maxX": 276,
+      "minY": 176,
+      "maxY": 450
+    },
+    "anchorsIdle": {
+      "rear_boot_contact": [164, 450],
+      "front_boot_contact": [224, 450],
+      "pelvis": [193, 379],
+      "chest": [194, 326],
+      "neck": [205, 277],
+      "head_center": [207, 247],
+      "helmet_center": [203, 212],
+      "lamp": [259, 229],
+      "rear_shoulder": [163, 296],
+      "front_shoulder": [225, 299],
+      "backpack_mount": [138, 318],
+      "rear_grip": [285, 326],
+      "front_grip": [308, 319]
+    },
+    "tolerancesPx": {
+      "baseline": 1,
+      "bodyHeight": 3,
+      "helmetTopY": 3,
+      "coreIdleAnchor": 3,
+      "shoulderIdleAnchor": 4,
+      "gripIdleAnchor": 5,
+      "rangedAimFireMuzzle": 2
+    },
+    "immutableAcrossTiers": [
+      "body scale",
+      "helmet dome and lamp",
+      "face and beard profile",
+      "base suit",
+      "limb thickness",
+      "boots",
+      "belt",
+      "backpack mount"
+    ],
+    "allowedTierChanges": [
+      "tool silhouette",
+      "functional backpack modules",
+      "one hose or power cable",
+      "large reinforcement panels",
+      "approved cyan or violet technology accents"
+    ]
+  },
+  "palette": {
+    "outline": "#071119",
+    "deepShadow": "#11191B",
+    "suitBase": "#314437",
+    "suitLight": "#52644B",
+    "helmetBase": "#C66C32",
+    "helmetLight": "#ED9847",
+    "skin": "#C48761",
+    "leatherShadow": "#71432D",
+    "steelBase": "#667579",
+    "steelLight": "#A6B0AC",
+    "lamp": "#FFE18A",
+    "techCyan": "#63E5D6",
+    "prismViolet": "#C884FF"
+  },
+  "currentReferences": {
+    "characterRoot": "assets/characters/miner",
+    "currentAnimationManifest": "assets/characters/miner/animation_manifest.json",
+    "identity": "assets/characters/miner/miner_v01_worn_pick_idle.png",
+    "keyArtStyleOnly": "assets/main-menu/main-menu-hero-desktop.png",
+    "terrainContrastOnly": "docs/art-references/depth-zero-current-terrain-reference.png",
+    "instructions": "REFERENCE_HANDOFF_RU.md"
+  },
+  "equipmentTiers": [
+    {
+      "index": 1,
+      "id": "v01_worn_pick",
+      "labelRu": "Стартовая потёртая кирка",
+      "category": "melee",
+      "currentReferencePrefix": "miner_v01_worn_pick",
+      "currentRuntimeScale": 1.0,
+      "requiredScaleAfterRedux": 1.0,
+      "equipment": "compact worn double-ended steel pick, warm wooden handle, simple small backpack",
+      "technologyAccents": "warm rust and muted steel; no cyan or violet",
+      "frames": [
+        { "order": 0, "action": "idle", "filename": "miner_v01_worn_pick_idle.png" },
+        { "order": 1, "action": "step", "filename": "miner_v01_worn_pick_step.png" },
+        { "order": 2, "action": "prepare", "filename": "miner_v01_worn_pick_prepare.png" },
+        { "order": 3, "action": "contact", "filename": "miner_v01_worn_pick_contact.png" },
+        { "order": 4, "action": "recoil", "filename": "miner_v01_worn_pick_recoil.png" }
+      ]
+    },
+    {
+      "index": 2,
+      "id": "v02_iron_pick",
+      "labelRu": "Железная кирка",
+      "category": "melee",
+      "currentReferencePrefix": "miner_v02_iron_pick",
+      "currentRuntimeScale": 1.0,
+      "requiredScaleAfterRedux": 1.0,
+      "equipment": "heavier angular iron pick, reinforced handle, one large iron backpack plate",
+      "technologyAccents": "dark iron and muted steel; no cyan or violet",
+      "frames": [
+        { "order": 0, "action": "idle", "filename": "miner_v02_iron_pick_idle.png" },
+        { "order": 1, "action": "step", "filename": "miner_v02_iron_pick_step.png" },
+        { "order": 2, "action": "prepare", "filename": "miner_v02_iron_pick_prepare.png" },
+        { "order": 3, "action": "contact", "filename": "miner_v02_iron_pick_contact.png" },
+        { "order": 4, "action": "recoil", "filename": "miner_v02_iron_pick_recoil.png" }
+      ]
+    },
+    {
+      "index": 3,
+      "id": "v03_steel_pick",
+      "labelRu": "Стальная кирка",
+      "category": "melee",
+      "currentReferencePrefix": "miner_v03_steel_pick",
+      "currentRuntimeScale": 1.0,
+      "requiredScaleAfterRedux": 1.0,
+      "equipment": "wide professional steel pick, bright bevel, metal handle rings, rigid backpack frame",
+      "technologyAccents": "cold steel and one orange safety accent; no cyan or violet",
+      "frames": [
+        { "order": 0, "action": "idle", "filename": "miner_v03_steel_pick_idle.png" },
+        { "order": 1, "action": "step", "filename": "miner_v03_steel_pick_step.png" },
+        { "order": 2, "action": "prepare", "filename": "miner_v03_steel_pick_prepare.png" },
+        { "order": 3, "action": "contact", "filename": "miner_v03_steel_pick_contact.png" },
+        { "order": 4, "action": "recoil", "filename": "miner_v03_steel_pick_recoil.png" }
+      ]
+    },
+    {
+      "index": 4,
+      "id": "v04_pneumatic_pick",
+      "labelRu": "Пневмокирка",
+      "category": "melee",
+      "currentReferencePrefix": "miner_v04_pneumatic_pick",
+      "currentRuntimeScale": 0.98,
+      "requiredScaleAfterRedux": 1.0,
+      "equipment": "horizontal pneumatic rock drill, short chisel, cylinder body, front grip, one thick hose to pressure backpack",
+      "technologyAccents": "muted steel and one amber pressure indicator; no cyan or violet",
+      "frames": [
+        { "order": 0, "action": "idle", "filename": "miner_v04_pneumatic_pick_idle.png" },
+        { "order": 1, "action": "step", "filename": "miner_v04_pneumatic_pick_step.png" },
+        { "order": 2, "action": "prepare", "filename": "miner_v04_pneumatic_pick_prepare.png" },
+        { "order": 3, "action": "contact", "filename": "miner_v04_pneumatic_pick_contact.png" },
+        { "order": 4, "action": "recoil", "filename": "miner_v04_pneumatic_pick_recoil.png" }
+      ]
+    },
+    {
+      "index": 5,
+      "id": "v05_super_pick",
+      "labelRu": "Суперкирка",
+      "category": "melee",
+      "currentReferencePrefix": "miner_v05_super_pick",
+      "currentRuntimeScale": 1.37,
+      "requiredScaleAfterRedux": 1.0,
+      "equipment": "oversized powered double pick, broad opposed steel blades, large mechanical hub, one cyan energy cell, power backpack",
+      "technologyAccents": "first contained cyan core; no external glow and no violet",
+      "frames": [
+        { "order": 0, "action": "idle", "filename": "miner_v05_super_pick_idle.png" },
+        { "order": 1, "action": "step", "filename": "miner_v05_super_pick_step.png" },
+        { "order": 2, "action": "prepare", "filename": "miner_v05_super_pick_prepare.png" },
+        { "order": 3, "action": "contact", "filename": "miner_v05_super_pick_contact.png" },
+        { "order": 4, "action": "recoil", "filename": "miner_v05_super_pick_recoil.png" }
+      ]
+    },
+    {
+      "index": 6,
+      "id": "v06_mining_laser",
+      "labelRu": "Дальнобойный шахтный лазер",
+      "category": "ranged",
+      "currentReferencePrefix": "miner_v06_mining_laser",
+      "currentRuntimeScale": 1.05,
+      "requiredScaleAfterRedux": 1.0,
+      "equipment": "closed industrial mining laser cannon, cylindrical barrel, orange brackets, cyan vents, two grips, power cable",
+      "technologyAccents": "contained cyan vents and power cell; no violet",
+      "aimMuzzle": [425, 306],
+      "frames": [
+        { "order": 0, "action": "idle", "filename": "miner_v06_mining_laser_idle.png" },
+        { "order": 1, "action": "step", "filename": "miner_v06_mining_laser_step.png" },
+        { "order": 2, "action": "aim", "filename": "miner_v06_mining_laser_aim.png" },
+        { "order": 3, "action": "fire", "filename": "miner_v06_mining_laser_fire.png" },
+        { "order": 4, "action": "recoil", "filename": "miner_v06_mining_laser_recoil.png" }
+      ]
+    },
+    {
+      "index": 7,
+      "id": "v07_solar_drill",
+      "labelRu": "Призматический солнечный бур",
+      "category": "ranged",
+      "currentReferencePrefix": "miner_v07_solar_drill",
+      "currentRuntimeScale": 1.0,
+      "requiredScaleAfterRedux": 1.0,
+      "equipment": "prismatic solar drill, orange-steel housing, claw-ring around one contained faceted cyan-violet crystal core, power cable",
+      "technologyAccents": "contained cyan and violet crystal core with a narrow internal hot accent; no external bloom",
+      "aimMuzzle": [430, 309],
+      "frames": [
+        { "order": 0, "action": "idle", "filename": "miner_v07_solar_drill_idle.png" },
+        { "order": 1, "action": "step", "filename": "miner_v07_solar_drill_step.png" },
+        { "order": 2, "action": "aim", "filename": "miner_v07_solar_drill_aim.png" },
+        { "order": 3, "action": "fire", "filename": "miner_v07_solar_drill_fire.png" },
+        { "order": 4, "action": "recoil", "filename": "miner_v07_solar_drill_recoil.png" }
+      ]
+    }
+  ],
+  "qa": {
+    "sourceOfTruth": "QA_CHECKLIST_RU.md",
+    "requiredChecks": [
+      "file count and exact naming",
+      "512x512 8-bit RGBA sRGB",
+      "real transparent alpha",
+      "safe bounds and transparent rows below baseline",
+      "pivot and anchor overlay",
+      "five-pose flipbook per tier",
+      "seven-idle progression overlay",
+      "68px thumbnail test",
+      "single-color silhouette test",
+      "aim-fire muzzle lock"
+    ],
+    "blockingDefects": [
+      "different master body between frames or tiers",
+      "baseline or pivot drift",
+      "per-frame autocentering",
+      "body scale drift",
+      "black or checkerboard background",
+      "external action VFX baked into sprite",
+      "microdetail-dependent readability",
+      "content crossing cell boundaries"
+    ]
+  },
+  "integration": {
+    "performedByThisPackage": false,
+    "legacyRuntimeScales": {
+      "v01_worn_pick": 1.0,
+      "v02_iron_pick": 1.0,
+      "v03_steel_pick": 1.0,
+      "v04_pneumatic_pick": 0.98,
+      "v05_super_pick": 1.37,
+      "v06_mining_laser": 1.05,
+      "v07_solar_drill": 1.0
+    },
+    "requiredRuntimeScalesAfterRedux": {
+      "v01_worn_pick": 1.0,
+      "v02_iron_pick": 1.0,
+      "v03_steel_pick": 1.0,
+      "v04_pneumatic_pick": 1.0,
+      "v05_super_pick": 1.0,
+      "v06_mining_laser": 1.0,
+      "v07_solar_drill": 1.0
+    },
+    "criticalStep": "Keep all legacy scales until the old PNG set is actually replaced; in the same future integration change, set every redux tier scale to 1.0, especially v05 1.37 to 1.0."
+  },
+  "documents": [
+    "PROMPT_RU.md",
+    "NEGATIVE_PROMPT_RU.txt",
+    "MASTER_BODY_AND_ANIMATION_SPEC_RU.md",
+    "REFERENCE_HANDOFF_RU.md",
+    "QA_CHECKLIST_RU.md"
+  ]
+}

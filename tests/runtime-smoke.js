@@ -163,13 +163,14 @@ global.Image = class StubImage {
   }
   set src(value) {
     this._src = String(value);
-    if (this._src.endsWith("depth-zero-terrain-runtime-atlas.png")) {
+    const canonicalSource = this._src.split("?", 1)[0];
+    if (canonicalSource.endsWith("depth-zero-terrain-runtime-atlas.png")) {
       this.naturalWidth = 1536;
       this.naturalHeight = 1024;
-    } else if (this._src.endsWith("depth-zero-ores-runtime-atlas.png")) {
+    } else if (canonicalSource.endsWith("depth-zero-ores-runtime-atlas.png")) {
       this.naturalWidth = 1774;
       this.naturalHeight = 887;
-    } else if (this._src.endsWith("depth-zero-vein-connectors-runtime-atlas.png")) {
+    } else if (canonicalSource.endsWith("depth-zero-vein-connectors-runtime-atlas.png")) {
       this.naturalWidth = 2560;
       this.naturalHeight = 1024;
     }
@@ -217,12 +218,15 @@ assert.equal(api.debugGetMinerSpriteVariant({ toolTier: 7, laserUnlocked: true, 
 assert.equal(api.debugGetMinerSpriteVariant({ toolTier: 7, laserUnlocked: true, solarDrillEnabled: true }).id, "v07_solar_drill");
 assert.equal(requestedImageSources.length, 8, "field atlases and only the active equipment tier should preload");
 assert.deepEqual(requestedImageSources.slice(0, 3), [
-  "assets/field/depth-zero-terrain-runtime-atlas.png",
+  "assets/field/depth-zero-terrain-runtime-atlas.png?v=visual-redux-2",
   "assets/field/depth-zero-ores-runtime-atlas.png",
   "assets/field/depth-zero-vein-connectors-runtime-atlas.png",
 ]);
 assert.ok(
-  requestedImageSources.slice(3).every((source) => source.startsWith("assets/characters/miner/miner_v01_worn_pick_")),
+  requestedImageSources.slice(3).every((source) => (
+    source.startsWith("assets/characters/miner/miner_v01_worn_pick_")
+    && source.endsWith("?v=visual-redux-2")
+  )),
 );
 assert.deepEqual(api.getSnapshot().fieldArt, {
   terrainReady: true,

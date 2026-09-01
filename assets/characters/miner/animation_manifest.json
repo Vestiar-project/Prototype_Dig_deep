@@ -2,11 +2,30 @@
   "format_version": 1,
   "game": "Глубина Нуль",
   "asset_set": "miner_equipment_progression",
+  "revision": "visual-redux-2",
+  "source_sheet": "docs/art-sources/visual-redux-2026-09-01/depth-zero-miner-sprite-sheet-5x7.png",
   "source_canvas": {
-    "width": 1024,
-    "height": 1024,
+    "width": 2560,
+    "height": 3584,
     "format": "PNG",
     "color_mode": "RGBA"
+  },
+  "sheet_layout": {
+    "columns": 5,
+    "rows": 7,
+    "cell_width": 512,
+    "cell_height": 512,
+    "row_order": [
+      "v01_worn_pick",
+      "v02_iron_pick",
+      "v03_steel_pick",
+      "v04_pneumatic_pick",
+      "v05_super_pick",
+      "v06_mining_laser",
+      "v07_solar_drill"
+    ],
+    "melee_column_order": ["idle", "step", "prepare", "contact", "recoil"],
+    "ranged_column_order": ["idle", "step", "aim", "fire", "recoil"]
   },
   "canvas": {
     "width": 512,
@@ -15,7 +34,7 @@
     "color_mode": "RGBA",
     "background": "transparent"
   },
-  "runtime_resample": "Lanczos",
+  "runtime_resample": "none; direct fixed-cell crop",
   "facing": "right",
   "baseline_y": 450,
   "pivot": {

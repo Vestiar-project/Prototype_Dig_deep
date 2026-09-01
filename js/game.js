@@ -81,6 +81,8 @@ const FINAL_LAYER_DEPTH_METERS = Math.max(
 const WORKSHOP_FIRST_RANK_CAP = 4;
 const WORKSHOP_BREAKTHROUGH_CAP = 4;
 const WORKSHOP_LEVEL_CAP = 35;
+const VISUAL_ASSET_REVISION = 'visual-redux-2';
+const visualAssetSource = (source) => `${source}?v=${VISUAL_ASSET_REVISION}`;
 const UPGRADE_ICON_DIRECTORY = 'assets/icons/upgrades';
 const MINER_SPRITE_DIRECTORY = 'assets/characters/miner';
 const FIELD_TERRAIN_ATLAS_SOURCE = 'assets/field/depth-zero-terrain-runtime-atlas.png';
@@ -157,19 +159,32 @@ const FIELD_ORE_NODE_TRANSFORM_CACHE = new WeakMap();
 const MINER_SPRITE_CANVAS_SIZE = 512;
 const MINER_SPRITE_PIVOT_X = 193;
 const MINER_SPRITE_PIVOT_Y = 450;
-const MINER_SPRITE_SCALE = 0.23;
+// Runtime art is intentionally larger than the old illustrated pass. The
+// gameplay figure now reads as a character at normal zoom instead of a moving
+// patch of terrain detail. New visual-redux sprites are authored to this size.
+const MINER_SPRITE_SCALE = 0.275;
 const MINER_SPRITE_BASELINE_OFFSET = 22;
+const MINER_ACTION_HOLD_SECONDS = Object.freeze({
+  idle: 0.11,
+  step: 0.1,
+  prepare: 0.075,
+  aim: 0.085,
+  contact: 0.075,
+  fire: 0.075,
+  recoil: 0.12,
+});
 const MINER_SPRITE_VARIANTS = Object.freeze([
   Object.freeze({ id: 'v01_worn_pick', tier: 1, ranged: false, scale: 1 }),
   Object.freeze({ id: 'v02_iron_pick', tier: 2, ranged: false, scale: 1 }),
   Object.freeze({ id: 'v03_steel_pick', tier: 3, ranged: false, scale: 1 }),
-  Object.freeze({ id: 'v04_pneumatic_pick', tier: 4, ranged: false, scale: 0.98 }),
-  Object.freeze({ id: 'v05_super_pick', tier: 5, ranged: false, scale: 1.37 }),
-  Object.freeze({ id: 'v06_mining_laser', tier: 6, ranged: true, scale: 1.05 }),
+  Object.freeze({ id: 'v04_pneumatic_pick', tier: 4, ranged: false, scale: 1 }),
+  Object.freeze({ id: 'v05_super_pick', tier: 5, ranged: false, scale: 1 }),
+  Object.freeze({ id: 'v06_mining_laser', tier: 6, ranged: true, scale: 1 }),
   Object.freeze({ id: 'v07_solar_drill', tier: 7, ranged: true, scale: 1 }),
 ]);
 const MINER_SPRITE_CACHE = new Map();
 let activeMinerSpriteVariantId = null;
+let minerSpriteActionState = { variant: null, action: 'idle', since: 0 };
 const STORAGE_KEY = 'depth-zero-save-v1';
 const CAMPAIGN = Object.freeze({
   requiredLifetimeChunks: 4_000,
@@ -1934,6 +1949,7 @@ function startRun(options = {}) {
   state.floaters.length = 0;
   state.beams.length = 0;
   state.shocks.length = 0;
+  DRONE_VISUAL_STATE.clear();
   hideAllScreens();
   updateUtilityNavState();
   ui.runHud?.classList.remove('hidden');
@@ -7459,10 +7475,12 @@ function detonate(x, y, directionX = 0, directionY = 1, options = {}) {
   const noProcs = Boolean(options.noProcs);
   const source = options.source || 'bomb';
   sound.boom();
-  state.shake = Math.max(state.shake, 15);
-  flash('#f0a24c', 0.28);
+  // Proc rolls stay in their original gameplay order. Cosmetic timing and
+  // particle budgets must not decide which upgrade effect wins a seeded run.
   const volatile = !noProcs && (stats.volatileBombChance || 0) > 0 && Math.random() < procChance(stats.volatileBombChance, 0.1);
   const sticky = !noProcs && (stats.stickyBombChance || 0) > 0 && Math.random() < procChance(stats.stickyBombChance, 0.12);
+  state.shake = Math.max(state.shake, volatile ? 12 : 9);
+  flash(volatile ? '#e66b43' : '#d99a54', volatile ? 0.24 : 0.14);
   const beacon = getCrewBeacon();
   let blastX = x;
   let blastY = y;
@@ -7557,29 +7575,53 @@ function detonate(x, y, directionX = 0, directionY = 1, options = {}) {
   state.shocks.push({
     x: blastX,
     y: blastY,
-    life: 0.48,
-    maxLife: 0.48,
+    life: 0.34,
+    maxLife: 0.34,
     tick: Infinity,
     radius,
     color: volatile ? '#ff6f4e' : '#ffc45d',
     kind: 'blast',
   });
-  const blastParticleCount = REDUCED_MOTION ? 14 : 26;
-  for (let index = 0; index < blastParticleCount; index += 1) {
+  const blastParticleSlots = REDUCED_MOTION ? 14 : 26;
+  const visibleBlastParticleCount = REDUCED_MOTION ? 9 : 18;
+  for (let index = 0; index < blastParticleSlots; index += 1) {
     const angle = Math.random() * Math.PI * 2;
     const speed = 55 + Math.random() * 180;
+    const size = 2 + Math.random() * 5;
+    const life = 0.42 + Math.random() * 0.34;
+    // Preserve the historic number of cosmetic RNG reads so visual density
+    // cannot perturb seeded mechanics, while only retaining the calmer budget.
+    if (index >= visibleBlastParticleCount) continue;
     state.particles.push({
       x: blastX,
       y: blastY,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
-      size: 2 + Math.random() * 6,
-      color: index % 3 ? '#e06b3e' : '#ffd67d',
-      life: 0.65 + Math.random() * 0.5,
-      maxLife: 1.1,
+      size,
+      color: index % 4 === 0 ? VFX_PALETTE.hot : index % 3 === 0 ? VFX_PALETTE.bone : VFX_PALETTE.rust,
+      life,
+      maxLife: 0.76,
       gravity: 80,
-      glow: true,
-      kind: index % 4 === 0 ? 'blast-chip' : 'blast-ember',
+      glow: index % 3 === 1,
+      kind: index % 3 === 0 ? 'blast-chip' : 'blast-ember',
+    });
+  }
+  const smokeCount = REDUCED_MOTION ? 3 : 6;
+  for (let index = 0; index < smokeCount; index += 1) {
+    const angle = vfxFraction(blastX, blastY, index, 1) * Math.PI * 2;
+    const speed = 12 + vfxFraction(blastX, blastY, index, 2) * 34;
+    state.particles.push({
+      x: blastX + Math.cos(angle) * radius * 0.12,
+      y: blastY + Math.sin(angle) * radius * 0.12,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 14,
+      size: 7 + vfxFraction(blastX, blastY, index, 3) * 8,
+      color: index % 2 ? VFX_PALETTE.smoke : VFX_PALETTE.smokeWarm,
+      life: 0.52 + vfxFraction(blastX, blastY, index, 4) * 0.32,
+      maxLife: 0.84,
+      gravity: -8,
+      glow: false,
+      kind: 'blast-smoke',
     });
   }
 }
@@ -8480,11 +8522,16 @@ function updateRun(delta, now = performance.now()) {
 
 function dronePosition(index, now = state.elapsed) {
   const count = Math.max(1, Math.floor(stats.droneCount));
-  const angle = now * (1.2 + index * 0.07) + index / count * Math.PI * 2;
-  const radius = 56 + (index % 2) * 14;
+  const outerRing = count > 4 && index >= 4;
+  const ringIndex = outerRing ? index - 4 : index;
+  const ringCount = outerRing ? Math.max(1, count - 4) : Math.min(4, count);
+  const angularSpeed = outerRing ? -0.52 : 0.66;
+  const phaseOffset = outerRing ? Math.PI * 0.25 : 0;
+  const angle = now * angularSpeed + ringIndex / ringCount * Math.PI * 2 + phaseOffset;
+  const radius = outerRing ? 76 : 55;
   return {
     x: state.player.x + Math.cos(angle) * radius,
-    y: state.player.y - 20 + Math.sin(angle * 1.2) * radius * 0.45,
+    y: state.player.y - 22 + Math.sin(angle) * radius * (outerRing ? 0.34 : 0.3),
   };
 }
 
@@ -8589,28 +8636,44 @@ function droneAttack() {
     advanceDemolitionCombo('drone', comboTarget);
     const drillVisual = clamp(((stats.dronePower || 0.75) - 0.75) / 1.8, 0, 1);
     const batteryVisual = clamp(((stats.droneLifetime || 0.75) - 0.75) / 0.25, 0, 1);
+    const aimAngle = Math.atan2(target.y - origin.y, target.x - origin.x);
+    DRONE_VISUAL_STATE.set(index, {
+      aimAngle,
+      firedAt: state.elapsed,
+      fireUntil: state.elapsed + 0.14,
+    });
     state.beams.push({
       x: origin.x,
       y: origin.y,
       x2: target.x,
       y2: target.y,
       color: '#76dbff',
-      life: 0.2 + batteryVisual * 0.08,
-      maxLife: 0.2 + batteryVisual * 0.08,
-      width: 4 + drillVisual * 3,
+      life: 0.1 + batteryVisual * 0.02,
+      maxLife: 0.1 + batteryVisual * 0.02,
+      width: 3.2 + drillVisual * 2.2,
       kind: 'drone',
+      droneIndex: index,
     });
     state.shocks.push({
       x: target.x,
       y: target.y,
-      life: 0.24,
-      maxLife: 0.24,
+      life: 0.2,
+      maxLife: 0.2,
       tick: Infinity,
       radius: 12 + drillVisual * 8,
       color: '#8deaff',
       kind: 'drone-impact',
     });
-    spawnSparks(target.x, target.y, '#8deaff', 3 + Math.round(drillVisual * 4));
+    const sparkStart = state.particles.length;
+    const sparkRandomBudget = 3 + Math.round(drillVisual * 4);
+    const sparkVisibleBudget = REDUCED_MOTION
+      ? Math.max(1, Math.ceil((2 + Math.round(drillVisual * 2)) * 0.55))
+      : 2 + Math.round(drillVisual * 2);
+    spawnSparks(target.x, target.y, '#8deaff', sparkRandomBudget);
+    const spawnedSparkCount = state.particles.length - sparkStart;
+    if (spawnedSparkCount > sparkVisibleBudget) {
+      state.particles.splice(sparkStart + sparkVisibleBudget, spawnedSparkCount - sparkVisibleBudget);
+    }
     if ((stats.droneBombChance || 0) > 0 && Math.random() < procChance(stats.droneBombChance, 0.12)) {
       const dx = target.x - origin.x;
       const dy = target.y - origin.y;
@@ -8711,7 +8774,7 @@ function updateEffects(delta) {
   }
   updateMicroEventIndicator();
   updatePerkStatusRail();
-  state.shake = Math.max(0, state.shake - delta * 32);
+  state.shake = Math.max(0, state.shake - delta * 46);
 }
 
 function horizontalCameraBounds(worldWidth, viewportWidth) {
@@ -8765,6 +8828,32 @@ const TERRAIN_OPEN_TOP = 1;
 const TERRAIN_OPEN_RIGHT = 2;
 const TERRAIN_OPEN_BOTTOM = 4;
 const TERRAIN_OPEN_LEFT = 8;
+const TERRAIN_MATERIAL_INTERLOCK_ALONG = Object.freeze([
+  0,
+  4.5,
+  9.5,
+  14.5,
+  19.5,
+  24.5,
+  TILE_SIZE + 1,
+]);
+const TERRAIN_MATERIAL_INTERLOCK_MAX_DEPTH = 27;
+const TERRAIN_MATERIAL_LOBE_PERIOD = 61;
+const TERRAIN_MATERIAL_NOISE_SALTS = Object.freeze({
+  loam: 0,
+  dirt: 11,
+  stone: 23,
+  deepstone: 37,
+  bedrock: 53,
+});
+const TERRAIN_MATERIAL_DENSITY_RANK = Object.freeze({
+  loam: 0,
+  dirt: 1,
+  stone: 2,
+  deepstone: 3,
+  bedrock: 4,
+});
+const TERRAIN_VOID_FEATHER_WIDTH = 9;
 
 // Static, allocation-free palettes. The three base tones are selected from
 // coarse world-space cells so the mine reads as broad geological masses rather
@@ -8840,10 +8929,34 @@ const GEO_COMIC_COLORS = Object.freeze({
   damp: '#3f7778',
   dampLight: '#78a8a1',
   bone: '#c8b98d',
-  root: '#4a3028',
-  rootLight: '#8a573d',
+  rootShadow: '#281d1b',
+  root: '#5b3d31',
+  rootLight: '#9a6242',
   cable: '#493337',
 });
+
+const VFX_PALETTE = Object.freeze({
+  ink: '#080d11',
+  smoke: '#262724',
+  smokeWarm: '#3a2b24',
+  rust: '#b85f37',
+  ember: '#e58a45',
+  hot: '#ffd98b',
+  bone: '#efe0b3',
+  patina: '#58bdb4',
+  patinaLight: '#bdece1',
+});
+const DRONE_VISUAL_STATE = new Map();
+
+function vfxFraction(x, y, index = 0, salt = 0) {
+  const wave = Math.sin(
+    Number(x) * 0.071
+    + Number(y) * 0.113
+    + Number(index) * 17.17
+    + Number(salt) * 31.91,
+  ) * 43758.5453;
+  return wave - Math.floor(wave);
+}
 
 // Ore identity is carried by silhouette and material as well as colour. Keep
 // this table render-only: it must never influence deposit generation or yield.
@@ -8860,9 +8973,9 @@ const ORE_RENDER_STYLES = Object.freeze({
   star_core: Object.freeze({ material: 'molten-star', nodeWidth: 19, nodeHeight: 19 }),
 });
 
-// Only the deterministic substrate of a solid tile is cached. Depth tint,
-// exposed-edge landmarks, ore, damage cracks and every animated effect stay on
-// the main canvas so their state can change independently from this surface.
+// Only deterministic solid-tile art is cached. The clipped depth tint lives in
+// the same surface so it cannot refill a feathered cave edge with a 28 px box;
+// landmarks, ore, damage cracks and animated effects stay on the main canvas.
 const terrainBaseCache = new Map();
 const terrainBaseCacheCounters = {
   hits: 0,
@@ -8913,7 +9026,7 @@ function requestFieldArtAssets() {
   terrainImage.onerror = () => {
     FIELD_ART_RUNTIME.terrainReady = false;
   };
-  terrainImage.src = FIELD_TERRAIN_ATLAS_SOURCE;
+  terrainImage.src = visualAssetSource(FIELD_TERRAIN_ATLAS_SOURCE);
 
   const oreImage = new window.Image();
   FIELD_ART_RUNTIME.oreImage = oreImage;
@@ -9015,7 +9128,7 @@ function drawMirroredAtlasRegion(renderContext, image, region, sourceX, sourceY,
   }
 }
 
-function drawRuntimeTerrainTexture(renderContext, x, y, tx, ty, kind) {
+function drawRuntimeTerrainTexture(renderContext, x, y, tx, ty, kind, opacityOverride = null) {
   const region = FIELD_TERRAIN_ATLAS_LAYOUT[kind] || FIELD_TERRAIN_ATLAS_LAYOUT.stone;
   if (
     !FIELD_ART_RUNTIME.terrainReady
@@ -9036,7 +9149,16 @@ function drawRuntimeTerrainTexture(renderContext, x, y, tx, ty, kind) {
   try {
     renderContext.save();
     renderContext.globalCompositeOperation = 'source-atop';
-    renderContext.globalAlpha = 0.96;
+    // Preserve the authored geology while letting the flatter palette beneath
+    // it absorb tiny highlights that became noise at 28 px per world tile.
+    const textureOpacity = kind === 'final_seal'
+      ? 0.96
+      : kind === 'loam' || kind === 'dirt'
+        ? 0.8
+        : 0.75;
+    renderContext.globalAlpha = Number.isFinite(opacityOverride)
+      ? clamp(opacityOverride, 0, 1)
+      : textureOpacity;
     renderContext.imageSmoothingEnabled = true;
     drawMirroredAtlasRegion(
       renderContext,
@@ -9057,6 +9179,274 @@ function drawRuntimeTerrainTexture(renderContext, x, y, tx, ty, kind) {
   }
 }
 
+function drawTerrainEdgeBand(renderContext, x, y, side, width, edgeColor, innerColor) {
+  if (typeof renderContext.createLinearGradient !== 'function') return;
+  let gradient;
+  if (side === TERRAIN_OPEN_TOP) {
+    gradient = renderContext.createLinearGradient(x, y, x, y + width);
+    renderContext.fillStyle = gradient;
+    gradient.addColorStop(0, edgeColor);
+    gradient.addColorStop(1, innerColor);
+    renderContext.fillRect(x, y, TILE_SIZE + 1, width);
+    return;
+  }
+  if (side === TERRAIN_OPEN_RIGHT) {
+    gradient = renderContext.createLinearGradient(x + TILE_SIZE + 1, y, x + TILE_SIZE + 1 - width, y);
+    renderContext.fillStyle = gradient;
+    gradient.addColorStop(0, edgeColor);
+    gradient.addColorStop(1, innerColor);
+    renderContext.fillRect(x + TILE_SIZE + 1 - width, y, width, TILE_SIZE + 1);
+    return;
+  }
+  if (side === TERRAIN_OPEN_BOTTOM) {
+    gradient = renderContext.createLinearGradient(x, y + TILE_SIZE + 1, x, y + TILE_SIZE + 1 - width);
+    renderContext.fillStyle = gradient;
+    gradient.addColorStop(0, edgeColor);
+    gradient.addColorStop(1, innerColor);
+    renderContext.fillRect(x, y + TILE_SIZE + 1 - width, TILE_SIZE + 1, width);
+    return;
+  }
+  gradient = renderContext.createLinearGradient(x, y, x + width, y);
+  renderContext.fillStyle = gradient;
+  gradient.addColorStop(0, edgeColor);
+  gradient.addColorStop(1, innerColor);
+  renderContext.fillRect(x, y, width, TILE_SIZE + 1);
+}
+
+function terrainMaterialBoundaryIdentity(tx, ty, side) {
+  return {
+    x: tx + (side === TERRAIN_OPEN_RIGHT ? 1 : 0),
+    y: ty + (side === TERRAIN_OPEN_BOTTOM ? 1 : 0),
+    vertical: side === TERRAIN_OPEN_LEFT || side === TERRAIN_OPEN_RIGHT,
+  };
+}
+
+function terrainMaterialEdgePoint(x, y, side, along, inward) {
+  if (side === TERRAIN_OPEN_TOP) return { x: x + along, y: y + inward };
+  if (side === TERRAIN_OPEN_RIGHT) return { x: x + TILE_SIZE + 1 - inward, y: y + along };
+  if (side === TERRAIN_OPEN_BOTTOM) return { x: x + along, y: y + TILE_SIZE + 1 - inward };
+  return { x: x + inward, y: y + along };
+}
+
+function terrainMaterialInterlockProfile(tx, ty, side, kind, neighborKind) {
+  const boundary = terrainMaterialBoundaryIdentity(tx, ty, side);
+  const kindSalt = TERRAIN_MATERIAL_NOISE_SALTS[kind] || 0;
+  const neighborSalt = TERRAIN_MATERIAL_NOISE_SALTS[neighborKind] || 0;
+  const salt = 210 + kindSalt * 3 + neighborSalt * 7 + (boundary.vertical ? 97 : 0);
+  const maximumDepth = neighborKind === 'bedrock' ? 19 : TERRAIN_MATERIAL_INTERLOCK_MAX_DEPTH;
+  const lineCoordinate = boundary.vertical ? boundary.x : boundary.y;
+  const segmentStart = (boundary.vertical ? boundary.y : boundary.x) * TILE_SIZE;
+  const depths = TERRAIN_MATERIAL_INTERLOCK_ALONG.map((along) => {
+    // Clamp the 1 px drawing overlap to the logical 28 px tile span so the
+    // endpoint is exactly shared with the following cached tile.
+    const worldAlong = segmentStart + Math.min(along, TILE_SIZE);
+    const baselineCell = Math.floor(worldAlong / 19);
+    const baselineLocal = (worldAlong - baselineCell * 19) / 19;
+    const baselineEase = baselineLocal * baselineLocal * (3 - 2 * baselineLocal);
+    const baselineStart = tileNoise(lineCoordinate, baselineCell, salt + 10);
+    const baselineEnd = tileNoise(lineCoordinate, baselineCell + 1, salt + 10);
+    const baselineNoise = baselineStart + (baselineEnd - baselineStart) * baselineEase;
+    let depth = 3 + Math.round(baselineNoise * 7);
+
+    const lobeCell = Math.floor(worldAlong / TERRAIN_MATERIAL_LOBE_PERIOD);
+    for (let candidate = lobeCell - 1; candidate <= lobeCell + 1; candidate += 1) {
+      const centerNoise = tileNoise(lineCoordinate, candidate, salt + 20);
+      const widthNoise = tileNoise(lineCoordinate * 3 + 1, candidate * 5 + 1, salt + 21);
+      const depthNoise = tileNoise(lineCoordinate * 5 + 2, candidate * 7 + 2, salt + 22);
+      const center = (candidate + 0.5) * TERRAIN_MATERIAL_LOBE_PERIOD + (centerNoise - 0.5) * 20;
+      const halfWidth = neighborKind === 'bedrock'
+        ? 10 + widthNoise * 6
+        : 14 + widthNoise * 8;
+      const linearInfluence = Math.max(0, 1 - Math.abs(worldAlong - center) / halfWidth);
+      const smoothInfluence = linearInfluence * linearInfluence * (3 - 2 * linearInfluence);
+      const lobeDepth = neighborKind === 'bedrock'
+        ? 13 + Math.floor(depthNoise * 7)
+        : 20 + Math.floor(depthNoise * 8);
+      depth = Math.max(depth, Math.round(5 + (lobeDepth - 5) * smoothInfluence));
+    }
+
+    return Math.min(maximumDepth, depth);
+  });
+
+  const pocketNoise = tileNoise(boundary.x * 3 + 1, boundary.y * 11 + 1, salt + 6);
+  let pocket = null;
+  if (pocketNoise > 0.78 && neighborKind !== 'bedrock') {
+    const alongNoise = tileNoise(boundary.x * 5, boundary.y * 7, salt + 7);
+    const inwardNoise = tileNoise(boundary.x * 3, boundary.y * 11, salt + 8);
+    pocket = {
+      along: 3 + alongNoise * (TILE_SIZE - 5),
+      inward: 17 + inwardNoise * 7,
+      alongRadius: 3.2 + alongNoise * 2.8,
+      inwardRadius: 2 + inwardNoise * 2.6,
+    };
+  }
+
+  return {
+    boundary,
+    points: TERRAIN_MATERIAL_INTERLOCK_ALONG.map((along, index) => ({
+      along,
+      inward: depths[index],
+    })),
+    pocket,
+  };
+}
+
+function traceTerrainMaterialInterlock(renderContext, x, y, tx, ty, side, kind, neighborKind) {
+  const profile = terrainMaterialInterlockProfile(tx, ty, side, kind, neighborKind);
+  const profilePoints = profile.points.map((point) => (
+    terrainMaterialEdgePoint(x, y, side, point.along, point.inward)
+  ));
+
+  renderContext.beginPath();
+  const boundaryStart = terrainMaterialEdgePoint(x, y, side, 0, 0);
+  const boundaryEnd = terrainMaterialEdgePoint(x, y, side, TILE_SIZE + 1, 0);
+  renderContext.moveTo(boundaryStart.x, boundaryStart.y);
+  renderContext.lineTo(boundaryEnd.x, boundaryEnd.y);
+  const reversedProfilePoints = [...profilePoints].reverse();
+  renderContext.lineTo(reversedProfilePoints[0].x, reversedProfilePoints[0].y);
+  for (let index = 0; index < reversedProfilePoints.length - 1; index += 1) {
+    const previous = reversedProfilePoints[Math.max(0, index - 1)];
+    const current = reversedProfilePoints[index];
+    const next = reversedProfilePoints[index + 1];
+    const following = reversedProfilePoints[Math.min(reversedProfilePoints.length - 1, index + 2)];
+    renderContext.bezierCurveTo(
+      current.x + (next.x - previous.x) / 6,
+      current.y + (next.y - previous.y) / 6,
+      next.x - (following.x - current.x) / 6,
+      next.y - (following.y - current.y) / 6,
+      next.x,
+      next.y,
+    );
+  }
+  renderContext.closePath();
+
+  // A rare detached pocket makes some contacts feel geological without
+  // turning every boundary into an ore-like dotted line.
+  if (profile.pocket) {
+    const center = terrainMaterialEdgePoint(
+      x,
+      y,
+      side,
+      profile.pocket.along,
+      profile.pocket.inward,
+    );
+    renderContext.moveTo(center.x + profile.pocket.alongRadius, center.y);
+    renderContext.ellipse(
+      center.x,
+      center.y,
+      profile.pocket.alongRadius,
+      profile.pocket.inwardRadius,
+      profile.boundary.vertical ? Math.PI * 0.5 : 0,
+      0,
+      Math.PI * 2,
+    );
+  }
+}
+
+function drawTerrainMaterialInterlock(renderContext, x, y, tx, ty, side, kind, neighborKind) {
+  const neighborPalette = TERRAIN_PALETTES[neighborKind];
+  if (!neighborPalette) return;
+  renderContext.save();
+  traceTerrainMaterialInterlock(renderContext, x, y, tx, ty, side, kind, neighborKind);
+  renderContext.clip();
+  const textured = drawRuntimeTerrainTexture(renderContext, x, y, tx, ty, neighborKind, 0.96);
+  if (!textured) {
+    const neighborColor = neighborPalette.base[Math.floor(neighborPalette.base.length * 0.5)];
+    renderContext.globalCompositeOperation = 'source-atop';
+    renderContext.globalAlpha = 0.94;
+    renderContext.fillStyle = neighborColor;
+    renderContext.fillRect(x, y, TILE_SIZE + 1, TILE_SIZE + 1);
+  }
+  renderContext.restore();
+}
+
+function drawTerrainMaterialTransitions(renderContext, x, y, tx, ty, kind) {
+  if (kind === 'final_seal') return;
+  const currentRank = TERRAIN_MATERIAL_DENSITY_RANK[kind];
+  if (!Number.isFinite(currentRank)) return;
+  const neighbors = [
+    { side: TERRAIN_OPEN_TOP, dx: 0, dy: -1 },
+    { side: TERRAIN_OPEN_RIGHT, dx: 1, dy: 0 },
+    { side: TERRAIN_OPEN_BOTTOM, dx: 0, dy: 1 },
+    { side: TERRAIN_OPEN_LEFT, dx: -1, dy: 0 },
+  ];
+
+  const intrusions = [];
+  for (const neighbor of neighbors) {
+    const neighborKind = state.world?.getTile(tx + neighbor.dx, ty + neighbor.dy)?.kind;
+    if (!neighborKind || neighborKind === 'air' || neighborKind === kind || neighborKind === 'final_seal') continue;
+    const neighborRank = TERRAIN_MATERIAL_DENSITY_RANK[neighborKind];
+    if (!Number.isFinite(neighborRank) || neighborRank <= currentRank) continue;
+    intrusions.push({ ...neighbor, neighborKind, rank: neighborRank });
+  }
+
+  // Draw the densest neighbor last where two intrusions meet at a corner.
+  intrusions.sort((a, b) => a.rank - b.rank);
+  for (const intrusion of intrusions) {
+    drawTerrainMaterialInterlock(
+      renderContext,
+      x,
+      y,
+      tx,
+      ty,
+      intrusion.side,
+      kind,
+      intrusion.neighborKind,
+    );
+  }
+}
+
+function drawTerrainVoidFeather(renderContext, x, y, palette, openMask) {
+  if (!openMask) return;
+  const openSides = [
+    TERRAIN_OPEN_TOP,
+    TERRAIN_OPEN_RIGHT,
+    TERRAIN_OPEN_BOTTOM,
+    TERRAIN_OPEN_LEFT,
+  ];
+
+  // Pull the cave colour into the rock before easing away a little opacity.
+  // The collision edge remains exact, but the visual contact no longer reads
+  // as a row of hard-edged 28 px cut-outs.
+  renderContext.save();
+  renderContext.globalCompositeOperation = 'source-atop';
+  renderContext.globalAlpha = 0.46;
+  for (const side of openSides) {
+    if (!(openMask & side)) continue;
+    drawTerrainEdgeBand(
+      renderContext,
+      x,
+      y,
+      side,
+      TERRAIN_VOID_FEATHER_WIDTH,
+      palette.shadow,
+      `${palette.shadow}00`,
+    );
+  }
+  renderContext.restore();
+
+  // destination-out is safe on the isolated cached surface. In the rare
+  // direct-to-main-canvas fallback it would erase the cave backdrop as well,
+  // so that path keeps only the colour feather above.
+  if (renderContext === ctx) return;
+  renderContext.save();
+  renderContext.globalCompositeOperation = 'destination-out';
+  renderContext.globalAlpha = 0.18;
+  for (const side of openSides) {
+    if (!(openMask & side)) continue;
+    drawTerrainEdgeBand(
+      renderContext,
+      x,
+      y,
+      side,
+      TERRAIN_VOID_FEATHER_WIDTH,
+      '#000000',
+      '#00000000',
+    );
+  }
+  renderContext.restore();
+}
+
 function drawTerrainBaseDirect(renderContext, x, y, tx, ty, kind, palette, baseIndex, openMask) {
   drawChippedTerrainCell(x, y, tx, ty, openMask, palette.base[baseIndex], renderContext);
   const runtimeTextureDrawn = drawRuntimeTerrainTexture(renderContext, x, y, tx, ty, kind);
@@ -9064,7 +9454,15 @@ function drawTerrainBaseDirect(renderContext, x, y, tx, ty, kind, palette, baseI
     drawVoxelMassTexture(x, y, tx, ty, palette, openMask, renderContext);
     drawTerrainStrata(x, y, tx, ty, kind, palette, openMask, renderContext);
   }
-  drawExposedVoxelFaces(x, y, tx, ty, palette, openMask, renderContext);
+  renderContext.save();
+  if (openMask) {
+    traceChippedTerrainCell(renderContext, x, y, tx, ty, openMask);
+    renderContext.clip();
+  }
+  drawTerrainDepthTone(renderContext, x, y, tx, ty, openMask);
+  drawTerrainMaterialTransitions(renderContext, x, y, tx, ty, kind);
+  drawTerrainVoidFeather(renderContext, x, y, palette, openMask);
+  renderContext.restore();
 }
 
 function drawTerrainBaseLayer(x, y, tx, ty, kind, palette, baseIndex, openMask) {
@@ -9122,13 +9520,7 @@ function getOpenTerrainMask(tx, ty) {
   return mask;
 }
 
-function drawChippedTerrainCell(x, y, tx, ty, openMask, fillStyle, renderContext = ctx) {
-  renderContext.fillStyle = fillStyle;
-  if (openMask === 0) {
-    renderContext.fillRect(x, y, TILE_SIZE + 1, TILE_SIZE + 1);
-    return;
-  }
-
+function traceChippedTerrainCell(renderContext, x, y, tx, ty, openMask) {
   const topOpen = (openMask & TERRAIN_OPEN_TOP) !== 0;
   const rightOpen = (openMask & TERRAIN_OPEN_RIGHT) !== 0;
   const bottomOpen = (openMask & TERRAIN_OPEN_BOTTOM) !== 0;
@@ -9141,36 +9533,52 @@ function drawChippedTerrainCell(x, y, tx, ty, openMask, fillStyle, renderContext
 
   // Only edges touching air are inset. Closed sides still overlap their solid
   // neighbor by one pixel, preventing hairline seams while the camera moves.
+  const topLeftX = x + (leftOpen ? chipC : 0);
+  const topLeftY = y + (topOpen ? chipA : 0);
+  const topRightX = rightEdge - (rightOpen ? chipB : 0);
+  const topRightY = y + (topOpen ? chipB : 0);
+  const bottomRightX = rightEdge - (rightOpen ? chipC : 0);
+  const bottomRightY = bottomEdge - (bottomOpen ? chipA : 0);
+  const bottomLeftX = x + (leftOpen ? chipA : 0);
+  const bottomLeftY = bottomEdge - (bottomOpen ? chipB : 0);
+
   renderContext.beginPath();
-  renderContext.moveTo(x + (leftOpen ? chipC : 0), y + (topOpen ? chipA : 0));
-  renderContext.lineTo(x + 5, y + (topOpen ? chipB : 0));
-  renderContext.lineTo(x + 10, y + (topOpen ? chipB : 0));
-  renderContext.lineTo(x + 10, y + (topOpen ? chipC : 0));
-  renderContext.lineTo(x + 18, y + (topOpen ? chipC : 0));
-  renderContext.lineTo(x + 18, y + (topOpen ? chipA : 0));
-  renderContext.lineTo(x + 24, y + (topOpen ? chipA : 0));
-  renderContext.lineTo(rightEdge - (rightOpen ? chipB : 0), y + (topOpen ? chipB : 0));
-  renderContext.lineTo(rightEdge - (rightOpen ? chipC : 0), y + 6);
-  renderContext.lineTo(rightEdge - (rightOpen ? chipC : 0), y + 11);
-  renderContext.lineTo(rightEdge - (rightOpen ? chipA : 0), y + 11);
-  renderContext.lineTo(rightEdge - (rightOpen ? chipA : 0), y + 18);
-  renderContext.lineTo(rightEdge - (rightOpen ? chipB : 0), y + 18);
-  renderContext.lineTo(rightEdge - (rightOpen ? chipB : 0), y + 24);
-  renderContext.lineTo(rightEdge - (rightOpen ? chipC : 0), bottomEdge - (bottomOpen ? chipA : 0));
-  renderContext.lineTo(x + 24, bottomEdge - (bottomOpen ? chipB : 0));
-  renderContext.lineTo(x + 18, bottomEdge - (bottomOpen ? chipB : 0));
-  renderContext.lineTo(x + 18, bottomEdge - (bottomOpen ? chipA : 0));
-  renderContext.lineTo(x + 10, bottomEdge - (bottomOpen ? chipA : 0));
-  renderContext.lineTo(x + 10, bottomEdge - (bottomOpen ? chipC : 0));
-  renderContext.lineTo(x + 5, bottomEdge - (bottomOpen ? chipC : 0));
-  renderContext.lineTo(x + (leftOpen ? chipA : 0), bottomEdge - (bottomOpen ? chipB : 0));
-  renderContext.lineTo(x + (leftOpen ? chipB : 0), y + 24);
-  renderContext.lineTo(x + (leftOpen ? chipB : 0), y + 18);
-  renderContext.lineTo(x + (leftOpen ? chipC : 0), y + 18);
-  renderContext.lineTo(x + (leftOpen ? chipC : 0), y + 11);
-  renderContext.lineTo(x + (leftOpen ? chipA : 0), y + 11);
-  renderContext.lineTo(x + (leftOpen ? chipA : 0), y + 5);
+  renderContext.moveTo(topLeftX, topLeftY);
+  if (topOpen) {
+    renderContext.quadraticCurveTo(x + 7, y + chipB, x + 14, y + chipC);
+    renderContext.quadraticCurveTo(x + 21, y + chipA, topRightX, topRightY);
+  } else {
+    renderContext.lineTo(topRightX, topRightY);
+  }
+  if (rightOpen) {
+    renderContext.quadraticCurveTo(rightEdge - chipC, y + 7, rightEdge - chipA, y + 14);
+    renderContext.quadraticCurveTo(rightEdge - chipB, y + 21, bottomRightX, bottomRightY);
+  } else {
+    renderContext.lineTo(bottomRightX, bottomRightY);
+  }
+  if (bottomOpen) {
+    renderContext.quadraticCurveTo(x + 21, bottomEdge - chipB, x + 14, bottomEdge - chipA);
+    renderContext.quadraticCurveTo(x + 7, bottomEdge - chipC, bottomLeftX, bottomLeftY);
+  } else {
+    renderContext.lineTo(bottomLeftX, bottomLeftY);
+  }
+  if (leftOpen) {
+    renderContext.quadraticCurveTo(x + chipB, y + 21, x + chipC, y + 14);
+    renderContext.quadraticCurveTo(x + chipA, y + 7, topLeftX, topLeftY);
+  } else {
+    renderContext.lineTo(topLeftX, topLeftY);
+  }
   renderContext.closePath();
+}
+
+function drawChippedTerrainCell(x, y, tx, ty, openMask, fillStyle, renderContext = ctx) {
+  renderContext.fillStyle = fillStyle;
+  if (openMask === 0) {
+    renderContext.fillRect(x, y, TILE_SIZE + 1, TILE_SIZE + 1);
+    return;
+  }
+
+  traceChippedTerrainCell(renderContext, x, y, tx, ty, openMask);
   renderContext.fill();
 }
 
@@ -9236,38 +9644,6 @@ function drawVoxelMassTexture(x, y, tx, ty, palette, openMask, renderContext = c
   renderContext.globalAlpha = 1;
 }
 
-function drawExposedVoxelFaces(x, y, tx, ty, palette, openMask, renderContext = ctx) {
-  const faceA = 2 + Math.floor(tileNoise(tx, ty, 32) * 3);
-  const faceB = 2 + Math.floor(tileNoise(tx, ty, 33) * 3);
-
-  if (openMask & TERRAIN_OPEN_TOP) {
-    renderContext.fillStyle = palette.light;
-    renderContext.fillRect(x + 3, y + faceA, 5, 2);
-    renderContext.fillRect(x + 10, y + faceB, 4, 2);
-    renderContext.fillRect(x + 17, y + faceA, 6, 2);
-    renderContext.fillStyle = palette.side;
-    renderContext.fillRect(x + 7, y + faceA + 2, 4, 1);
-  }
-  if (openMask & TERRAIN_OPEN_LEFT) {
-    renderContext.fillStyle = palette.side;
-    renderContext.fillRect(x + faceB, y + 4, 2, 5);
-    renderContext.fillRect(x + faceA, y + 11, 2, 4);
-    renderContext.fillRect(x + faceB, y + 18, 2, 5);
-  }
-  if (openMask & TERRAIN_OPEN_RIGHT) {
-    renderContext.fillStyle = palette.shadow;
-    renderContext.fillRect(x + TILE_SIZE - faceA - 1, y + 4, 2, 5);
-    renderContext.fillRect(x + TILE_SIZE - faceB - 1, y + 11, 2, 4);
-    renderContext.fillRect(x + TILE_SIZE - faceA - 1, y + 18, 2, 5);
-  }
-  if (openMask & TERRAIN_OPEN_BOTTOM) {
-    renderContext.fillStyle = palette.shadow;
-    renderContext.fillRect(x + 3, y + TILE_SIZE - faceB - 1, 5, 2);
-    renderContext.fillRect(x + 10, y + TILE_SIZE - faceA - 1, 4, 2);
-    renderContext.fillRect(x + 17, y + TILE_SIZE - faceB - 1, 6, 2);
-  }
-}
-
 function terrainDepthFactor(tx, ty) {
   const clampedTx = clamp(Math.floor(tx), 0, WORLD_CONFIG.WIDTH - 1);
   const surface = state.world?.surface?.[clampedTx] ?? WORLD_CONFIG.SURFACE_BASE;
@@ -9278,14 +9654,15 @@ function terrainDepthFactor(tx, ty) {
   );
 }
 
-function drawTerrainDepthTone(x, y, tx, ty, openMask) {
+function drawTerrainDepthTone(renderContext, x, y, tx, ty, openMask) {
   const depth = terrainDepthFactor(tx, ty);
   if (depth <= 0.08) return;
   const edgeRelief = openMask ? 0.78 : 1;
-  ctx.globalAlpha = (0.025 + depth * 0.15) * edgeRelief;
-  ctx.fillStyle = depth > 0.72 ? '#03070c' : '#091017';
-  ctx.fillRect(x, y, TILE_SIZE + 1, TILE_SIZE + 1);
-  ctx.globalAlpha = 1;
+  renderContext.save();
+  renderContext.globalAlpha = (0.025 + depth * 0.15) * edgeRelief;
+  renderContext.fillStyle = depth > 0.72 ? '#03070c' : '#091017';
+  renderContext.fillRect(x, y, TILE_SIZE + 1, TILE_SIZE + 1);
+  renderContext.restore();
 }
 
 function drawFracturedStratumMark(x, y, tx, ty) {
@@ -9303,6 +9680,112 @@ function drawFracturedStratumMark(x, y, tx, ty) {
   ctx.lineTo(x + split - 2, y + splitY - 1);
   ctx.moveTo(x + split + 2, y + splitY + 1);
   ctx.lineTo(x + TILE_SIZE, y + rightY);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawRootFragment(anchorX, anchorY, axisX, axisY, length, hand = 1, forked = false) {
+  const magnitude = Math.max(0.001, Math.hypot(axisX, axisY));
+  const forwardX = axisX / magnitude;
+  const forwardY = axisY / magnitude;
+  const lateralX = -forwardY;
+  const lateralY = forwardX;
+  const side = hand < 0 ? -1 : 1;
+  const point = (forward, lateral = 0) => ({
+    x: anchorX + forwardX * forward + lateralX * lateral,
+    y: anchorY + forwardY * forward + lateralY * lateral,
+  });
+  const p2 = point(length * 0.65, side * -1.15);
+  const p3 = point(length, side * 2.15);
+
+  const traceUpper = (lateralOffset = 0) => {
+    const start = point(-2, lateralOffset);
+    const controlA = point(length * 0.08, side * 0.45 + lateralOffset);
+    const controlB = point(length * 0.19, side * 2.2 + lateralOffset);
+    const middle = point(length * 0.28, side * 1.7 + lateralOffset);
+    const controlC = point(length * 0.4, side * 1.15 + lateralOffset);
+    const controlD = point(length * 0.53, side * -1.45 + lateralOffset);
+    const end = point(length * 0.65, side * -1.15 + lateralOffset);
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.bezierCurveTo(controlA.x, controlA.y, controlB.x, controlB.y, middle.x, middle.y);
+    ctx.bezierCurveTo(controlC.x, controlC.y, controlD.x, controlD.y, end.x, end.y);
+  };
+  const traceTip = () => {
+    const controlA = point(length * 0.77, side * -1.25);
+    const controlB = point(length * 0.91, side * 2.05);
+    ctx.beginPath();
+    ctx.moveTo(p2.x, p2.y);
+    ctx.bezierCurveTo(controlA.x, controlA.y, controlB.x, controlB.y, p3.x, p3.y);
+  };
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // A wide, warm collar embeds the root into the textured terrain instead of
+  // leaving a bright line apparently glued to the cave background.
+  const collarRotation = Math.atan2(forwardY, forwardX) + Math.PI * 0.5;
+  ctx.globalAlpha = 0.7;
+  ctx.fillStyle = GEO_COMIC_COLORS.rootShadow;
+  ctx.beginPath();
+  ctx.ellipse(anchorX, anchorY, 4.5, 2.5, collarRotation, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = GEO_COMIC_COLORS.root;
+  ctx.beginPath();
+  ctx.ellipse(anchorX, anchorY, 3.4, 1.45, collarRotation, 0, Math.PI * 2);
+  ctx.fill();
+
+  traceUpper();
+  ctx.globalAlpha = 0.68;
+  ctx.strokeStyle = GEO_COMIC_COLORS.rootShadow;
+  ctx.lineWidth = 4.4;
+  ctx.stroke();
+  traceUpper();
+  ctx.globalAlpha = 0.92;
+  ctx.strokeStyle = GEO_COMIC_COLORS.root;
+  ctx.lineWidth = 2.8;
+  ctx.stroke();
+
+  // The final third is a separate narrow pass, producing an actual taper.
+  traceTip();
+  ctx.globalAlpha = 0.62;
+  ctx.strokeStyle = GEO_COMIC_COLORS.rootShadow;
+  ctx.lineWidth = 2.6;
+  ctx.stroke();
+  traceTip();
+  ctx.globalAlpha = 0.88;
+  ctx.strokeStyle = GEO_COMIC_COLORS.root;
+  ctx.lineWidth = 1.45;
+  ctx.stroke();
+
+  if (forked && length >= 16) {
+    const forkStart = point(length * 0.48, side * 0.15);
+    const forkControl = point(length * 0.55, side * 3.8);
+    const forkEnd = point(length * 0.59, side * 6.7);
+    ctx.beginPath();
+    ctx.moveTo(forkStart.x, forkStart.y);
+    ctx.quadraticCurveTo(forkControl.x, forkControl.y, forkEnd.x, forkEnd.y);
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = GEO_COMIC_COLORS.rootShadow;
+    ctx.lineWidth = 2.4;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(forkStart.x, forkStart.y);
+    ctx.quadraticCurveTo(forkControl.x, forkControl.y, forkEnd.x, forkEnd.y);
+    ctx.globalAlpha = 0.82;
+    ctx.strokeStyle = GEO_COMIC_COLORS.root;
+    ctx.lineWidth = 1.35;
+    ctx.stroke();
+  }
+
+  // A short, offset highlight gives volume without recreating the continuous
+  // orange wire that made the previous landmark clash with the new terrain.
+  traceUpper(side * -0.62);
+  ctx.globalAlpha = 0.32;
+  ctx.strokeStyle = GEO_COMIC_COLORS.rootLight;
+  ctx.lineWidth = 0.9;
   ctx.stroke();
   ctx.restore();
 }
@@ -9355,14 +9838,9 @@ function drawTerrainEdgeLandmark(x, y, tx, ty, palette, openMask) {
   // Near-surface roots terminate on exposed soil faces rather than floating
   // over the cave background.
   if (depth < 0.18 && (openMask & TERRAIN_OPEN_BOTTOM) && tileNoise(tx, ty, 146) > 0.93) {
-    ctx.globalAlpha = 0.72;
-    ctx.strokeStyle = GEO_COMIC_COLORS.root;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(x + 7, y + TILE_SIZE - 2);
-    ctx.lineTo(x + 11, y + TILE_SIZE + 5);
-    ctx.lineTo(x + 8, y + TILE_SIZE + 10);
-    ctx.stroke();
+    const rootHand = tileNoise(tx, ty, 147) > 0.5 ? 1 : -1;
+    const rootX = x + 6 + Math.floor(tileNoise(tx, ty, 148) * 14);
+    drawRootFragment(rootX, y + TILE_SIZE - 3, 0, 1, 13, rootHand, false);
   }
   ctx.restore();
 }
@@ -9383,21 +9861,17 @@ function drawCaveLandmark(x, y, tx, ty, surface) {
 
   const rootSeed = tileNoise(tx, ty, 151);
   if (depth < 0.2 && rootSeed > 0.965 && (solidTop || solidLeft || solidRight)) {
-    const fromX = solidLeft ? x : solidRight ? x + TILE_SIZE : x + 5 + rootSeed * 17;
-    const fromY = solidTop ? y : y + 4;
-    const direction = solidRight ? -1 : 1;
-    ctx.globalAlpha = 0.86;
-    ctx.strokeStyle = GEO_COMIC_COLORS.ink;
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(fromX, fromY);
-    ctx.lineTo(fromX + direction * 4, fromY + 8);
-    ctx.lineTo(fromX + direction * 1, fromY + 17);
-    ctx.lineTo(fromX + direction * 6, fromY + 25);
-    ctx.stroke();
-    ctx.strokeStyle = GEO_COMIC_COLORS.rootLight;
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    const variation = tileNoise(tx, ty, 157);
+    const hand = variation > 0.5 ? 1 : -1;
+    const forked = tileNoise(tx, ty, 158) > 0.46;
+    const rootLength = 21 + Math.floor(tileNoise(tx, ty, 159) * 5);
+    if (solidTop) {
+      drawRootFragment(x + 5 + rootSeed * 17, y, 0, 1, rootLength, hand, forked);
+    } else if (solidLeft) {
+      drawRootFragment(x, y + 5 + variation * 12, 0.84, 0.54, rootLength, hand, forked);
+    } else {
+      drawRootFragment(x + TILE_SIZE, y + 5 + variation * 12, -0.84, 0.54, rootLength, hand, forked);
+    }
     ctx.restore();
     return;
   }
@@ -9506,6 +9980,33 @@ function drawBackground(now) {
 
   const cameraDepth = Math.max(0, state.camera.y) / Math.max(1, WORLD_CONFIG.HEIGHT * TILE_SIZE);
   ctx.save();
+
+  // Slow parallax shaftwork gives the upper void a sense of place without
+  // filling the negative space with another high-frequency texture.
+  const supportSpacing = Math.max(210, Math.min(320, width * 0.24));
+  const supportOffset = positiveModulo(-state.camera.x * 0.035, supportSpacing);
+  ctx.globalAlpha = 0.1 + cameraDepth * 0.025;
+  for (let support = -1; support <= Math.ceil(width / supportSpacing) + 1; support += 1) {
+    const supportX = supportOffset + support * supportSpacing;
+    ctx.fillStyle = GEO_COMIC_COLORS.ink;
+    ctx.fillRect(supportX - 13, 0, 26, height);
+    ctx.strokeStyle = GEO_COMIC_COLORS.rust;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(supportX - 9, 0);
+    ctx.lineTo(supportX - 9, height);
+    ctx.moveTo(supportX + 9, 0);
+    ctx.lineTo(supportX + 9, height);
+    for (let braceY = -80; braceY < height + 120; braceY += 118) {
+      const shiftedY = braceY - positiveModulo(state.camera.y * 0.025, 118);
+      ctx.moveTo(supportX - 9, shiftedY);
+      ctx.lineTo(supportX + 9, shiftedY + 38);
+      ctx.moveTo(supportX + 9, shiftedY + 38);
+      ctx.lineTo(supportX - 9, shiftedY + 76);
+    }
+    ctx.stroke();
+  }
+
   ctx.lineCap = 'square';
   ctx.lineJoin = 'miter';
   for (let layer = 0; layer < 4; layer += 1) {
@@ -9550,8 +10051,14 @@ function drawBackground(now) {
 
 function drawWorld(now) {
   if (!state.world) return;
-  const shakeX = state.shake ? (Math.random() - 0.5) * state.shake : 0;
-  const shakeY = state.shake ? (Math.random() - 0.5) * state.shake : 0;
+  const shakeStrength = state.shake * (REDUCED_MOTION ? 0.14 : 1);
+  const shakeTime = now * 0.001;
+  const shakeX = shakeStrength
+    ? (Math.sin(shakeTime * 47) + Math.sin(shakeTime * 83) * 0.32) * shakeStrength * 0.46
+    : 0;
+  const shakeY = shakeStrength
+    ? (Math.cos(shakeTime * 53) + Math.sin(shakeTime * 71) * 0.28) * shakeStrength * 0.4
+    : 0;
   const cameraX = state.camera.x - shakeX;
   const cameraY = state.camera.y - shakeY;
   ctx.save();
@@ -9587,8 +10094,9 @@ function drawWorld(now) {
   drawMicroEvents(now);
   drawTargeting(now);
   drawBeams();
-  drawDrones(now);
+  drawDrones(now, 'behind');
   drawMiner(now);
+  drawDrones(now, 'front');
   drawParticles();
   drawFloaters();
   ctx.restore();
@@ -9781,8 +10289,10 @@ function drawTile({ tile, tx, ty, x, y }, now, phase = 'all', oreVisualStates = 
       ctx.fillStyle = `rgba(27, 74, 78, ${0.2 + sky * 0.28})`;
       ctx.fillRect(x, y, TILE_SIZE + 1, TILE_SIZE + 1);
       if (ty === surface - 1) {
-        ctx.fillStyle = '#617a4a';
-        ctx.fillRect(x, y + TILE_SIZE - 4, TILE_SIZE + 1, 4);
+        ctx.fillStyle = '#6f4535';
+        ctx.fillRect(x, y + TILE_SIZE - 5, TILE_SIZE + 1, 5);
+        ctx.fillStyle = '#a96843';
+        ctx.fillRect(x, y + TILE_SIZE - 5, TILE_SIZE + 1, 2);
       }
     } else {
       const dust = tileNoise(tx, ty, 8);
@@ -9806,7 +10316,6 @@ function drawTile({ tile, tx, ty, x, y }, now, phase = 'all', oreVisualStates = 
     );
     const openMask = getOpenTerrainMask(tx, ty);
     drawTerrainBaseLayer(x, y, tx, ty, tile.kind, palette, baseIndex, openMask);
-    drawTerrainDepthTone(x, y, tx, ty, openMask);
     drawTerrainEdgeLandmark(x, y, tx, ty, palette, openMask);
     if (tile.fracturedStratum) drawFracturedStratumMark(x, y, tx, ty);
 
@@ -9863,7 +10372,7 @@ function drawTile({ tile, tx, ty, x, y }, now, phase = 'all', oreVisualStates = 
       || getOreVisualState(tile, tx, ty, x, y);
     drawOreInTile(x, y, tx, ty, ore, visualState.visible, now, oreVisualStates);
     const veinState = tile.veinId ? state.veinRuntime.get(tile.veinId) : null;
-    if (veinState?.rich || veinState?.motherlode) {
+    if (visualState.visible && (veinState?.rich || veinState?.motherlode)) {
       const motherlode = Boolean(veinState.motherlode);
       const glow = 0.5 + Math.sin(now * 0.006 + tx + ty) * 0.25;
       ctx.save();
@@ -10186,12 +10695,11 @@ function drawRuntimeOreNode(centerX, centerY, ore, revealed, noise, branchNoise,
     ctx.translate(centerX, centerY);
     ctx.rotate(rotation);
     if (transform?.mirrorX) ctx.scale(-1, 1);
-    // Unknown ore remains a readable dark inclusion in the rock. Sense does
-    // not create the node from nothing: it restores colour, detail and the
-    // connected vein, making the scanner's result immediately legible.
-    ctx.globalAlpha = revealed ? 0.98 : 0.62;
+    // Unknown ore is only a subdued inclusion in the rock. Sense restores its
+    // colour, detail and connected vein, making discovery immediately legible.
+    ctx.globalAlpha = revealed ? 0.98 : 0.38;
     if (!revealed && 'filter' in ctx) {
-      ctx.filter = 'grayscale(0.78) saturate(0.18) brightness(0.38) contrast(1.15)';
+      ctx.filter = 'grayscale(0.9) saturate(0.1) brightness(0.28) contrast(0.95)';
     }
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(
@@ -10639,12 +11147,12 @@ function drawOreInTile(x, y, tx, ty, ore, revealed, now, oreVisualStates = null)
     ctx.rotate(nodeTransform.rotation);
     if (nodeTransform.mirrorX) ctx.scale(-1, 1);
     traceOreNodeSilhouette(ore.id, nodeWidth, nodeHeight, noise, branchNoise);
-    ctx.globalAlpha = revealed ? 0.92 : 0.54;
+    ctx.globalAlpha = revealed ? 0.92 : 0.34;
     ctx.strokeStyle = GEO_COMIC_COLORS.ink;
     ctx.lineWidth = ore.id === 'silver' ? 3 : 5;
     ctx.stroke();
-    ctx.globalAlpha = revealed ? 1 : 0.48;
-    ctx.fillStyle = revealed ? ore.color : '#263335';
+    ctx.globalAlpha = revealed ? 1 : 0.3;
+    ctx.fillStyle = revealed ? ore.color : '#1d292b';
     ctx.fill();
     drawOreMaterialDetails(ore, nodeWidth, nodeHeight, noise, branchNoise, revealed);
     ctx.restore();
@@ -10912,29 +11420,41 @@ function drawTargeting(now) {
 function drawBeams() {
   for (const beam of state.beams) {
     const alpha = clamp(beam.life / beam.maxLife, 0, 1);
-    const dx = beam.x2 - beam.x;
-    const dy = beam.y2 - beam.y;
+    const liveDroneOrigin = beam.kind === 'drone'
+      && Number.isInteger(beam.droneIndex)
+      && state.player
+      ? dronePosition(beam.droneIndex, state.elapsed)
+      : null;
+    const startAngle = liveDroneOrigin
+      ? Math.atan2(beam.y2 - liveDroneOrigin.y, beam.x2 - liveDroneOrigin.x)
+      : 0;
+    const startX = liveDroneOrigin ? liveDroneOrigin.x + Math.cos(startAngle) * 14 : beam.x;
+    const startY = liveDroneOrigin ? liveDroneOrigin.y + Math.sin(startAngle) * 14 : beam.y;
+    const dx = beam.x2 - startX;
+    const dy = beam.y2 - startY;
     const length = Math.max(0.001, Math.hypot(dx, dy));
     const normalX = -dy / length;
     const normalY = dx / length;
     ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalCompositeOperation = 'source-over';
     ctx.shadowColor = beam.color;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    ctx.lineCap = 'square';
+    ctx.lineJoin = 'bevel';
 
     if (beam.kind === 'chain') {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
       const segments = clamp(Math.ceil(length / 20), 4, 10);
       ctx.globalAlpha = alpha * 0.92;
       ctx.strokeStyle = beam.color;
       ctx.shadowBlur = 9;
       ctx.lineWidth = Math.max(1.5, beam.width);
       ctx.beginPath();
-      ctx.moveTo(beam.x, beam.y);
+      ctx.moveTo(startX, startY);
       for (let index = 1; index < segments; index += 1) {
         const progress = index / segments;
         const offset = (index % 2 ? 1 : -1) * (3 + (index % 3));
-        ctx.lineTo(beam.x + dx * progress + normalX * offset, beam.y + dy * progress + normalY * offset);
+        ctx.lineTo(startX + dx * progress + normalX * offset, startY + dy * progress + normalY * offset);
       }
       ctx.lineTo(beam.x2, beam.y2);
       ctx.stroke();
@@ -10943,6 +11463,8 @@ function drawBeams() {
       ctx.lineWidth = 1;
       ctx.stroke();
     } else if (beam.kind === 'prism' || beam.kind === 'prism-ricochet') {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
       const spread = beam.kind === 'prism' ? Math.max(2.2, beam.width * 0.28) : 2;
       const colors = ['#6fffe4', '#fff0a8', '#e59cff'];
       ctx.shadowBlur = 14;
@@ -10952,7 +11474,7 @@ function drawBeams() {
         ctx.strokeStyle = colors[index];
         ctx.lineWidth = Math.max(1.4, beam.width * (index === 1 ? 0.28 : 0.2));
         ctx.beginPath();
-        ctx.moveTo(beam.x + normalX * offset, beam.y + normalY * offset);
+        ctx.moveTo(startX + normalX * offset, startY + normalY * offset);
         ctx.lineTo(beam.x2 + normalX * offset, beam.y2 + normalY * offset);
         ctx.stroke();
       }
@@ -10960,29 +11482,38 @@ function drawBeams() {
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = Math.max(1, beam.width * 0.1);
       ctx.beginPath();
-      ctx.moveTo(beam.x, beam.y);
+      ctx.moveTo(startX, startY);
       ctx.lineTo(beam.x2, beam.y2);
       ctx.stroke();
     } else if (beam.kind === 'drone') {
-      ctx.globalAlpha = alpha * 0.9;
-      ctx.strokeStyle = beam.color;
-      ctx.shadowBlur = 10;
-      ctx.lineWidth = Math.max(3, beam.width || 4);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = alpha * 0.92;
+      ctx.strokeStyle = VFX_PALETTE.ink;
+      ctx.shadowBlur = 0;
+      ctx.lineCap = 'square';
+      ctx.lineWidth = Math.max(5, (beam.width || 4) + 2.8);
       ctx.beginPath();
-      ctx.moveTo(beam.x, beam.y);
+      ctx.moveTo(startX, startY);
       ctx.lineTo(beam.x2, beam.y2);
       ctx.stroke();
-      ctx.globalAlpha = alpha;
-      ctx.strokeStyle = '#efffff';
-      ctx.shadowBlur = 4;
-      ctx.lineWidth = 1.2;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = alpha * 0.82;
+      ctx.strokeStyle = VFX_PALETTE.patina;
+      ctx.shadowColor = VFX_PALETTE.patina;
+      ctx.shadowBlur = 5;
+      ctx.lineWidth = Math.max(2, beam.width || 3);
+      ctx.stroke();
+      ctx.globalAlpha = alpha * 0.95;
+      ctx.strokeStyle = VFX_PALETTE.bone;
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 1;
       ctx.stroke();
       ctx.translate(beam.x2, beam.y2);
       ctx.rotate(Math.atan2(dy, dx) + Math.PI * 0.25);
       ctx.globalAlpha = alpha;
-      ctx.strokeStyle = '#bff8ff';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(-4, -4, 8, 8);
+      ctx.strokeStyle = VFX_PALETTE.bone;
+      ctx.lineWidth = 1.8;
+      ctx.strokeRect(-3.5, -3.5, 7, 7);
     } else if (beam.kind === 'beacon') {
       ctx.globalAlpha = alpha * 0.74;
       ctx.strokeStyle = beam.color;
@@ -10990,7 +11521,7 @@ function drawBeams() {
       ctx.lineWidth = 2;
       ctx.setLineDash([2, 5]);
       ctx.beginPath();
-      ctx.moveTo(beam.x, beam.y);
+      ctx.moveTo(startX, startY);
       ctx.lineTo(beam.x2, beam.y2);
       ctx.stroke();
       ctx.setLineDash([]);
@@ -11001,7 +11532,7 @@ function drawBeams() {
       ctx.lineWidth = beam.width;
       ctx.setLineDash([3, 5]);
       ctx.beginPath();
-      ctx.moveTo(beam.x, beam.y);
+      ctx.moveTo(startX, startY);
       ctx.lineTo(beam.x2, beam.y2);
       ctx.stroke();
       ctx.setLineDash([]);
@@ -11012,31 +11543,34 @@ function drawBeams() {
       ctx.lineWidth = 1.5;
       ctx.setLineDash([7, 6]);
       ctx.beginPath();
-      ctx.moveTo(beam.x, beam.y);
+      ctx.moveTo(startX, startY);
       ctx.lineTo(beam.x2, beam.y2);
       ctx.stroke();
     } else if (beam.kind === 'heat') {
+      ctx.globalCompositeOperation = 'lighter';
       ctx.shadowBlur = 10;
       for (const offset of [-1.7, 1.7]) {
         ctx.globalAlpha = alpha * 0.75;
         ctx.strokeStyle = offset < 0 ? '#ff6b48' : '#ffd09a';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(beam.x + normalX * offset, beam.y + normalY * offset);
+        ctx.moveTo(startX + normalX * offset, startY + normalY * offset);
         ctx.lineTo(beam.x2 + normalX * offset, beam.y2 + normalY * offset);
         ctx.stroke();
       }
     } else {
       const isSolar = beam.kind === 'solar';
       const isLaser = beam.kind === 'laser' || beam.kind === 'ricochet' || isSolar;
+      ctx.globalCompositeOperation = isLaser ? 'lighter' : 'source-over';
+      ctx.lineCap = isLaser ? 'round' : 'square';
       ctx.globalAlpha = alpha * (beam.kind === 'impact' || beam.kind === 'sample' ? 0.72 : 1);
       ctx.strokeStyle = beam.color;
-      ctx.shadowBlur = isLaser ? 14 : 7;
+      ctx.shadowBlur = isLaser ? 14 : 2;
       ctx.lineWidth = beam.width;
       if (beam.kind === 'fault') ctx.setLineDash([10, 3, 2, 3]);
       else if (beam.kind === 'chrono' || beam.kind === 'sample') ctx.setLineDash([5, 4]);
       ctx.beginPath();
-      ctx.moveTo(beam.x, beam.y);
+      ctx.moveTo(startX, startY);
       ctx.lineTo(beam.x2, beam.y2);
       ctx.stroke();
       ctx.setLineDash([]);
@@ -11056,28 +11590,54 @@ function drawBeams() {
       : 9 + (1 - alpha) * 14;
     ctx.save();
     ctx.strokeStyle = shock.color || '#b58cff';
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
+    ctx.lineJoin = 'bevel';
+    ctx.lineCap = 'square';
     if (shock.kind === 'blast') {
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = alpha * 0.82;
-      ctx.lineWidth = 3;
-      ctx.fillStyle = shock.color || '#ffc45d';
       ctx.beginPath();
-      const points = REDUCED_MOTION ? 12 : 18;
+      const points = REDUCED_MOTION ? 10 : 14;
       for (let index = 0; index < points; index += 1) {
         const angle = index / points * Math.PI * 2;
-        const spikeRadius = radius * (index % 2 ? 0.7 : 1.05);
+        const spikeRadius = radius * (index % 2 ? 0.72 : 1.04);
         const x = shock.x + Math.cos(angle) * spikeRadius;
         const y = shock.y + Math.sin(angle) * spikeRadius;
         if (index === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
       ctx.closePath();
-      ctx.globalAlpha = alpha * 0.12;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = alpha * 0.16;
+      ctx.fillStyle = VFX_PALETTE.ink;
       ctx.fill();
-      ctx.globalAlpha = alpha * 0.82;
+      ctx.globalAlpha = alpha * 0.86;
+      ctx.strokeStyle = VFX_PALETTE.ink;
+      ctx.lineWidth = 7;
       ctx.stroke();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = alpha * 0.72;
+      ctx.strokeStyle = shock.color || VFX_PALETTE.hot;
+      ctx.lineWidth = 2.6;
+      ctx.stroke();
+      if (alpha > 0.52) {
+        const core = radius * 0.28;
+        ctx.translate(shock.x, shock.y);
+        ctx.rotate(Math.PI * 0.25);
+        ctx.globalAlpha = (alpha - 0.52) * 1.3;
+        ctx.fillStyle = VFX_PALETTE.bone;
+        ctx.fillRect(-core, -core, core * 2, core * 2);
+      }
+    } else if (shock.kind === 'drone-impact') {
+      ctx.translate(shock.x, shock.y);
+      ctx.rotate(Math.PI * 0.25);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = alpha * 0.88;
+      ctx.strokeStyle = VFX_PALETTE.ink;
+      ctx.lineWidth = 4.5;
+      ctx.strokeRect(-radius * 0.55, -radius * 0.55, radius * 1.1, radius * 1.1);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = alpha * 0.8;
+      ctx.strokeStyle = VFX_PALETTE.patina;
+      ctx.lineWidth = 1.8;
+      ctx.strokeRect(-radius * 0.55, -radius * 0.55, radius * 1.1, radius * 1.1);
     } else if (shock.kind === 'sense-pulse' || shock.kind === 'echo') {
       ctx.globalAlpha = alpha * (shock.kind === 'echo' ? 0.75 : 0.55);
       ctx.lineWidth = shock.kind === 'echo' ? 3 : 2;
@@ -11128,74 +11688,106 @@ function drawBeams() {
   }
 }
 
-function drawDrones() {
+function drawDrones(now = state.elapsed * 1000, layer = 'all') {
   if (!dronesAreActive()) return;
   const count = Math.min(8, Math.max(0, Math.floor(stats.droneCount || 0)));
   const batteryVisual = clamp(((stats.droneLifetime || 0.75) - 0.75) / 0.25, 0, 1);
   const drillVisual = clamp(((stats.dronePower || 0.75) - 0.75) / 1.8, 0, 1);
   for (let index = 0; index < count; index += 1) {
     const point = dronePosition(index, state.elapsed);
+    const inFront = point.y > state.player.y + 2;
+    if (layer === 'behind' && inFront) continue;
+    if (layer === 'front' && !inFront) continue;
+    const ahead = dronePosition(index, state.elapsed + 0.04);
+    const idleAngle = Math.atan2(ahead.y - point.y, ahead.x - point.x);
+    const visualState = DRONE_VISUAL_STATE.get(index);
+    const activelyFiring = Boolean(
+      visualState
+      && state.elapsed >= visualState.firedAt
+      && state.elapsed <= visualState.fireUntil
+    );
+    const facingAngle = activelyFiring ? visualState.aimAngle : idleAngle;
     ctx.save();
     ctx.translate(point.x, point.y);
-    ctx.scale(1.2 + drillVisual * 0.08, 1.2 + drillVisual * 0.08);
-    const enginePulse = 0.72 + Math.sin(state.elapsed * 8 + index * 1.7) * 0.18;
+    if (!REDUCED_MOTION) ctx.translate(0, Math.sin(now * 0.004 + index * 1.7) * 0.65);
+    ctx.rotate(facingAngle);
+    ctx.scale(1.3 + drillVisual * 0.08, 1.3 + drillVisual * 0.08);
+    const enginePulse = REDUCED_MOTION ? 0.78 : 0.72 + Math.sin(state.elapsed * 7 + index * 1.7) * 0.16;
     if (batteryVisual > 0) {
-      const tailLength = 5 + batteryVisual * 10;
-      ctx.globalAlpha = 0.38 + batteryVisual * 0.34;
-      ctx.strokeStyle = '#76dbff';
-      ctx.lineWidth = 1.5 + batteryVisual * 1.5;
-      ctx.shadowColor = '#76dbff';
-      ctx.shadowBlur = 6 + batteryVisual * 7;
+      const tailLength = 4 + batteryVisual * 8;
+      ctx.globalAlpha = 0.3 + batteryVisual * 0.32;
+      ctx.strokeStyle = VFX_PALETTE.patina;
+      ctx.lineCap = 'square';
+      ctx.lineWidth = 1.2 + batteryVisual;
+      ctx.shadowColor = VFX_PALETTE.patina;
+      ctx.shadowBlur = 3 + batteryVisual * 4;
       ctx.beginPath();
-      ctx.moveTo(-10, -2);
-      ctx.lineTo(-10 - tailLength * enginePulse, -4);
-      ctx.moveTo(-10, 3);
-      ctx.lineTo(-10 - tailLength * enginePulse, 5);
+      ctx.moveTo(-11, -2.5);
+      ctx.lineTo(-11 - tailLength * enginePulse, -2.5);
+      ctx.moveTo(-11, 2.5);
+      ctx.lineTo(-11 - tailLength * enginePulse, 2.5);
       ctx.stroke();
       ctx.globalAlpha = 1;
       ctx.shadowBlur = 0;
     }
-    ctx.fillStyle = '#42251b';
-    ctx.strokeStyle = '#f08a43';
-    ctx.lineWidth = 2.4;
-    ctx.shadowColor = '#76dbff';
-    ctx.shadowBlur = 7 * enginePulse;
+
+    // Squat mining canister: ink carries the silhouette, rust carries the
+    // material, and cyan is reserved for the lens and active drill energy.
+    ctx.fillStyle = '#6b3527';
+    ctx.strokeStyle = VFX_PALETTE.ink;
+    ctx.lineJoin = 'bevel';
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(-12, 1);
-    ctx.lineTo(-7, -8);
-    ctx.lineTo(7, -7);
-    ctx.lineTo(12, 1);
-    ctx.lineTo(7, 8);
-    ctx.lineTo(-7, 7);
+    ctx.moveTo(-12, 0);
+    ctx.lineTo(-8, -8);
+    ctx.lineTo(6, -8);
+    ctx.lineTo(11, -4);
+    ctx.lineTo(12, 4);
+    ctx.lineTo(6, 8);
+    ctx.lineTo(-8, 8);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
+
+    ctx.fillStyle = '#a75431';
+    ctx.fillRect(-7, -5, 7, 10);
+    ctx.fillStyle = VFX_PALETTE.bone;
+    ctx.fillRect(-6, -5, 8, 2);
+    ctx.fillStyle = '#2b4a48';
+    ctx.fillRect(1, -5, 5, 10);
+    ctx.strokeStyle = VFX_PALETTE.ink;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(1, -5, 5, 10);
+
+    ctx.fillStyle = VFX_PALETTE.patinaLight;
+    ctx.shadowColor = VFX_PALETTE.patina;
+    ctx.shadowBlur = activelyFiring ? 7 : 3 * enginePulse;
+    ctx.fillRect(6, -3, 4, 6);
     ctx.shadowBlur = 0;
-    ctx.fillStyle = '#c45c2c';
-    ctx.fillRect(-7, -4, 8, 8);
-    ctx.fillStyle = '#d8ffff';
-    ctx.fillRect(3, -3, 5, 5);
     if (drillVisual > 0) {
-      ctx.fillStyle = '#d8ffff';
-      ctx.strokeStyle = '#76dbff';
-      ctx.lineWidth = 1.2;
+      ctx.fillStyle = VFX_PALETTE.bone;
+      ctx.strokeStyle = VFX_PALETTE.ink;
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(11, -3 - drillVisual * 2);
-      ctx.lineTo(16 + drillVisual * 5, 1);
-      ctx.lineTo(11, 4 + drillVisual * 2);
+      ctx.moveTo(11, -3 - drillVisual);
+      ctx.lineTo(17 + drillVisual * 4, 0);
+      ctx.lineTo(11, 3 + drillVisual);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
     }
-    ctx.fillStyle = `rgba(118, 219, 255, ${enginePulse})`;
-    ctx.fillRect(-11, -2, 3, 5);
-    ctx.strokeStyle = '#9a4c2b';
-    ctx.lineWidth = 2;
+
+    ctx.fillStyle = `rgba(88, 189, 180, ${enginePulse})`;
+    ctx.fillRect(-11, -2, 2, 4);
+    ctx.strokeStyle = VFX_PALETTE.ink;
+    ctx.lineWidth = 1.8;
     ctx.beginPath();
-    ctx.moveTo(-8, 7);
-    ctx.lineTo(-11, 11);
-    ctx.moveTo(8, 7);
-    ctx.lineTo(11, 11);
+    ctx.moveTo(-7, 8);
+    ctx.lineTo(-10, 11);
+    ctx.lineTo(-5, 10);
+    ctx.moveTo(6, 8);
+    ctx.lineTo(9, 11);
+    ctx.lineTo(4, 10);
     ctx.stroke();
     ctx.restore();
   }
@@ -11208,7 +11800,7 @@ function getMinerSpriteVariant(currentStats = stats) {
   return MINER_SPRITE_VARIANTS[tier - 1];
 }
 
-function getMinerSpriteAction(player = state.player, currentStats = stats) {
+function getRequestedMinerSpriteAction(player = state.player, currentStats = stats) {
   const variant = getMinerSpriteVariant(currentStats);
   if (!player) return 'idle';
 
@@ -11240,6 +11832,34 @@ function getMinerSpriteAction(player = state.player, currentStats = stats) {
   return 'idle';
 }
 
+function getMinerSpriteAction(player = state.player, currentStats = stats) {
+  const variant = getMinerSpriteVariant(currentStats);
+  const requestedAction = getRequestedMinerSpriteAction(player, currentStats);
+  const now = Math.max(0, Number(state.elapsed) || 0);
+  const actionStateExpired = (
+    minerSpriteActionState.variant !== variant.id
+    || now < minerSpriteActionState.since
+  );
+
+  if (actionStateExpired) {
+    minerSpriteActionState = { variant: variant.id, action: requestedAction, since: now };
+    return requestedAction;
+  }
+  if (requestedAction === minerSpriteActionState.action) return requestedAction;
+
+  // Impacts may arrive immediately so the picture remains mechanically honest.
+  // All following poses get a short readable hold; fast late-game tools then
+  // communicate extra hits through sparks and beams instead of body flicker.
+  const isImpact = requestedAction === 'contact' || requestedAction === 'fire';
+  const minimumHold = MINER_ACTION_HOLD_SECONDS[minerSpriteActionState.action] || 0;
+  if (!isImpact && now - minerSpriteActionState.since < minimumHold) {
+    return minerSpriteActionState.action;
+  }
+
+  minerSpriteActionState = { variant: variant.id, action: requestedAction, since: now };
+  return requestedAction;
+}
+
 function getMinerSpriteDescriptor(player = state.player, currentStats = stats) {
   const variant = getMinerSpriteVariant(currentStats);
   const action = getMinerSpriteAction(player, currentStats);
@@ -11251,7 +11871,7 @@ function getMinerSpriteDescriptor(player = state.player, currentStats = stats) {
     scale: variant.scale,
     action,
     filename,
-    src: `${MINER_SPRITE_DIRECTORY}/${filename}`,
+    src: visualAssetSource(`${MINER_SPRITE_DIRECTORY}/${filename}`),
   };
 }
 
@@ -11291,7 +11911,11 @@ function preloadMinerVariant(currentStats = stats) {
     : ['idle', 'step', 'prepare', 'contact', 'recoil'];
   for (const action of actions) {
     const filename = `miner_${variant.id}_${action}.png`;
-    requestMinerSprite({ variant: variant.id, filename, src: `${MINER_SPRITE_DIRECTORY}/${filename}` });
+    requestMinerSprite({
+      variant: variant.id,
+      filename,
+      src: visualAssetSource(`${MINER_SPRITE_DIRECTORY}/${filename}`),
+    });
   }
 }
 
@@ -11314,10 +11938,33 @@ function drawMiner(now) {
   const hasPrism = stats.tool === 'prismaticLaser' || toolTier >= 7;
   const visualScale = 1.17;
   const motionNow = REDUCED_MOTION ? 0 : now;
-  const walk = Math.sin(motionNow * 0.016) * player.moving;
-  const bob = Math.abs(Math.sin(motionNow * 0.016)) * player.moving * 1.1;
   const spriteDescriptor = getMinerSpriteDescriptor(player, stats);
+  const walkingPose = spriteDescriptor.action === 'step';
+  const walk = Math.sin(motionNow * 0.016) * player.moving;
+  const bob = walkingPose
+    ? Math.abs(Math.sin(motionNow * 0.016)) * player.moving * 0.62
+    : 0;
   const sprite = requestMinerSprite(spriteDescriptor);
+
+  // A restrained local value plate separates the miner from the equally warm
+  // rock texture without turning the character into a neon sticker.
+  ctx.save();
+  const readabilityGradient = ctx.createRadialGradient(
+    player.x,
+    player.y - 18,
+    4,
+    player.x,
+    player.y - 18,
+    sprite ? 68 : 54,
+  );
+  readabilityGradient.addColorStop(0, 'rgba(2, 9, 12, 0.38)');
+  readabilityGradient.addColorStop(0.62, 'rgba(2, 9, 12, 0.2)');
+  readabilityGradient.addColorStop(1, 'rgba(2, 9, 12, 0)');
+  ctx.fillStyle = readabilityGradient;
+  ctx.beginPath();
+  ctx.arc(player.x, player.y - 18, sprite ? 68 : 54, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 
   // The lamp sits behind the silhouette, keeping the miner's colours crisp.
   ctx.save();
@@ -11344,7 +11991,7 @@ function drawMiner(now) {
 
   if (sprite) {
     const stepTilt = spriteDescriptor.action === 'step'
-      ? Math.sin(motionNow * 0.016) * 0.018 * player.moving
+      ? Math.sin(motionNow * 0.016) * 0.008 * player.moving
       : 0;
     ctx.save();
     ctx.translate(player.x, player.y + MINER_SPRITE_BASELINE_OFFSET - bob);
@@ -11353,6 +12000,18 @@ function drawMiner(now) {
     ctx.scale(player.facing * spriteScale, spriteScale);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
+    ctx.globalAlpha = 0.78;
+    ctx.shadowColor = hasPrism ? 'rgba(174, 132, 255, 0.58)' : 'rgba(92, 201, 190, 0.48)';
+    ctx.shadowBlur = 8;
+    ctx.drawImage(
+      sprite,
+      -MINER_SPRITE_PIVOT_X,
+      -MINER_SPRITE_PIVOT_Y,
+      MINER_SPRITE_CANVAS_SIZE,
+      MINER_SPRITE_CANVAS_SIZE,
+    );
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
     ctx.drawImage(
       sprite,
       -MINER_SPRITE_PIVOT_X,
@@ -11965,7 +12624,7 @@ function drawParticles() {
       const ny = particle.vy / speed;
       ctx.strokeStyle = particle.color;
       ctx.lineWidth = Math.max(1, particle.size * 0.75);
-      ctx.lineCap = 'round';
+      ctx.lineCap = 'square';
       ctx.beginPath();
       ctx.moveTo(particle.x, particle.y);
       ctx.lineTo(particle.x - nx * trail, particle.y - ny * trail);
@@ -11985,6 +12644,27 @@ function drawParticles() {
       ctx.lineTo(-particle.size * 0.25, -particle.size * 0.55);
       ctx.closePath();
       ctx.fill();
+    } else if (particle.kind === 'blast-smoke') {
+      const expansion = 1 + (1 - alpha) * 0.7;
+      ctx.translate(particle.x, particle.y);
+      ctx.rotate(Math.atan2(particle.vy, particle.vx) * 0.25);
+      ctx.scale(expansion, expansion * 0.78);
+      ctx.globalAlpha = alpha * 0.48;
+      ctx.strokeStyle = VFX_PALETTE.ink;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      const sides = 7;
+      for (let index = 0; index < sides; index += 1) {
+        const angle = index / sides * Math.PI * 2;
+        const localSize = particle.size * (index % 2 ? 0.82 : 1);
+        const px = Math.cos(angle) * localSize;
+        const py = Math.sin(angle) * localSize;
+        if (index === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
     } else if (particle.kind === 'sprint-trail') {
       ctx.translate(particle.x, particle.y);
       ctx.rotate(Math.atan2(particle.vy, particle.vx));
@@ -12678,10 +13358,17 @@ window.__DEPTH_ZERO__ = {
     if (!state.world) return null;
     const tile = state.world.getTile(Math.floor(tx), Math.floor(ty));
     if (!tile) return null;
+    const previousKind = tile.kind;
     const previousVeinId = tile.oreId && tile.veinId && tile.kind !== 'air' ? tile.veinId : null;
     for (const key of ['kind', 'oreId', 'veinId', 'hp', 'maxHp', 'discovered', 'cracked', 'liftSupply', 'frontierReserveOreId']) {
       if (Object.prototype.hasOwnProperty.call(patch, key)) tile[key] = patch[key];
     }
+    if (
+      Object.prototype.hasOwnProperty.call(patch, 'kind')
+      && previousKind !== tile.kind
+      && previousKind !== 'air'
+      && tile.kind !== 'air'
+    ) resetTerrainBaseCache();
     const nextVeinId = tile.oreId && tile.veinId && tile.kind !== 'air' ? tile.veinId : null;
     if (previousVeinId) {
       state.veinRemainingCounts.set(previousVeinId, Math.max(0, (state.veinRemainingCounts.get(previousVeinId) || 0) - 1));

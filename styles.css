@@ -4668,6 +4668,163 @@ button.upgrade-node { font: inherit; }
   }
 }
 
+/* -------------------------------------------------------------------------
+   VISUAL REDUX · hierarchy and gameplay-scale readability foundation
+   A compact reinforcement block at EOF wins over the remaining legacy theme
+   layers that are still kept for old layouts and screenshots.
+   ------------------------------------------------------------------------- */
+
+#gameShell.theme-rust-comic {
+  --redux-panel: #0a1c1e;
+  --redux-panel-soft: #102729;
+  --redux-line: rgba(119, 154, 143, 0.42);
+  --redux-rust-line: rgba(177, 94, 57, 0.58);
+}
+
+#gameShell.theme-rust-comic .screen-texture {
+  opacity: 0.14;
+}
+
+/* The balancing lab remains available through the local debug API, but is no
+   longer presented as part of the player-facing expedition chrome. */
+#gameShell.theme-rust-comic .utility-nav__button--dev {
+  display: none !important;
+}
+
+/* The timer is the only primary instrument. Supporting telemetry uses a
+   quieter frame and flatter material so the eye lands in the middle first. */
+#gameShell.theme-rust-comic .run-hud .hud-chip,
+#gameShell.theme-rust-comic .run-hud .focus-hud {
+  border: 1px solid var(--redux-line);
+  background:
+    linear-gradient(112deg, rgba(95, 55, 39, 0.34), transparent 38%),
+    rgba(7, 22, 24, 0.9);
+  box-shadow: inset 0 2px 0 rgba(75, 116, 108, 0.16), 3px 4px 0 rgba(7, 9, 10, 0.84);
+}
+
+#gameShell.theme-rust-comic .run-hud .hud-chip--ore {
+  border-color: var(--redux-rust-line);
+}
+
+#gameShell.theme-rust-comic .run-hud .timer-module {
+  border: 2px solid var(--comic-ochre);
+  background:
+    repeating-linear-gradient(-45deg, rgba(255, 238, 174, 0.045) 0 7px, transparent 7px 14px),
+    linear-gradient(100deg, #62301e, #20322f 38%, #111b19);
+  box-shadow: inset 0 4px 0 #814128, 5px 6px 0 var(--comic-ink), 0 0 22px rgba(229, 173, 69, 0.09);
+}
+
+#gameShell.theme-rust-comic .hud-label {
+  font-size: 11px;
+  letter-spacing: 0.095em;
+}
+
+#gameShell.theme-rust-comic .run-ore-breakdown {
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+/* Copy should read as copy, not as another halftone texture. */
+#gameShell.theme-rust-comic #startScreen.has-menu-art .game-intro,
+#gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps li span,
+#gameShell.theme-rust-comic .result-header > p:last-child,
+#gameShell.theme-rust-comic .result-stats span,
+#gameShell.theme-rust-comic .banked-module small,
+#gameShell.theme-rust-comic .upgrade-footer p,
+#gameShell.theme-rust-comic .next-breakthrough__copy > span,
+#gameShell.theme-rust-comic .diagnosis-advice p {
+  font-size: 10px;
+  line-height: 1.42;
+}
+
+#gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps strong,
+#gameShell.theme-rust-comic .next-breakthrough__copy strong {
+  font-size: 11px;
+}
+
+#gameShell.theme-rust-comic .next-breakthrough__copy small,
+#gameShell.theme-rust-comic .upgrade-node__level {
+  font-size: 8px;
+}
+
+/* The map keeps its radial identity, while locked structure and background
+   drafting lines step back until they are relevant. */
+#gameShell.theme-rust-comic .upgrade-map__viewport {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(195, 111, 68, 0.08), transparent 31%),
+    linear-gradient(118deg, rgba(94, 52, 37, 0.11), transparent 29%),
+    #0b2223;
+}
+
+#gameShell.theme-rust-comic .upgrade-map__world {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(217, 169, 79, 0.2) 0 3px, transparent 4px 100%),
+    repeating-radial-gradient(ellipse at 50% 50%, transparent 0 116px, rgba(104, 146, 138, 0.045) 117px 118px, transparent 119px 172px),
+    conic-gradient(from -12deg at 50% 50%, rgba(165, 84, 50, 0.018) 0 1deg, transparent 1deg 50deg, rgba(104, 146, 138, 0.018) 50deg 51deg, transparent 51deg 100deg);
+}
+
+#gameShell.theme-rust-comic .upgrade-map__world::before {
+  opacity: 0.055;
+}
+
+#gameShell.theme-rust-comic .upgrade-edge {
+  opacity: 0.38;
+}
+
+#gameShell.theme-rust-comic .upgrade-edge.is-preview,
+#gameShell.theme-rust-comic .upgrade-edge[data-state="preview"] {
+  opacity: 0.22;
+}
+
+#gameShell.theme-rust-comic .upgrade-node {
+  border-width: 2px;
+  border-color: color-mix(in srgb, var(--category-color) 50%, var(--comic-rust-hi));
+  background: linear-gradient(145deg, color-mix(in srgb, var(--category-color) 11%, #203331), #071719 72%);
+  box-shadow:
+    inset 0 0 0 2px var(--comic-ink),
+    4px 5px 0 var(--comic-ink),
+    0 9px 16px rgba(0, 0, 0, 0.26);
+}
+
+#gameShell.theme-rust-comic .upgrade-node__icon {
+  border-width: 1px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--category-color) 13%, #102526), #071517 72%);
+  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--category-color) 24%, transparent);
+}
+
+#gameShell.theme-rust-comic .upgrade-node__icon-image {
+  width: 98%;
+  height: 98%;
+  filter: saturate(0.78) contrast(1.16) brightness(1.04) drop-shadow(0 2px 0 rgba(1, 7, 9, 0.88));
+}
+
+#gameShell.theme-rust-comic .upgrade-node.is-preview,
+#gameShell.theme-rust-comic .upgrade-node[data-state="preview"] {
+  opacity: 0.4;
+  filter: saturate(0.34) brightness(0.66);
+}
+
+#gameShell.theme-rust-comic .upgrade-node.is-preview .upgrade-node__icon-image,
+#gameShell.theme-rust-comic .upgrade-node[data-state="preview"] .upgrade-node__icon-image {
+  opacity: 0.48;
+}
+
+#gameShell.theme-rust-comic .upgrade-node.is-dimmed {
+  opacity: 0.09;
+}
+
+@media (max-width: 640px) {
+  #gameShell.theme-rust-comic .screen-texture { opacity: 0.08; }
+  #gameShell.theme-rust-comic .hud-label { font-size: 9px; }
+  #gameShell.theme-rust-comic .run-ore-breakdown { font-size: 8px; }
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .game-intro,
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps li span,
+  #gameShell.theme-rust-comic .result-header > p:last-child,
+  #gameShell.theme-rust-comic .result-stats span,
+  #gameShell.theme-rust-comic .banked-module small,
+  #gameShell.theme-rust-comic .next-breakthrough__copy > span { font-size: 9px; }
+}
+
 #gameShell.theme-rust-comic .next-breakthrough__max:disabled {
   opacity: 1;
   filter: none;
@@ -7560,4 +7717,82 @@ summary:focus-visible,
     filter: none;
     transform: none;
   }
+}
+
+/* VISUAL REDUX · authoritative final overrides */
+#gameShell.theme-rust-comic .screen-texture { opacity: 0.14; }
+#gameShell.theme-rust-comic .utility-nav__button--dev { display: none !important; }
+
+#gameShell.theme-rust-comic .run-hud .hud-chip,
+#gameShell.theme-rust-comic .run-hud .focus-hud {
+  border: 1px solid var(--redux-line);
+  background: linear-gradient(112deg, rgba(95, 55, 39, 0.34), transparent 38%), rgba(7, 22, 24, 0.9);
+  box-shadow: inset 0 2px 0 rgba(75, 116, 108, 0.16), 3px 4px 0 rgba(7, 9, 10, 0.84);
+}
+
+#gameShell.theme-rust-comic .run-hud .hud-chip--ore { border-color: var(--redux-rust-line); }
+#gameShell.theme-rust-comic .run-hud .timer-module {
+  border: 2px solid var(--comic-ochre);
+  background: repeating-linear-gradient(-45deg, rgba(255, 238, 174, 0.045) 0 7px, transparent 7px 14px), linear-gradient(100deg, #62301e, #20322f 38%, #111b19);
+  box-shadow: inset 0 4px 0 #814128, 5px 6px 0 var(--comic-ink), 0 0 22px rgba(229, 173, 69, 0.09);
+}
+
+#gameShell.theme-rust-comic .hud-label { font-size: 11px; letter-spacing: 0.095em; }
+#gameShell.theme-rust-comic .run-ore-breakdown { font-size: 9px; line-height: 1.3; }
+#gameShell.theme-rust-comic #startScreen.has-menu-art .game-intro,
+#gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps li span,
+#gameShell.theme-rust-comic .result-header > p:last-child,
+#gameShell.theme-rust-comic .result-stats span,
+#gameShell.theme-rust-comic .banked-module small,
+#gameShell.theme-rust-comic .upgrade-footer p,
+#gameShell.theme-rust-comic .next-breakthrough__copy > span,
+#gameShell.theme-rust-comic .diagnosis-advice p { font-size: 10px; line-height: 1.42; }
+#gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps strong,
+#gameShell.theme-rust-comic .next-breakthrough__copy strong { font-size: 11px; }
+#gameShell.theme-rust-comic .next-breakthrough__copy small,
+#gameShell.theme-rust-comic .upgrade-node__level { font-size: 8px; }
+
+#gameShell.theme-rust-comic .upgrade-map__viewport {
+  background: radial-gradient(circle at 50% 50%, rgba(195, 111, 68, 0.08), transparent 31%), linear-gradient(118deg, rgba(94, 52, 37, 0.11), transparent 29%), #0b2223;
+}
+#gameShell.theme-rust-comic .upgrade-map__world {
+  background: radial-gradient(circle at 50% 50%, rgba(217, 169, 79, 0.2) 0 3px, transparent 4px 100%), repeating-radial-gradient(ellipse at 50% 50%, transparent 0 116px, rgba(104, 146, 138, 0.045) 117px 118px, transparent 119px 172px), conic-gradient(from -12deg at 50% 50%, rgba(165, 84, 50, 0.018) 0 1deg, transparent 1deg 50deg, rgba(104, 146, 138, 0.018) 50deg 51deg, transparent 51deg 100deg);
+}
+#gameShell.theme-rust-comic .upgrade-map__world::before { opacity: 0.055; }
+#gameShell.theme-rust-comic .upgrade-edge { opacity: 0.38; }
+#gameShell.theme-rust-comic .upgrade-edge.is-preview,
+#gameShell.theme-rust-comic .upgrade-edge[data-state="preview"] { opacity: 0.22; }
+
+#gameShell.theme-rust-comic .upgrade-node {
+  border-width: 2px;
+  border-color: color-mix(in srgb, var(--category-color) 50%, var(--comic-rust-hi));
+  background: linear-gradient(145deg, color-mix(in srgb, var(--category-color) 11%, #203331), #071719 72%);
+  box-shadow: inset 0 0 0 2px var(--comic-ink), 4px 5px 0 var(--comic-ink), 0 9px 16px rgba(0, 0, 0, 0.26);
+}
+#gameShell.theme-rust-comic .upgrade-node__icon {
+  border-width: 1px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--category-color) 13%, #102526), #071517 72%);
+  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--category-color) 24%, transparent);
+}
+#gameShell.theme-rust-comic .upgrade-node__icon-image {
+  width: 98%;
+  height: 98%;
+  filter: saturate(0.78) contrast(1.16) brightness(1.04) drop-shadow(0 2px 0 rgba(1, 7, 9, 0.88));
+}
+#gameShell.theme-rust-comic .upgrade-node.is-preview,
+#gameShell.theme-rust-comic .upgrade-node[data-state="preview"] { opacity: 0.4; filter: saturate(0.34) brightness(0.66); }
+#gameShell.theme-rust-comic .upgrade-node.is-preview .upgrade-node__icon-image,
+#gameShell.theme-rust-comic .upgrade-node[data-state="preview"] .upgrade-node__icon-image { opacity: 0.48; }
+#gameShell.theme-rust-comic .upgrade-node.is-dimmed { opacity: 0.09; }
+
+@media (max-width: 640px) {
+  #gameShell.theme-rust-comic .screen-texture { opacity: 0.08; }
+  #gameShell.theme-rust-comic .hud-label { font-size: 9px; }
+  #gameShell.theme-rust-comic .run-ore-breakdown { font-size: 8px; }
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .game-intro,
+  #gameShell.theme-rust-comic #startScreen.has-menu-art .briefing-steps li span,
+  #gameShell.theme-rust-comic .result-header > p:last-child,
+  #gameShell.theme-rust-comic .result-stats span,
+  #gameShell.theme-rust-comic .banked-module small,
+  #gameShell.theme-rust-comic .next-breakthrough__copy > span { font-size: 9px; }
 }

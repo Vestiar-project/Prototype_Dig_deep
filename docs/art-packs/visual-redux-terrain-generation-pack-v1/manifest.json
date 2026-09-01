@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 1,
+  "packageVersion": "1.0",
+  "created": "2026-08-31",
+  "assetId": "depth-zero-terrain-visual-redux-v1",
+  "generatorTarget": "GPT Image",
+  "purpose": "Drop-in visual redux of the six-cell runtime terrain atlas with reduced microcontrast, larger geological masses, invisible logical-tile boundaries, and preserved ore contrast",
+  "output": {
+    "filename": "depth-zero-terrain-runtime-atlas.png",
+    "format": "png",
+    "colorSpace": "sRGB",
+    "background": "opaque",
+    "alphaAllowed": false,
+    "exactWidth": 1536,
+    "exactHeight": 1024,
+    "columns": 3,
+    "rows": 2,
+    "cellWidth": 512,
+    "cellHeight": 512,
+    "outerPadding": 0,
+    "gutter": 0,
+    "fullBleedCells": true
+  },
+  "references": [
+    {
+      "label": "REFERENCE A",
+      "path": "assets/field/depth-zero-terrain-runtime-atlas.png",
+      "filename": "depth-zero-terrain-runtime-atlas.png",
+      "required": true,
+      "priority": 1,
+      "role": "Authoritative current layout, terrain identities, palette, and final-seal core position",
+      "doNotCopy": [
+        "excessive microcontrast",
+        "uniform pebble field",
+        "bright edge on every fragment"
+      ]
+    },
+    {
+      "label": "REFERENCE B",
+      "path": "assets/field/depth-zero-ores-runtime-atlas.png",
+      "filename": "depth-zero-ores-runtime-atlas.png",
+      "required": true,
+      "priority": 2,
+      "role": "Contrast-only reference for all ten ore nodes",
+      "includeInOutput": false
+    },
+    {
+      "label": "REFERENCE C",
+      "path": "assets/field/depth-zero-vein-connectors-runtime-atlas.png",
+      "filename": "depth-zero-vein-connectors-runtime-atlas.png",
+      "required": true,
+      "priority": 3,
+      "role": "Contrast-only reference for all ten vein connector materials",
+      "includeInOutput": false
+    },
+    {
+      "label": "REFERENCE D",
+      "path": "assets/field/depth-zero-field-art-master-atlas.png",
+      "filename": "depth-zero-field-art-master-atlas.png",
+      "required": false,
+      "priority": 4,
+      "role": "Style-only reference for broad hand-painted rust geo-comic massing",
+      "includeInOutput": false
+    }
+  ],
+  "layout": {
+    "coordinateOrigin": "top-left",
+    "cells": [
+      {
+        "id": "loam",
+        "column": 0,
+        "row": 0,
+        "x": 0,
+        "y": 0,
+        "width": 512,
+        "height": 512,
+        "palette": ["#654333", "#865c40"],
+        "seamlessX": true,
+        "seamlessY": true
+      },
+      {
+        "id": "dirt",
+        "column": 1,
+        "row": 0,
+        "x": 512,
+        "y": 0,
+        "width": 512,
+        "height": 512,
+        "palette": ["#51362e", "#704b39"],
+        "seamlessX": true,
+        "seamlessY": true
+      },
+      {
+        "id": "stone",
+        "column": 2,
+        "row": 0,
+        "x": 1024,
+        "y": 0,
+        "width": 512,
+        "height": 512,
+        "palette": ["#30373a", "#494e50"],
+        "seamlessX": true,
+        "seamlessY": true
+      },
+      {
+        "id": "deepstone",
+        "column": 0,
+        "row": 1,
+        "x": 0,
+        "y": 512,
+        "width": 512,
+        "height": 512,
+        "palette": ["#1d242a", "#30373d"],
+        "seamlessX": true,
+        "seamlessY": true
+      },
+      {
+        "id": "bedrock",
+        "column": 1,
+        "row": 1,
+        "x": 512,
+        "y": 512,
+        "width": 512,
+        "height": 512,
+        "palette": ["#0a1017", "#1b2128"],
+        "seamlessX": true,
+        "seamlessY": true
+      },
+      {
+        "id": "final_seal",
+        "column": 2,
+        "row": 1,
+        "x": 1024,
+        "y": 512,
+        "width": 512,
+        "height": 512,
+        "palette": {
+          "shell": ["#24182f", "#493052"],
+          "core": ["#b78542", "#ffe69a"]
+        },
+        "seamlessX": true,
+        "seamlessY": false,
+        "core": {
+          "orientation": "horizontal",
+          "count": 1,
+          "localCenterY": 256,
+          "mustCrossFullWidth": true,
+          "openMatchingEnds": true,
+          "runtimeSampleBand": {
+            "localY": 242,
+            "height": 28,
+            "endExclusiveY": 270
+          }
+        }
+      }
+    ]
+  },
+  "detailBudget": {
+    "runtimeLogicalTilePx": {
+      "min": 25,
+      "max": 28
+    },
+    "primaryMassSourcePx": {
+      "min": 72,
+      "max": 160
+    },
+    "secondaryFacetSourcePx": {
+      "min": 20,
+      "max": 56
+    },
+    "forbidRepeatedDetailBelowSourcePx": 8,
+    "targetMajorValueMassesPerRuntimeTile": {
+      "min": 1,
+      "max": 3
+    },
+    "targetSecondaryEdgesPerRuntimeTile": {
+      "min": 0,
+      "max": 2
+    },
+    "goal": "Preserve broad volume while preventing pebble noise, shimmer, and equal-weight highlights at runtime scale"
+  },
+  "artDirection": {
+    "style": "simplified hand-painted 3D / soft-PBR rust geo-comic",
+    "view": "side-section material only; no authored cave edge or scene",
+    "lighting": "broad diffuse top-left form light, restrained ambient occlusion, no cast shadows",
+    "valueHierarchy": [
+      "ore nodes and vein connectors",
+      "player and gameplay effects",
+      "terrain structure"
+    ],
+    "ordinaryTerrainMustAvoid": [
+      "saturated copper orange",
+      "gold yellow",
+      "amber yellow",
+      "amethyst purple",
+      "cyan",
+      "magenta",
+      "white needle-like lines",
+      "continuous ore-like colored seams"
+    ],
+    "embeddedDecorAllowed": false,
+    "damageStateEmbedded": false,
+    "authoredCaveBoundaryAllowed": false
+  },
+  "runtimeContract": {
+    "source": "assets/field/depth-zero-terrain-runtime-atlas.png",
+    "sampling": "world-space continuous sampling inside the selected 512x512 material region",
+    "ordinaryMaterialsWrap": "mirrored and continuous in X and Y",
+    "logicalTileBoundaryDrawnByAsset": false,
+    "chippedCaveMaskAppliedByRuntime": true,
+    "finalSealUsesCenteredHorizontalSourceBand": true,
+    "visualOnly": true,
+    "changesWorldGeneration": false,
+    "changesCaveTopology": false,
+    "changesOreNodes": false,
+    "changesVeinConnectors": false,
+    "changesCollision": false,
+    "changesTerrainHp": false,
+    "changesBalance": false
+  },
+  "qa": {
+    "requiredChecks": [
+      {
+        "id": "dimensions",
+        "method": "Inspect PNG metadata",
+        "pass": "Exactly 1536x1024, sRGB, fully opaque"
+      },
+      {
+        "id": "slicing",
+        "method": "Slice at x=512, x=1024, y=512",
+        "pass": "Six exact 512x512 cells in the declared order, with zero gutters and zero labels"
+      },
+      {
+        "id": "ordinary-tiling",
+        "method": "Build a 2x2 repeat of loam, dirt, stone, deepstone, and bedrock",
+        "pass": "No X/Y seams, cut masses, bright borders, dark caps, or obvious butterfly symmetry"
+      },
+      {
+        "id": "final-seal-tiling",
+        "method": "Repeat final_seal twice in X and inspect local y=242..269",
+        "pass": "One uninterrupted core centered at y=256 with stable width and no shell seam"
+      },
+      {
+        "id": "runtime-detail",
+        "method": "Inspect at least 16 different 28x28 crops per ordinary material, including seam-crossing crops",
+        "pass": "Each crop has 1-3 major value masses, no pebble field, no shimmer, and no implied square tile"
+      },
+      {
+        "id": "ore-composite",
+        "method": "Composite current ore nodes and vein connectors over representative terrain crops near runtime scale",
+        "pass": "All ten ores remain primary; copper, coal, and iron are readable without glow"
+      },
+      {
+        "id": "forbidden-content",
+        "method": "Visual inspection",
+        "pass": "No ore, crystals, roots, grass, cave edge, damage cracks, props, UI, text, transparency, perspective, or grid"
+      }
+    ],
+    "automaticReject": [
+      "wrong dimensions or cell order",
+      "any gutter, caption, frame, or alpha hole",
+      "visible seam in an ordinary material",
+      "final core missing the runtime source band",
+      "terrain mistaken for ore or vein connector",
+      "high-frequency pebble or glitter texture at 28px",
+      "visible logical-tile grid or Minecraft-like blocks"
+    ]
+  },
+  "handoff": {
+    "deliverables": [
+      "depth-zero-terrain-runtime-atlas.png"
+    ],
+    "referenceFilesAreDeliverables": false,
+    "runtimeReplacementAutomatic": false,
+    "approvalRequiredBeforeIntegration": true
+  }
+}

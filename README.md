@@ -77,6 +77,9 @@ node tests/runtime-smoke.js
 node tests/music-smoke.js
 node tests/campaign-balance-smoke.js
 node tests/progression-uniformity-smoke.js
+node tests/character-assets-smoke.js
+node tests/field-art-assets-smoke.js
+node tests/visual-redux-smoke.js
 ```
 
 Кампанийные тесты используют настоящую игровую логику, точные рудные рецепты и целевую покупку преобразующих узлов. Быстрый прогон проверяет контрольные кампании и достижимость главных фаз, а многосидовый аудит сравнивает 20 seed и три стратегии, измеряет паузы без новых механик, размеры пакетов покупок, первое событие, распределение времени до 85 заметных вех и отдельную длительность финального маршрута после установки Солнечного бура. Отдельный музыкальный smoke-тест фиксирует исходную длительность 150 секунд, структуру из 40 тактов, бесшовный цикл, запрет автозапуска без жеста и синхронизацию выключателя звука с сохранением.
@@ -84,3 +87,10 @@ node tests/progression-uniformity-smoke.js
 ## Документация
 
 Полный исходный замысел, хронология уточнений и нормализованное ТЗ первой версии сохранены в [`docs/GAME_DESIGN_SPEC.md`](docs/GAME_DESIGN_SPEC.md).
+
+Материалы ветки `visual_redux`:
+
+- [`docs/art-sources/visual-redux-2026-09-01/depth-zero-miner-sprite-sheet-5x7.png`](docs/art-sources/visual-redux-2026-09-01/depth-zero-miner-sprite-sheet-5x7.png) и [`depth-zero-terrain-gpt-image-original.png`](docs/art-sources/visual-redux-2026-09-01/depth-zero-terrain-gpt-image-original.png) — утверждённые исходники GPT Image; sheet нарезан на 35 runtime-кадров, а сердечник Печати фазово выровнен без перерисовки;
+- [`docs/art-packs/visual-redux-character-generation-pack-v1.zip`](docs/art-packs/visual-redux-character-generation-pack-v1.zip) — готовый пакет для GPT Image: основной one-shot prompt `5×7`, все current frames, master-body/animation spec, negative prompt и QA;
+- [`docs/art-packs/terrain-gpt-image-handoff/PROMPT_TO_PASTE_RU.txt`](docs/art-packs/terrain-gpt-image-handoff/PROMPT_TO_PASTE_RU.txt) — упрощённая передача породы в GPT Image: загрузить четыре PNG из этой же папки и вставить единственный текст целиком;
+- [`docs/VISUAL_REDUX_VFX_AND_DRONE_RU.md`](docs/VISUAL_REDUX_VFX_AND_DRONE_RU.md) — зафиксированный язык дрона, взрывов, лучей, дыма и camera shake.

@@ -772,13 +772,13 @@ assert.doesNotMatch(
 );
 assert.match(stylesSource, /\.result-header h2[\s\S]*?\.micro-event-banner[\s\S]*?\{\s*text-shadow:\s*none/, "the result heading must remain readable without a same-colour duplicate shadow");
 assert.match(indexSource, /class=["'][^"']*theme-rust-comic/);
-assert.match(indexSource, /styles\.css\?v=deep-shaft-11-vein-route/);
-assert.match(indexSource, /js\/upgrades\.js\?v=deep-shaft-11-vein-route/);
-assert.match(indexSource, /js\/world\.js\?v=deep-shaft-11-vein-route/);
-assert.match(indexSource, /js\/music\.js\?v=deep-shaft-11-vein-route/);
-assert.match(indexSource, /js\/game\.js\?v=deep-shaft-11-vein-route/);
+assert.match(indexSource, /styles\.css\?v=visual-redux-2/);
+assert.match(indexSource, /js\/upgrades\.js\?v=visual-redux-2/);
+assert.match(indexSource, /js\/world\.js\?v=visual-redux-2/);
+assert.match(indexSource, /js\/music\.js\?v=visual-redux-2/);
+assert.match(indexSource, /js\/game\.js\?v=visual-redux-2/);
 assert.ok(
-  indexSource.indexOf('js/music.js?v=deep-shaft-11-vein-route') < indexSource.indexOf('js/game.js?v=deep-shaft-11-vein-route'),
+  indexSource.indexOf('js/music.js?v=visual-redux-2') < indexSource.indexOf('js/game.js?v=visual-redux-2'),
   "the soundtrack singleton must load before the game audio engine",
 );
 assert.match(indexSource, /id=["']soundToggle["'][\s\S]*?aria-pressed=["']true["']/);
