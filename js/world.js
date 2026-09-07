@@ -878,6 +878,7 @@ class MineWorld {
       const key = `${tx}:${ty}`;
       if (checked.has(key)) continue;
       checked.add(key);
+      if (this._liftReservedKeys.has(key)) continue;
       const tile = this.getTile(tx, ty);
       if (!tile || tile.kind === "air" || tile.kind === "bedrock") continue;
       const occupied = this._undergroundEvents.some((other) => (
@@ -896,6 +897,7 @@ class MineWorld {
     event.x = (location.tx + 0.5) * WORLD_CONFIG.TILE_SIZE;
     event.y = (location.ty + 0.5) * WORLD_CONFIG.TILE_SIZE;
     event.depthTiles = Math.max(0, location.ty - this._spawn.ty);
+    event.hostBlockBroken = false;
     if (event.effect === "chest") {
       event.loot = this._createContainerLoot(
         location.tx,
@@ -953,6 +955,7 @@ class MineWorld {
     const id = typeof idOrEvent === "string" ? idOrEvent : idOrEvent?.id;
     const event = this._undergroundEventById.get(id);
     if (!event || event.triggered || event.consumed) return null;
+    if (event.effect === "chest" && !event.hostBlockBroken) return null;
     event.triggered = true;
     return {
       ...this._publicMicroEvent(event),
@@ -968,6 +971,7 @@ class MineWorld {
     const id = typeof idOrEvent === "string" ? idOrEvent : idOrEvent?.id;
     const event = this._undergroundEventById.get(id);
     if (!event || event.consumed) return null;
+    if (event.effect === "chest" && !event.hostBlockBroken) return null;
     const wasTriggered = event.triggered;
     event.triggered = true;
     event.consumed = true;
@@ -1106,7 +1110,7 @@ class MineWorld {
     if (tile.oreId || !tile.pendingLiftSupply) return null;
     const resupplyHpCap = Math.max(1, Math.round(asFinite(lift.target.maxHp, tile.maxHp)));
 
-    const tierCap = Math.max(0, Math.floor(asFinite(lift.requiredTier, 0)));
+    const tierCap = Math.min(3, Math.max(0, Math.floor(asFinite(lift.requiredTier, 0))));
     const allowed = this._oreDefinitions
       .filter((definition) => {
         const tier = Math.max(0, Math.floor(numericField(definition.source, ["tier"], 0)));
@@ -1743,6 +1747,14 @@ class MineWorld {
     this._oreRankByTile[this._index(tileX, tileY)] = -1;
     this._revealAround(tileX, tileY, 1);
 
+    // A container is sealed by this exact ordinary host block. Proximity,
+    // neighbouring blasts and visual discovery cannot award its contents.
+    for (const event of this._undergroundEvents) {
+      if (event.effect === "chest" && !event.consumed && event.tx === tileX && event.ty === tileY) {
+        event.hostBlockBroken = true;
+      }
+    }
+
     const broken = {
       tile: brokenTile,
       tx: tileX,
@@ -1824,11 +1836,14 @@ class MineWorld {
   }
 
   _publicMicroEvent(event) {
+    const host = event.effect === "chest" ? this.getTile(event.tx, event.ty) : null;
     return {
       ...event,
       visual: { ...event.visual },
       loot: event.loot ? { ...event.loot } : null,
-      state: event.consumed ? "consumed" : event.triggered ? "triggered" : "ready",
+      state: event.consumed ? "consumed" : event.triggered ? "triggered"
+        : event.effect === "chest" ? event.hostBlockBroken ? "opened"
+          : host?.hp < host?.maxHp ? "opening" : "sealed" : "ready",
     };
   }
 
@@ -1894,6 +1909,7 @@ class MineWorld {
         const tx = eventRng.int(7, WORLD_CONFIG.WIDTH - 8);
         const localMinimumTy = Math.max(minimumTy, this.surface[tx] + 7);
         const ty = eventRng.int(localMinimumTy, maximumTy);
+        if (this._liftReservedKeys.has(`${tx}:${ty}`)) continue;
         const tile = this.getTile(tx, ty);
         if (!tile || tile.kind === "air" || tile.kind === "bedrock") continue;
         if (Math.hypot(tx - this._spawn.tx, ty - this._spawn.ty) < 12) continue;
@@ -1913,6 +1929,7 @@ class MineWorld {
           for (let offset = 0; offset < WORLD_CONFIG.WIDTH && !location; offset += 1) {
             const tx = (rowOffset + offset) % WORLD_CONFIG.WIDTH;
             if (tx < 7 || tx >= WORLD_CONFIG.WIDTH - 7 || ty <= this.surface[tx] + 6) continue;
+            if (this._liftReservedKeys.has(`${tx}:${ty}`)) continue;
             const tile = this.getTile(tx, ty);
             if (!tile || tile.kind === "air" || tile.kind === "bedrock") continue;
             const overlaps = placed.some((other) => (
@@ -1956,6 +1973,7 @@ class MineWorld {
           : null,
         triggered: false,
         consumed: false,
+        hostBlockBroken: false,
       };
       placed.push(event);
       this._undergroundEvents.push(event);

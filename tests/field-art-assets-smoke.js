@@ -89,7 +89,7 @@ assert.deepEqual(readPngHeader("assets/field/depth-zero-vein-connectors-runtime-
 assert.equal(fs.existsSync(path.join(root, "assets/field/depth-zero-ores-chroma-source.png")), false);
 assert.equal(fs.existsSync(path.join(root, "assets/field/depth-zero-field-art-master-atlas-sanitized.png")), false);
 
-const gameSource = fs.readFileSync(path.join(root, "js/game.js"), "utf8");
+const gameSource = fs.readFileSync(path.join(root, "js/game.js"), "utf8").replace(/\r\n/g, "\n");
 const worldSource = fs.readFileSync(path.join(root, "js/world.js"), "utf8");
 
 function extractFunctionSource(name, nextName) {

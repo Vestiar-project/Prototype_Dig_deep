@@ -7796,3 +7796,189 @@ summary:focus-visible,
   #gameShell.theme-rust-comic .banked-module small,
   #gameShell.theme-rust-comic .next-breakthrough__copy > span { font-size: 9px; }
 }
+
+/* Workshop: a readable map, a persistent explanation, and a direct return to work. */
+#gameShell.theme-rust-comic .upgrade-shell {
+  width: min(1540px, 100%);
+  height: 100dvh;
+  padding: 14px 18px;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  grid-template-rows: auto auto minmax(0, 1fr) 56px;
+  grid-template-areas: "header header" "toolbar detail" "map detail" "footer footer";
+  gap: 12px;
+}
+#gameShell.theme-rust-comic .upgrade-header { grid-area: header; min-height: 72px; gap: 18px; padding: 10px 16px; }
+#gameShell.theme-rust-comic .upgrade-title-group h2 { font-size: 19px; }
+#gameShell.theme-rust-comic .upgrade-header .icon-btn { width: 44px; height: 44px; }
+#gameShell.theme-rust-comic .upgrade-toolbar { grid-area: toolbar; display: flex; flex-wrap: wrap; align-items: start; gap: 10px; padding: 0; max-height: none; }
+#gameShell.theme-rust-comic .search-box { width: auto; flex: 1 1 190px; height: 44px; min-height: 44px; }
+#gameShell.theme-rust-comic .search-box input { font-size: 13px; }
+#gameShell.theme-rust-comic .upgrade-map-shell { grid-area: map; grid-template: minmax(0, 1fr) / minmax(0, 1fr); }
+#gameShell.theme-rust-comic .upgrade-node,
+#gameShell.theme-rust-comic .upgrade-node.is-final {
+  width: 112px; height: 112px; padding: 8px 5px 7px;
+  grid-template-rows: 62px minmax(0, 1fr); gap: 6px; border-radius: 8px 2px 8px 2px;
+}
+#gameShell.theme-rust-comic .upgrade-node__icon { width: 62px; height: 62px; grid-row: 1; }
+#gameShell.theme-rust-comic .upgrade-node__name {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  grid-row: 2; width: 100%; overflow: hidden; color: #f4e6c6;
+  font-size: 11px; font-weight: 700; line-height: 1.22; letter-spacing: 0;
+  text-shadow: 0 1px 2px #071719;
+}
+#gameShell.theme-rust-comic .upgrade-node__level { top: -8px; right: -7px; bottom: auto; padding: 3px 5px; font-size: 11px; }
+#gameShell.theme-rust-comic .upgrade-node__tooltip { display: none !important; }
+#gameShell.theme-rust-comic .upgrade-node.is-preview { opacity: 0.68; filter: saturate(0.5); }
+#gameShell.theme-rust-comic .upgrade-node.is-preview .upgrade-node__icon-image { opacity: 0.68; }
+#gameShell.theme-rust-comic .upgrade-node.is-selected { border-color: #ffdc8b; box-shadow: 0 0 0 3px #92643b, 4px 5px 0 #061012; transform: none; }
+#gameShell.theme-rust-comic .upgrade-detail {
+  grid-area: detail; position: relative; display: flex; flex-direction: column; align-items: stretch;
+  width: auto; min-width: 0; min-height: 0; margin: 0; padding: 16px;
+  border: 1px solid #7e6141; background: linear-gradient(160deg, #24332b, #0b2023 42%);
+  box-shadow: inset 0 3px 0 #805637, 3px 4px 0 #061012; text-align: left; overflow: hidden;
+}
+#gameShell.theme-rust-comic .upgrade-detail .next-breakthrough__copy {
+  display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; gap: 10px; overflow-y: auto;
+  scrollbar-color: #4c7565 #102324; padding-right: 4px;
+}
+#gameShell.theme-rust-comic .upgrade-detail .next-breakthrough__copy > small { color: #d3a86f; font-size: 10px; letter-spacing: 0.08em; }
+#gameShell.theme-rust-comic .upgrade-detail .next-breakthrough__copy > strong {
+  overflow: visible; white-space: normal; color: #ffe5af; font-size: 16px; line-height: 1.35; letter-spacing: 0;
+}
+#gameShell.theme-rust-comic .upgrade-benefit { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+#gameShell.theme-rust-comic .upgrade-benefit li { padding-left: 10px; border-left: 2px solid #7dbc9e; color: #e8efdc; font-size: 13px; line-height: 1.4; }
+#gameShell.theme-rust-comic .upgrade-full-details { border-block: 1px solid #35504b; }
+#gameShell.theme-rust-comic .upgrade-full-details summary { display: flex; justify-content: space-between; align-items: center; min-height: 44px; cursor: pointer; color: #9dc1b1; font-size: 12px; }
+#gameShell.theme-rust-comic .upgrade-full-details p { margin: 0 0 12px; color: #c8d6c9; font-size: 13px; line-height: 1.55; white-space: pre-line; }
+#gameShell.theme-rust-comic .upgrade-detail__recipe { display: flex; flex-wrap: wrap; gap: 5px; }
+#gameShell.theme-rust-comic .upgrade-detail__recipe .recipe-chip { min-height: 28px; padding: 5px 7px; font-size: 11px; }
+#gameShell.theme-rust-comic .upgrade-detail #nextBreakthroughNeed { overflow: visible; color: #a7bdb1; white-space: normal; font-size: 12px; line-height: 1.45; }
+#gameShell.theme-rust-comic .upgrade-detail .next-breakthrough__actions { display: flex; flex: 0 0 auto; gap: 8px; margin-top: 14px; padding-top: 10px; border-top: 1px solid #3e5348; }
+#gameShell.theme-rust-comic .upgrade-detail .next-breakthrough__buy,
+#gameShell.theme-rust-comic .upgrade-detail .next-breakthrough__max {
+  position: static; min-height: 48px; margin: 0; padding: 10px 12px; border: 1px solid #bc9b67;
+  color: #192821; background: #e2bd78; box-shadow: 0 3px 0 #6d4e2e; font: inherit; font-size: 12px; font-weight: 900; cursor: pointer;
+}
+#gameShell.theme-rust-comic .upgrade-detail .next-breakthrough__buy { flex: 1; }
+#gameShell.theme-rust-comic .upgrade-detail .next-breakthrough__max { width: 58px; min-width: 58px; color: #e4d2ac; background: #244037; }
+#gameShell.theme-rust-comic .upgrade-detail button:disabled { cursor: default; color: #93a59a; background: #283c35; border-color: #476052; box-shadow: none; opacity: 0.8; }
+#gameShell.theme-rust-comic .run-mode-controls { flex: 1 1 300px; min-width: 0; }
+#gameShell.theme-rust-comic .run-mode-controls__buttons { display: flex; border: 1px solid #586b50; padding: 3px; gap: 4px; background: #102523; }
+#gameShell.theme-rust-comic .run-mode-controls button { flex: 1; min-height: 44px; padding: 6px 9px; border: 0; color: #9eb7a7; background: transparent; font: inherit; font-size: 11px; font-weight: 700; touch-action: manipulation; }
+#gameShell.theme-rust-comic .run-mode-controls button[aria-pressed="true"] { color: #162821; background: #d5b774; box-shadow: inset 0 -2px 0 #997648; }
+#gameShell.theme-rust-comic .run-mode-controls p { margin: 5px 0 0; color: #a7bcb1; font-size: 11px; line-height: 1.4; }
+#gameShell.theme-rust-comic .upgrade-footer { grid-area: footer; display: flex; min-height: 56px; gap: 16px; padding: 0; }
+#gameShell.theme-rust-comic .upgrade-footer p { flex: 1; margin: 0; font-size: 10px; line-height: 1.5; }
+#gameShell.theme-rust-comic .upgrade-footer .danger-link { min-height: 44px; font-size: 9px; }
+#gameShell.theme-rust-comic .workshop-start { min-width: 180px; min-height: 48px; font-size: 14px; }
+#gameShell.theme-rust-comic .workshop-start kbd { margin-left: 10px; font-size: 10px; }
+#gameShell.theme-rust-comic .run-intent,
+#gameShell.theme-rust-comic .solar-finale-status { grid-column: 1 / -1; justify-self: center; max-width: 700px; margin: -6px 0 0; padding: 7px 12px; border-left: 2px solid #b99258; background: rgba(6, 21, 22, 0.9); color: #d8d2ae; font-size: 12px; line-height: 1.35; text-align: center; }
+#gameShell.theme-rust-comic .solar-finale-status { color: #ffdf80; border-color: #ffdf80; font-weight: 700; }
+#gameShell.theme-rust-comic .run-hud:has(.solar-finale-status:not(.hidden)) .run-intent { display: none; }
+
+/* The report scrolls independently; the next shift is always one visible action away. */
+#gameShell.theme-rust-comic .result-screen { padding: 18px; overflow: hidden; }
+#gameShell.theme-rust-comic .result-card {
+  display: flex; flex-direction: column; width: min(820px, 100%); max-height: calc(100dvh - 36px);
+  min-height: 0; padding: 20px 22px 14px; overflow: hidden; background: #0b2022;
+}
+#gameShell.theme-rust-comic .result-scroll { min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 0 4px 8px; scrollbar-color: #527967 #0b2022; }
+#gameShell.theme-rust-comic #resultTutorialSlot .context-tutorial,
+#gameShell.theme-rust-comic #upgradeTutorialSlot .context-tutorial { position: static; width: 100%; margin: 12px 0 0; box-shadow: none; }
+#gameShell.theme-rust-comic #upgradeTutorialSlot .context-tutorial { grid-template-columns: minmax(0, 1fr); padding: 10px; }
+#gameShell.theme-rust-comic #upgradeTutorialSlot .context-tutorial__marker { display: none; }
+#gameShell.theme-rust-comic #upgradeTutorialSlot .context-tutorial__actions { flex-wrap: wrap; }
+#gameShell.theme-rust-comic #resultUtilitySlot { margin-top: 12px; }
+#gameShell.theme-rust-comic #resultUtilitySlot .utility-nav,
+#gameShell.theme-rust-comic #upgradeUtilitySlot .utility-nav { position: static; max-width: none; }
+#gameShell.theme-rust-comic .upgrade-detail .danger-link { align-self: flex-start; margin-top: 12px; min-height: 44px; font-size: 9px; }
+#gameShell.theme-rust-comic .result-header .eyebrow { margin: 0 0 7px; font-size: 10px; }
+#gameShell.theme-rust-comic .result-header h2 { margin: 0; font-size: clamp(22px, 3vw, 30px); line-height: 1.2; }
+#gameShell.theme-rust-comic .result-header > p:last-child { margin: 8px 0 14px; font-size: 12px; }
+#gameShell.theme-rust-comic .result-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; gap: 8px; padding: 10px; }
+#gameShell.theme-rust-comic .result-stats > div { grid-column: auto; padding: 8px 4px; border: 0; }
+#gameShell.theme-rust-comic .result-stats > div + div { border-left: 1px solid #294643; }
+#gameShell.theme-rust-comic .result-stats strong { font-size: 20px; }
+#gameShell.theme-rust-comic .result-stats span { font-size: 11px; }
+#gameShell.theme-rust-comic .banked-module { min-height: 0; justify-content: flex-start; margin: 12px 0; padding: 12px 16px; gap: 15px; }
+#gameShell.theme-rust-comic .banked-module .ore-badge { width: 40px; height: 46px; }
+#gameShell.theme-rust-comic #bankedOre { display: inline; margin-left: 12px; font-size: 26px; }
+#gameShell.theme-rust-comic .banked-module small { display: none; }
+#gameShell.theme-rust-comic .result-ore-breakdown { max-width: none; }
+#gameShell.theme-rust-comic .result-ore-chip { min-height: 24px; font-size: 10px; }
+#gameShell.theme-rust-comic .run-diagnosis { margin-top: 12px; padding: 13px; gap: 10px; }
+#gameShell.theme-rust-comic .run-diagnosis__header h3 { margin: 0; font-size: 15px; }
+#gameShell.theme-rust-comic .run-diagnosis__header .ui-kicker,
+#gameShell.theme-rust-comic .diagnosis-grade { display: none; }
+#gameShell.theme-rust-comic .diagnosis-highlights { grid-template-columns: 1fr; gap: 8px; }
+#gameShell.theme-rust-comic .diagnosis-highlight { min-height: 0; padding: 10px; grid-template-columns: 28px minmax(0, 1fr); gap: 9px; }
+#gameShell.theme-rust-comic .diagnosis-highlight > span { width: 28px; height: 28px; font-size: 17px; }
+#gameShell.theme-rust-comic .diagnosis-highlight strong { font-size: 13px; }
+#gameShell.theme-rust-comic .diagnosis-highlight p { margin: 5px 0 0; font-size: 12px; line-height: 1.45; }
+#gameShell.theme-rust-comic .diagnosis-details summary { min-height: 44px; padding: 12px 0; font-size: 11px; }
+#gameShell.theme-rust-comic .result-actions { flex: 0 0 auto; width: 100%; margin: 10px 0 0; padding-top: 12px; border-top: 1px solid #426053; gap: 10px; }
+#gameShell.theme-rust-comic .result-actions .btn { min-width: 0; min-height: 50px; font-size: 13px; }
+#gameShell.theme-rust-comic .result-hint { flex: 0 0 auto; margin: 10px 0 0; font-size: 10px; }
+#gameShell.theme-rust-comic .upgrade-contribution { padding: 12px; border: 1px solid #426153; border-left: 3px solid #d3ae64; background: #142e2b; }
+#gameShell.theme-rust-comic .upgrade-contribution small { display: block; color: #a9c0ae; font-size: 10px; letter-spacing: 0.04em; }
+#gameShell.theme-rust-comic .upgrade-contribution strong { display: block; margin-top: 6px; color: #f0d899; font-size: 16px; line-height: 1.35; }
+#gameShell.theme-rust-comic .upgrade-contribution strong span { color: #b4d1b3; white-space: nowrap; }
+#gameShell.theme-rust-comic .upgrade-contribution p { margin: 7px 0 0; color: #d2dfce; font-size: 13px; line-height: 1.5; }
+#gameShell.theme-rust-comic .contribution-list { display: grid; gap: 10px; margin: 10px 0; }
+
+@media (max-width: 760px) {
+  #gameShell.theme-rust-comic .upgrade-shell {
+    padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom)); gap: 8px;
+    grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(90px, 1fr) minmax(150px, 34dvh) 52px;
+    grid-template-areas: "header" "toolbar" "map" "detail" "footer";
+  }
+  #gameShell.theme-rust-comic .upgrade-header { min-height: 0; grid-template-columns: minmax(0, 1fr) 44px; gap: 5px; padding: 7px 9px; }
+  #gameShell.theme-rust-comic .upgrade-title-group h2 { font-size: 14px; }
+  #gameShell.theme-rust-comic .upgrade-title-group .eyebrow,
+  #gameShell.theme-rust-comic .upgrade-progress-wrap { display: none; }
+  #gameShell.theme-rust-comic .ore-inventory { grid-column: 1 / -1; grid-row: 2; width: 100%; min-height: 30px; padding: 3px; gap: 3px; }
+  #gameShell.theme-rust-comic .ore-stock { min-width: 28px; padding: 2px 4px; grid-template-columns: 10px minmax(0, 1fr); grid-template-rows: 1fr; gap: 4px; }
+  #gameShell.theme-rust-comic .ore-stock::before { width: 9px; height: 11px; }
+  #gameShell.theme-rust-comic .ore-stock strong { grid-row: 1; font-size: 10px; }
+  #gameShell.theme-rust-comic .ore-stock small { font-size: 10px; }
+  #gameShell.theme-rust-comic .upgrade-toolbar { gap: 6px; }
+  #gameShell.theme-rust-comic .search-box { flex-basis: 100%; min-height: 38px; height: 38px; }
+  #gameShell.theme-rust-comic .run-mode-controls { flex-basis: 100%; }
+  #gameShell.theme-rust-comic .run-mode-controls__buttons { padding: 0; gap: 2px; }
+  #gameShell.theme-rust-comic .run-mode-controls p { margin-top: 4px; font-size: 10px; }
+  #gameShell.theme-rust-comic .upgrade-toolbar .ore-focus-panel { display: none; }
+  #gameShell.theme-rust-comic .mobile-ore-focus:not(.hidden) { grid-column: 1 / -1; }
+  #gameShell.theme-rust-comic .mobile-ore-focus__toggle { min-height: 44px; padding-block: 3px; }
+  #gameShell.theme-rust-comic .mobile-ore-focus__copy > span { display: none; }
+  #gameShell.theme-rust-comic .upgrade-detail { border-radius: 12px 12px 0 0; padding: 10px 12px 9px; }
+  #gameShell.theme-rust-comic .upgrade-detail .next-breakthrough__copy { gap: 7px; }
+  #gameShell.theme-rust-comic .upgrade-detail .next-breakthrough__copy > small { font-size: 9px; }
+  #gameShell.theme-rust-comic .upgrade-detail .next-breakthrough__copy > strong { font-size: 13px; }
+  #gameShell.theme-rust-comic .upgrade-benefit li { font-size: 12px; }
+  #gameShell.theme-rust-comic .upgrade-detail .next-breakthrough__actions { margin-top: 6px; padding-top: 6px; gap: 7px; }
+  #gameShell.theme-rust-comic .upgrade-detail .next-breakthrough__buy,
+  #gameShell.theme-rust-comic .upgrade-detail .next-breakthrough__max { min-height: 44px; padding: 8px; font-size: 12px; }
+  #gameShell.theme-rust-comic .upgrade-footer { min-height: 52px; justify-content: space-between; gap: 10px; }
+  #gameShell.theme-rust-comic .upgrade-footer p { display: none !important; }
+  #gameShell.theme-rust-comic .upgrade-footer .danger-link { font-size: 8px; }
+  #gameShell.theme-rust-comic .workshop-start { min-width: 170px; min-height: 48px; font-size: 13px; }
+  #gameShell.theme-rust-comic .workshop-start kbd { display: none; }
+  #gameShell.theme-rust-comic .run-intent,
+  #gameShell.theme-rust-comic .solar-finale-status { max-width: 100%; margin-top: 0; padding: 5px 8px; font-size: 11px; }
+  #gameShell.theme-rust-comic .result-screen { padding: 8px; }
+  #gameShell.theme-rust-comic .result-card { width: 100%; max-height: calc(100dvh - 16px); padding: 14px 12px 10px; }
+  #gameShell.theme-rust-comic .result-header h2 { font-size: 22px; }
+  #gameShell.theme-rust-comic .result-header > p:last-child { font-size: 11px; }
+  #gameShell.theme-rust-comic .result-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 8px 5px; }
+  #gameShell.theme-rust-comic .result-stats strong { font-size: 18px; }
+  #gameShell.theme-rust-comic .result-stats span { font-size: 10px; }
+  #gameShell.theme-rust-comic .banked-module { padding: 10px; }
+  #gameShell.theme-rust-comic .banked-module .ore-badge { display: none; }
+  #gameShell.theme-rust-comic #bankedOre { font-size: 23px; }
+  #gameShell.theme-rust-comic .run-diagnosis { padding: 10px; }
+  #gameShell.theme-rust-comic .result-actions { grid-template-columns: 1fr 1fr; }
+  #gameShell.theme-rust-comic .result-actions .btn { min-height: 50px; padding: 9px 6px; font-size: 12px; }
+  #gameShell.theme-rust-comic .result-actions .btn-icon { display: none; }
+  #gameShell.theme-rust-comic .result-hint { display: none; }
+}

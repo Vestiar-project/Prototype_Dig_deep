@@ -643,8 +643,8 @@ const mobileTreeRenderCount = elementFor('#upgradeNodes').replaceChildrenCalls;
 const mobileEdgeRenderCount = elementFor('#upgradeMapLinks').replaceChildrenCalls;
 dispatchUpgradeNodeClick('core_first_descent');
 assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'core_first_descent').level, 0, 'the narrow mobile layout must not purchase a perk by tapping its icon');
-assert.equal(elementFor('#buyMaxSelectedUpgrade').dataset.purchaseMode, 'single', 'the narrow mobile layout must expose a single-rank purchase action');
-assert.equal(elementFor('#buyMaxSelectedUpgrade').dataset.upgradeId, 'core_first_descent', 'a mobile tap must still update the selected perk panel');
+assert.equal(elementFor('#buySelectedUpgrade').dataset.purchaseMode, 'single', 'the narrow mobile layout must expose a single-rank purchase action');
+assert.equal(elementFor('#buySelectedUpgrade').dataset.upgradeId, 'core_first_descent', 'a mobile tap must still update the selected perk panel');
 assert.equal(
   elementFor('#upgradeNodes').replaceChildrenCalls,
   mobileTreeRenderCount,
@@ -663,8 +663,8 @@ mobileUpgradeInteraction = true;
 api.openUpgrades();
 dispatchUpgradeNodeClick('core_first_descent');
 assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'core_first_descent').level, 0, 'mobile node tap must only select and reveal its description');
-assert.equal(elementFor('#buyMaxSelectedUpgrade').textContent, 'КУПИТЬ', 'mobile must expose an explicit single-rank purchase button');
-assert.equal(elementFor('#buyMaxSelectedUpgrade').dataset.purchaseMode, 'single');
+assert.equal(elementFor('#buySelectedUpgrade').textContent, 'КУПИТЬ УРОВЕНЬ', 'mobile must expose an explicit single-rank purchase button');
+assert.equal(elementFor('#buySelectedUpgrade').dataset.purchaseMode, 'single');
 const mobileTreeRenderBeforePurchase = elementFor('#upgradeNodes').replaceChildrenCalls;
 const mountedUpgradeNodesBeforePurchase = new Map(
   elementFor('#upgradeNodes').children
@@ -674,7 +674,7 @@ const mountedUpgradeNodesBeforePurchase = new Map(
 const mountedUpgradeNodeWritesBeforePurchase = new Map(
   [...mountedUpgradeNodesBeforePurchase].map(([id, node]) => [id, node.innerHTMLWrites]),
 );
-elementFor('#buyMaxSelectedUpgrade').click();
+elementFor('#buySelectedUpgrade').click();
 assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'core_first_descent').level, 1, 'the explicit mobile purchase button must install the selected node');
 assert.equal(
   elementFor('#upgradeNodes').replaceChildrenCalls,
@@ -712,14 +712,14 @@ api.stepRun(8);
 grantWorkshopBudget(api);
 api.openUpgrades();
 dispatchUpgradeNodeClick('time_extra_breath');
-elementFor('#buyMaxSelectedUpgrade').click();
+elementFor('#buySelectedUpgrade').click();
 assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'time_extra_breath').level, 1, 'mobile purchase button must buy one rank rather than every affordable rank');
 
 mobileUpgradeInteraction = false;
 api.debugResetProgress();
 grantWorkshopBudget(api);
 api.openUpgrades();
-assert.equal(elementFor('#buyMaxSelectedUpgrade').textContent, 'КУПИТЬ MAX', 'desktop must retain its existing max-purchase button');
+assert.equal(elementFor('#buyMaxSelectedUpgrade').textContent, 'MAX', 'desktop must expose its explicit max-purchase button');
 assert.equal(elementFor('#buyMaxSelectedUpgrade').dataset.purchaseMode, 'max');
 api.debugResetProgress();
 
@@ -818,89 +818,48 @@ assert.equal(savedPreparedWorkshop.workshopEligibilityRun, 1, "a completed shift
 assert.equal(savedPreparedWorkshop.workshopEligibleIds.includes("time_extra_breath"), true, "the prepared child should remain ready after reload");
 assert.equal(api.buyUpgrade("time_extra_breath"), true, "the prepared child should purchase normally");
 
-// A workshop pause can start at most four previously-unowned nodes. Remaining
-// ranks on those nodes stay buyable, and a completed shift opens four fresh slots.
+// All prepared branches can be installed in the same workshop. Preparation
+// still prevents buying their newly revealed children in that workshop.
 grantWorkshopBudget(api);
 const workshopCandidates = api.getUpgradeCatalog()
-  .filter((upgrade) => upgrade.level === 0 && upgrade.available)
-  .slice(0, 4);
-assert.ok(workshopCandidates.length >= 4, "the first post-root workshop should expose enough distinct branches to exercise its cap");
-for (const candidate of workshopCandidates.slice(0, 3)) {
-  assert.equal(api.buyUpgrade(candidate.id), true, `the workshop should start ${candidate.id} before reaching its cap`);
+  .filter((upgrade) => upgrade.level === 0 && upgrade.available);
+assert.ok(workshopCandidates.length >= 5);
+for (const candidate of workshopCandidates) {
+  assert.equal(api.buyUpgrade(candidate.id), true, `prepared ${candidate.id} must not hit a quota`);
 }
-const cappedCandidate = workshopCandidates[3];
-const startedBeforeExtraRank = api.getUpgradeCatalog().find((upgrade) => upgrade.id === "time_extra_breath");
-assert.ok(startedBeforeExtraRank.level > 0 && startedBeforeExtraRank.level < startedBeforeExtraRank.maxLevel);
-assert.equal(api.buyUpgrade("time_extra_breath"), true, "a started node must keep all later ranks available at the first-rank cap");
-const cappedCatalogEntry = api.getUpgradeCatalog().find((upgrade) => upgrade.id === cappedCandidate.id);
-assert.equal(cappedCatalogEntry.available, false, "a fifth distinct first rank must be blocked in the same workshop");
-assert.equal(cappedCatalogEntry.pendingReason, "capacity", "catalog diagnostics should distinguish capacity from preparation");
-assert.equal(cappedCatalogEntry.firstRankSlotsRemaining, 0);
-assert.equal(api.buyUpgrade(cappedCandidate.id), false, "the direct purchase path must enforce the four-node cap");
-const cappedWorkshopSave = JSON.parse(localData.get("depth-zero-save-v1"));
-assert.equal(cappedWorkshopSave.version, 15, "the final-seal campaign state requires save schema v15");
-assert.equal(cappedWorkshopSave.workshopInstallRun, 1);
-assert.equal(cappedWorkshopSave.workshopInstalledIds.length, 4, "the exact set of first-ranked nodes must persist");
-assert.match(elementFor("#upgradeMapStatus").textContent, /4\/4/, "the workshop tracker should explain the exhausted capacity");
-api.startRun({ seed: 14003 });
-api.stepRun(8);
-assert.equal(
-  api.getUpgradeCatalog().find((upgrade) => upgrade.id === cappedCandidate.id).available,
-  true,
-  "the next completed shift must reset first-rank capacity",
-);
-assert.equal(api.buyUpgrade(cappedCandidate.id), true);
+assert.equal(api.buyUpgrade("time_extra_breath"), true, "owned ranks remain immediately buyable");
+const unlimitedWorkshopSave = JSON.parse(localData.get("depth-zero-save-v1"));
+assert.equal(unlimitedWorkshopSave.version, 16);
+assert.ok(unlimitedWorkshopSave.workshopInstalledIds.length > 4);
+assert.ok(api.getUpgradeCatalog().some((upgrade) => upgrade.pendingReason === "preparation"));
+assert.ok(api.getUpgradeCatalog().every((upgrade) => !["capacity", "breakthrough-capacity", "level-capacity"].includes(upgrade.pendingReason)));
+assert.doesNotMatch(elementFor("#upgradeMapStatus").textContent, /4\/4|Лимит/);
 api.debugResetProgress();
 
-grantWorkshopBudget(api);
-api.openUpgrades();
-assert.equal(api.buyUpgrade("core_first_descent"), true);
-api.startRun({ seed: 14004 });
-api.stepRun(8);
-grantWorkshopBudget(api);
-const prioritizedWorkshopPurchase = api.debugAutoBuyAffordable(1);
-assert.deepEqual(
-  prioritizedWorkshopPurchase.bought,
-  ["time_extra_breath"],
-  "the benchmark buyer should secure enough early shift time before spending on scalar side branches",
-);
-maxWorkshopUpgrade(api, "sense_instinct_spark");
-assert.equal(api.buyUpgrade("dig_arm_swing"), true);
-maxWorkshopUpgrade(api, "dig_arm_swing");
-assert.equal(api.buyUpgrade("time_extra_breath"), true);
-maxWorkshopUpgrade(api, "time_extra_breath");
-const lastSlotWorkshopPurchase = api.debugAutoBuyAffordable(1);
-assert.deepEqual(
-  lastSlotWorkshopPurchase.bought,
-  ["gadgets_powder_pocket"],
-  "the last contested first-rank slot should prefer a non-capstone mechanic to a cheaper new scalar",
-);
-const automatedWorkshop = api.debugAutoBuyAffordable(199);
-const automatedWorkshopSave = JSON.parse(localData.get("depth-zero-save-v1"));
-assert.ok(automatedWorkshop.bought.length > 0, "auto-buy should continue buying ranks after opening four nodes");
-assert.equal(automatedWorkshopSave.workshopInstalledIds.length, 4, "auto-buy must obey the distinct first-rank cap");
-assert.ok(automatedWorkshopSave.workshopLevelsInstalled <= 35, "auto-buy must never exceed total workshop capacity");
-assert.equal(new Set(automatedWorkshopSave.workshopInstalledIds).size, 4);
-assert.equal(automatedWorkshopSave.workshopInstalledIds[3], "gadgets_powder_pocket", "the mechanic reservation belongs only to the final slot");
-api.debugResetProgress();
-
-// A late-game workshop can have hundreds of affordable ranks and no first-rank
-// bottleneck. Bound that pathological Buy Max dump independently, and expose a
-// specific reason instead of pretending the player ran out of ore.
+// Buy Max is bounded by recipes and real max levels, not a 35-rank quota.
+// Supply the actual discovery/depth prerequisites before constructing the
+// partially ranked build; granting inventory alone does not discover samples.
+api.startRun({ seed: 'unlimited-workshop-samples' });
+for (const ore of global.DepthZeroUpgrades.ORE_TYPES) {
+  assert.ok(api.breakNearestOre(ore.id), `workshop setup needs a real ${ore.id} sample`);
+}
+api.finishRun();
+api.setBestDepth(2000);
 api.setAllUpgrades(true);
 for (const upgrade of initialUpgradeCatalog.filter((entry) => entry.maxLevel > 1)) {
   api.setUpgradeLevel(upgrade.id, 1);
 }
 grantWorkshopBudget(api);
-const levelsBeforeWorkshopCap = api.getSnapshot().purchasedLevels;
-const levelCappedPurchase = api.debugAutoBuyAffordable(199);
-assert.equal(levelCappedPurchase.purchasedLevels - levelsBeforeWorkshopCap, 35);
-const levelCappedSave = JSON.parse(localData.get("depth-zero-save-v1"));
-assert.equal(levelCappedSave.workshopLevelsInstalled, 35);
-assert.ok(
-  api.getUpgradeCatalog().some((upgrade) => upgrade.pendingReason === "level-capacity"),
-  "catalog diagnostics must expose the exhausted total-installation capacity",
-);
+const levelsBeforeUnlimitedWorkshop = api.getSnapshot().purchasedLevels;
+for (let pass = 0; pass < initialUpgradeCatalog.length; pass += 1) {
+  const available = api.getUpgradeCatalog().filter((upgrade) => upgrade.available && upgrade.level < upgrade.maxLevel);
+  if (!available.length) break;
+  for (const upgrade of available) maxWorkshopUpgrade(api, upgrade.id);
+}
+const purchasedWithoutQuota = api.getSnapshot().purchasedLevels - levelsBeforeUnlimitedWorkshop;
+assert.ok(purchasedWithoutQuota > 35, `expected more than 35 ranks, bought ${purchasedWithoutQuota}`);
+assert.equal(api.getSnapshot().purchasedLevels, initialUpgradeCatalog.reduce((sum, entry) => sum + entry.maxLevel, 0));
+assert.ok(api.getUpgradeCatalog().every((upgrade) => !upgrade.pendingReason));
 api.debugResetProgress();
 
 // Branch capstones are milestones, not last-slot reservation candidates.
@@ -1248,6 +1207,11 @@ assert.equal(
   "final_seal",
   "an approach burst must not strike the distant final seal remotely",
 );
+// Teleporting into a solid block is not a direct seal contact: the beam must
+// have a genuine clear approach to the same section chosen earlier.
+for (let ty = finalLayerTy - 4; ty < finalLayerTy; ty += 1) {
+  for (let tx = finalLayerTx - 1; tx <= finalLayerTx + 1; tx += 1) clearTile(tx, ty);
+}
 api.debugSetPlayerTile(finalLayerTx, finalLayerTy - 1);
 api.debugSetDescentCadenceState({
   deepest: 1_800,
@@ -1262,6 +1226,9 @@ for (let strike = 0; strike < 3; strike += 1) {
   for (let shot = 0; shot < 5; shot += 1) assert.ok(api.attackNow(), "the Solar Drill must receive its fifth shot");
   api.debugSetAttackCooldown(100);
   api.stepRun(0.8);
+  assert.equal(api.getSnapshot().solarFinale.sealHits, strike + 1, 'each completed charge must advance exactly one seal stage');
+  assert.equal(api.getSnapshot().mode, 'run', 'the fracture must remain visible in the mine before the next charge or epilogue');
+  api.stepRun(strike === 2 ? 0.9 : 0.8);
 }
 assert.equal(api.getSnapshot().mode, "ending", "the third Solar Drill strike must open the comic finale");
 assert.equal(api.getSnapshot().campaign.ready, true, "a breached seal must complete the campaign");
@@ -1523,8 +1490,8 @@ api.openUpgrades();
 assert.equal(api.getSnapshot().mode, "upgrades", "the 102-node radial map should render without a runtime error");
 const radialLayout = api.debugGetUpgradeLayout();
 const radialRoot = radialLayout.positions.core_first_descent;
-assert.equal(radialRoot.x + 31, radialLayout.centerX, "the single root must sit at the horizontal center");
-assert.equal(radialRoot.y + 31, radialLayout.centerY, "the single root must sit at the vertical center");
+assert.equal(radialRoot.x + radialLayout.sizes.core_first_descent.width * 0.5, radialLayout.centerX, "the single root must sit at the horizontal center");
+assert.equal(radialRoot.y + radialLayout.sizes.core_first_descent.height * 0.5, radialLayout.centerY, "the single root must sit at the vertical center");
 const radialNodes = Object.entries(radialLayout.positions).map(([id, point]) => ({
   id,
   x: point.x,
@@ -1554,10 +1521,8 @@ assert.ok(
   `radial upgrade boxes need ${radialLayout.minimumGap}px of clear space; closest is ${closestRadialBoxGap}px (${closestRadialBoxPair})`,
 );
 
-// Lift resupply belongs to the player's live tree, not the route used by the
-// headless campaign buyer. Keep one strategic target affordable while a
-// different selected upgrade is missing three opening materials: the selected
-// recipe must still drive the landing sample.
+// Lift resupply belongs to the player's economy and depth. Reading another
+// upgrade recipe must not silently retune the next landing sample.
 api.debugResetProgress();
 api.setAllUpgrades(false);
 api.setUpgradeLevel("tools_iron_pick", 1);
@@ -1576,16 +1541,18 @@ assert.equal(
 
 api.debugResetProgress();
 api.setAllUpgrades(true);
+api.setUpgradeLevel("core_bon_voyage", 0);
 api.setUpgradeLevel("time_extra_breath", 2);
 api.setUpgradeLevel("sense_greed_compass", 0);
 api.grantOre("copper", 3);
+const suppliesBeforePreview = api.debugGetLiftResupplyPreferences(3);
 assert.equal(api.debugSetSelectedUpgrade("sense_greed_compass"), true);
 assert.deepEqual(
-  api.debugGetLiftResupplyPreferences(3).slice(0, 3),
-  ["iron", "coal", "amber"],
-  "lift resupply must rank shortages from the selected live upgrade even when the campaign route has another pending target",
+  api.debugGetLiftResupplyPreferences(3), suppliesBeforePreview,
+  "previewing a recipe must not influence lift supplies",
 );
 api.setAllUpgrades(true);
+api.setUpgradeLevel("core_bon_voyage", 0);
 api.debugSetSelectedUpgrade(null);
 
 api.setFocusedOre("copper");
@@ -1874,6 +1841,7 @@ api.finishRun();
 // The same invariant applies to the main laser and to a ricochet whose chosen
 // target lies inside the search radius but beyond the actual beam range.
 api.setAllUpgrades(true);
+api.setUpgradeLevel("core_bon_voyage", 0);
 api.setFocusedOre("star_core");
 api.startRun({ seed: "runtime-remote-laser", sectorId: "stable_strata" });
 api.debugSetPlayerTile(40, 20);
@@ -1894,6 +1862,7 @@ api.finishRun();
 
 const measureFocusedLaserDamage = (calibrationLevel) => {
   api.setAllUpgrades(true);
+  api.setUpgradeLevel("core_bon_voyage", 0);
   // Redesigned secondary impacts are deliberately orthogonal to hardness
   // calibration. Disable them here so this legacy assertion continues to
   // measure the primary beam only.
@@ -1936,6 +1905,7 @@ assert.ok(
 // direct damage with one or three emitted beams.
 const measureSplitterMainTarget = (splitterLevel) => {
   api.setAllUpgrades(true);
+  api.setUpgradeLevel("core_bon_voyage", 0);
   for (const upgradeId of [
     "dig_sweeping_arc",
     "dig_precision_path",
@@ -1983,6 +1953,7 @@ assert.ok(
 
 const measureFocusedRicochetDamage = (calibrationLevel) => {
   api.setAllUpgrades(true);
+  api.setUpgradeLevel("core_bon_voyage", 0);
   for (const upgradeId of [
     "dig_sweeping_arc",
     "dig_precision_path",
@@ -2022,6 +1993,7 @@ assert.ok(
 // immediately and both chain lightning and drones must retarget normally in
 // that same simulation tick.
 api.setAllUpgrades(true);
+api.setUpgradeLevel("core_bon_voyage", 0);
 api.setFocusedOre("star_core");
 api.setBestDepth(0);
 api.startRun({ seed: "runtime-beacon-exhaustion", sectorId: "stable_strata" });
@@ -2044,6 +2016,7 @@ api.finishRun();
 // A still-living beacon outside a gadget's local radius must not consume the
 // proc: chain lightning and drones fall back to ordinary focused targeting.
 api.setAllUpgrades(true);
+api.setUpgradeLevel("core_bon_voyage", 0);
 api.setFocusedOre("star_core");
 api.setBestDepth(0);
 api.startRun({ seed: "runtime-beacon-range", sectorId: "stable_strata" });
@@ -2071,6 +2044,7 @@ api.finishRun();
 // Selected complex upgrades and the game-wide systems expose deterministic
 // runtime hooks so their behavior, not merely their stat flags, cannot regress.
 api.setAllUpgrades(true);
+api.setUpgradeLevel("core_bon_voyage", 0);
 api.setFocusedOre(null);
 api.setCompletedRuns(2);
 api.requestRunStart();
@@ -2122,6 +2096,7 @@ api.finishRun();
 // the no-proc source even when every random proc would otherwise succeed.
 api.setFocusedOre(null);
 api.setAllUpgrades(true);
+api.setUpgradeLevel("core_bon_voyage", 0);
 api.setUpgradeLevel("tools_super_pick_echo", 1);
 api.setUpgradeLevel("sense_deaf_knock", 0);
 for (const upgradeId of ["dig_sweeping_arc", "dig_precision_path", "dig_omni_swing", "dig_quarry_presence", "tools_super_field", "tools_laser_width", "tools_solar_drill", "fortune_motherlode_covenant"]) {
@@ -2146,6 +2121,7 @@ assert.equal(
 api.finishRun();
 
 api.setAllUpgrades(true);
+api.setUpgradeLevel("core_bon_voyage", 0);
 api.setUpgradeLevel("tools_super_pick_echo", 2);
 api.setUpgradeLevel("sense_deaf_knock", 0);
 for (const upgradeId of ["dig_sweeping_arc", "dig_precision_path", "dig_omni_swing", "dig_quarry_presence", "tools_super_field", "tools_laser_width", "tools_solar_drill", "fortune_motherlode_covenant"]) {
@@ -2272,7 +2248,7 @@ assert.ok(
 );
 api.finishRun();
 
-// Every micro-event gets a natural proximity trigger or an explicit semantic
+// Every micro-event gets its physical trigger or an explicit semantic
 // assertion for its compact top-line timer and concrete gameplay result.
 api.setAllUpgrades(false);
 api.startRun({ seed: "micro-event-semantics", sectorId: "stable_strata" });
@@ -2356,7 +2332,11 @@ assert.equal(api.debugTriggerMicroEvent("rich_lens"), true);
 assert.ok(api.getSnapshot().eventYieldBoostRemaining > 4.9, "rich lens must visibly grant a five-second yield window");
 assert.match(elementFor("#microEventTitle").textContent, /ВЫХОД РУДЫ ×1,5/);
 const beforeContainer = api.getSnapshot();
-assert.equal(api.debugTriggerMicroEvent("ancient_container"), true);
+assert.equal(api.debugTriggerMicroEvent("ancient_container"), false, 'a sealed container cannot award loot through proximity or a direct event trigger');
+const sealedContainer = api.debugGetMicroEvents().find((event) => event.type === 'ancient_container');
+assert.ok(sealedContainer && !sealedContainer.hostBlockBroken);
+api.debugSetPlayerTile(sealedContainer.tx, sealedContainer.ty);
+assert.equal(api.debugBreakTileWithSource(sealedContainer.tx, sealedContainer.ty, 'pick'), true, 'breaking the actual host block must open the container');
 snapshot = api.getSnapshot();
 assert.ok(snapshot.runOre >= beforeContainer.runOre + 1, "the ancient container must add its mixed depth-scaled ore reward");
 assert.ok(snapshot.timeLeft >= beforeContainer.timeLeft + 0.49, "the ancient container must add half a second");
@@ -2387,7 +2367,10 @@ api.startRun({ seed: "runtime-stacked-event-indicator", sectorId: "stable_strata
 api.debugScheduleGlobalEvent();
 assert.equal(api.debugTriggerMicroEvent("gas_pocket"), true);
 api.stepRun(1);
-assert.equal(api.debugTriggerMicroEvent("ancient_container"), true);
+const stackedContainer = api.debugGetMicroEvents().find((event) => event.type === 'ancient_container');
+assert.ok(stackedContainer);
+api.debugSetPlayerTile(stackedContainer.tx, stackedContainer.ty);
+assert.equal(api.debugBreakTileWithSource(stackedContainer.tx, stackedContainer.ty, 'pick'), true);
 api.stepRun(2.25);
 snapshot = api.getSnapshot();
 assert.ok(snapshot.eventDigBoostRemaining > 1.7);
@@ -3360,13 +3343,14 @@ assert.equal(reloadCapCandidates.length, 5);
 for (const candidate of reloadCapCandidates.slice(0, 4)) {
   assert.equal(reloadedApi.buyUpgrade(candidate.id), true);
 }
-assert.equal(reloadedApi.buyUpgrade(reloadCapCandidates[4].id), false);
+assert.equal(reloadedApi.getUpgradeCatalog().find((entry) => entry.id === reloadCapCandidates[4].id).available, true);
 delete require.cache[gameModulePath];
 require(gameModulePath);
 const capReloadedApi = global.__DEPTH_ZERO__;
 const reloadBlocked = capReloadedApi.getUpgradeCatalog().find((upgrade) => upgrade.id === reloadCapCandidates[4].id);
-assert.equal(reloadBlocked.available, false, "reloading the runtime must not restore a consumed first-rank slot");
-assert.equal(reloadBlocked.pendingReason, "capacity");
+assert.equal(reloadBlocked.available, true, "reloading preserves readiness without reintroducing a quota");
+assert.equal(reloadBlocked.pendingReason, null);
+assert.equal(capReloadedApi.buyUpgrade(reloadCapCandidates[4].id), true);
 const reloadStarted = reloadCapCandidates.find((candidate) => candidate.maxLevel > 1);
 assert.ok(reloadStarted);
 assert.equal(capReloadedApi.buyUpgrade(reloadStarted.id), true, "reload must still allow later ranks on an already-started node");
@@ -3445,8 +3429,8 @@ console.log(JSON.stringify({
     "geological-journal",
     "local-balance-bench",
     "persistent-workshop-session-gate",
-    "workshop-first-rank-cap",
-    "workshop-level-cap",
+    "unlimited-prepared-workshop-nodes",
+    "unlimited-owned-workshop-ranks",
     "absolute-60-second-cap",
     "field-guide-auto-collapse",
   ],

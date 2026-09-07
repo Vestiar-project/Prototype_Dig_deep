@@ -14,9 +14,8 @@ Date.now = () => 1_700_000_000_000;
 
 // Reuse the real headless runtime: this keeps movement, targeting, exact ore
 // recipes, purchases, timers, procs and save progression in the simulation.
-require("./runtime-smoke.js");
-
-const api = global.__DEPTH_ZERO__;
+const { api } = require("./helpers/runtime-harness.js");
+const { configureCampaignRunMode } = require("./helpers/campaign-run-mode.js");
 assert.ok(api, "runtime diagnostics API should initialize");
 
 function seededRandom(seed) {
@@ -150,6 +149,9 @@ function simulateCampaign(seed, maxRuns = 420) {
   let elapsedSeconds = 0;
   let completed = false;
   let runs = 0;
+  let bestMeasuredDepth = 0;
+  let finalPerkRun = null;
+  let finalPerkDepth = null;
   let maxWorkshopLevels = 0;
   let maxWorkshopMechanics = 0;
   let maxWorkshop = null;
@@ -169,11 +171,24 @@ function simulateCampaign(seed, maxRuns = 420) {
   let frequencyApproach = null;
   const depthTrace = [];
   const openingRunMotion = [];
+  const runModeCounts = { descent: 0, harvest: 0 };
+  const runModeChanges = [];
 
   for (let run = 1; run <= maxRuns; run += 1) {
+    const runChoice = configureCampaignRunMode(api, bestMeasuredDepth);
+    runModeCounts[runChoice.mode] += 1;
+    if (runModeChanges.at(-1)?.mode !== runChoice.mode) {
+      runModeChanges.push({ run, minute: Number((elapsedSeconds / 60).toFixed(2)), bestDepth: bestMeasuredDepth, ...runChoice });
+    }
     api.startRun({ seed: `campaign-${seed}-${run}` });
     api.stepRun(61);
     let snapshot = api.getSnapshot();
+    if (snapshot.mode === "run" && snapshot.solarFinale?.sealSequenceStarted) {
+      // An impulse already in flight at the seal cap still owns its brief
+      // third-fracture reveal; allow that scene to finish before inspection.
+      api.stepRun(9);
+      snapshot = api.getSnapshot();
+    }
     const report = snapshot.lastRunReport;
     assert.ok(snapshot.mode === "result" || snapshot.mode === "ending", `run ${run} must end in results or the final comic`);
     const endingRun = snapshot.mode === "ending";
@@ -183,6 +198,7 @@ function simulateCampaign(seed, maxRuns = 420) {
     const runDepth = endingRun
       ? Math.max(0, Number(snapshot.deepest) || 0)
       : Math.max(0, Number(report?.depth) || 0);
+    bestMeasuredDepth = Math.max(bestMeasuredDepth, runDepth);
     if (!endingRun) {
       descentCadenceTotals.pulses += report?.descentCadencePulses || 0;
       descentCadenceTotals.completions += report?.descentCadenceCompletions || 0;
@@ -272,10 +288,16 @@ function simulateCampaign(seed, maxRuns = 420) {
       if (solarApproachWindow.length > 3) solarApproachWindow.shift();
     }
     const purchase = api.debugAutoBuyAffordable(300);
+    if (purchase.bought.includes("core_bon_voyage")) {
+      finalPerkRun = run;
+      finalPerkDepth = bestMeasuredDepth;
+    }
     if (process.env.CAMPAIGN_TRACE_DEPTH === "1") {
       const runStats = api.getStats();
       depthTrace.push({
         run,
+        runMode: runChoice.mode,
+        liftDepth: snapshot.liftDepth,
         minute: Number((elapsedSeconds / 60).toFixed(2)),
         duration: report?.duration || 0,
         depth: report?.depth || 0,
@@ -425,6 +447,9 @@ function simulateCampaign(seed, maxRuns = 420) {
     runs,
     activeMinutes: Number((activeSeconds / 60).toFixed(1)),
     elapsedMinutes: Number((elapsedSeconds / 60).toFixed(2)),
+    finalApproachMinutes: milestones.finalPerk == null ? null : Number(((elapsedSeconds - milestones.finalPerk) / 60).toFixed(2)),
+    finalApproachRuns: finalPerkRun == null ? null : runs - finalPerkRun,
+    finalPerkDepth,
     purchasedLevels: snapshot.purchasedLevels,
     lifetimeChunks: snapshot.campaign.lifetimeChunks,
     maxWorkshopLevels,
@@ -451,6 +476,8 @@ function simulateCampaign(seed, maxRuns = 420) {
     ...(frequencyApproach ? { frequencyApproach } : {}),
     ...(process.env.CAMPAIGN_TRACE_DEPTH === "1" ? { depthTrace } : {}),
     openingRunMotion,
+    runModeCounts,
+    runModeChanges,
     maxFeaturedGapMinutes: Number(((featuredGaps.length ? Math.max(...featuredGaps) : 0) / 60).toFixed(1)),
     maxFeaturedGapBetween: maxFeaturedGapIndex >= 0
       ? [featuredEntries[maxFeaturedGapIndex][0], featuredEntries[maxFeaturedGapIndex + 1][0]]
@@ -494,6 +521,8 @@ for (const campaign of campaigns) {
   assert.ok(campaign.milestoneMinutes.focus >= campaign.firstOreMinutes.silver, "ore focus must unlock only after its T5 silver sample appears");
   assert.ok(progressAt("focus") >= 0.3, `ore focus should sit beyond the opening 30%: ${JSON.stringify(campaign)}`);
   assert.equal(campaign.completed, true, `campaign ${campaign.seed} must be completable`);
+  assert.equal(campaign.finalApproachRuns, 1, `the assembled Solar Drill should finish in one final expedition: ${JSON.stringify(campaign)}`);
+  assert.ok(campaign.finalApproachMinutes <= 1.3, `the final expedition must fit its sixty-second energy and short completion scene: ${JSON.stringify(campaign)}`);
   assert.ok(campaign.elapsedMinutes >= 60 && campaign.elapsedMinutes <= 120, `campaign ${campaign.seed} should remain a 60-120 minute optimized run: ${JSON.stringify(campaign)}`);
   assert.ok(
     campaign.milestoneMinutes.scoutDrone >= 1
@@ -536,7 +565,14 @@ for (const campaign of campaigns) {
       // ~55-second shift. The aggregate 1200-1650 assertion above prevents
       // the late game from collapsing, while this floor preserves the
       // intended random reward for finding one unusually open formation.
-      depthGap(from, to) >= 0.75 && depthGap(from, to) <= maximumMinutes,
+      // Returning to known layers in Harvest mode can prepare a strong build
+      // for a fast final push through 1500+ m. Keep each band's upper bound,
+      // but no longer require that prepared build to linger in every layer.
+      // The assembled final tool likewise crosses several strata in one run.
+      (from >= 1500
+        || (campaign.finalPerkDepth != null && to > campaign.finalPerkDepth)
+        || depthGap(from, to) >= 0.75)
+        && depthGap(from, to) <= maximumMinutes,
       `${from}-${to} m must stay visible without becoming a late single wall: ${JSON.stringify(campaign)}`,
     );
   }
@@ -627,8 +663,8 @@ for (const campaign of campaigns) {
     lastCapstoneMinute - Math.min(...capstoneMinutes) >= 4,
     `capstone waves must cover several deep shifts instead of one purchase cascade: ${JSON.stringify(campaign)}`,
   );
-  assert.ok(campaign.maxWorkshopLevels <= 40, `one haul must not collapse dozens of late levels at once: ${JSON.stringify(campaign)}`);
-  assert.ok(campaign.maxWorkshopMechanics <= 4, `one haul must not introduce more than four mechanics: ${JSON.stringify(campaign)}`);
+  // Purchases have no numeric workshop quota. Keep package sizes in the
+  // diagnostic output, while cadence requirements below remain independent.
   // This compact list samples headline branch moments only; the broader
   // progression audit enforces the real drought limits across every visible
   // gameplay change and several purchase strategies.

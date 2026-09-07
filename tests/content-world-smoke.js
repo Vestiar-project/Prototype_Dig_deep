@@ -675,7 +675,7 @@ for (const id of removedDuplicateIds) {
 const playerFacingSource = ["index.html", path.join("js", "game.js")]
   .map((file) => fs.readFileSync(path.join(root, file), "utf8"))
   .join("\n");
-const gameSource = fs.readFileSync(path.join(root, "js", "game.js"), "utf8");
+const gameSource = fs.readFileSync(path.join(root, "js", "game.js"), "utf8").replace(/\r\n/g, "\n");
 const indexSource = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const stylesSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 const upgradeIconDirectory = path.join(root, "assets", "icons", "upgrades");
@@ -724,24 +724,19 @@ assert.match(gameSource, /MOBILE_UPGRADE_NARROW_WIDTH\s*=\s*640[\s\S]*?window\.i
 assert.match(indexSource, /class=["']upgrade-footer__desktop-hint["']/);
 assert.match(indexSource, /class=["']upgrade-footer__mobile-hint["']/);
 assert.match(indexSource, /покупка только кнопкой «КУПИТЬ»/u, "the mobile workshop must explain its explicit purchase action");
-assert.match(stylesSource, /max-width:\s*640px[\s\S]*?filter:\s*none[\s\S]*?width:\s*calc\(100vw[^;]+[\s\S]*?opacity:\s*1[\s\S]*?visibility:\s*visible/, "the selected mobile perk sheet must escape the filtered 62px node and use viewport width");
-assert.match(stylesSource, /font-size:\s*clamp\(11px,\s*3vw,\s*13px\)[\s\S]*?font-weight:\s*400/, "mobile perk descriptions must remain larger and normal-weight");
-assert.match(stylesSource, /next-breakthrough__max[\s\S]*?min-height:\s*44px[\s\S]*?border:\s*2px solid #ffe2a0[\s\S]*?background:\s*linear-gradient\(#ffd875,\s*#d98b35\)/, "the mobile purchase action must remain a large high-contrast CTA");
-assert.match(
-  stylesSource,
-  /#gameShell\.theme-rust-comic \.next-breakthrough__max:disabled\s*\{[\s\S]*?opacity:\s*1[\s\S]*?color:\s*#f4ecd8[\s\S]*?linear-gradient\(#596261,\s*#303838\)[\s\S]*?text-shadow:\s*0 2px 0 #111819/,
-  "the disabled Buy action must stay grey while retaining fully opaque readable text",
-);
-assert.doesNotMatch(
-  stylesSource,
-  /next-breakthrough__max:disabled\s*\{\s*opacity:\s*0\./,
-  "no disabled Buy rule may fade its label back below full opacity",
-);
+assert.ok(indexSource.indexOf('id="nextBreakthrough"') > indexSource.indexOf('id="upgradeMapStatus"'), "the description panel must live outside the scrollable tree, so transformed nodes cannot trap its mobile layout");
+assert.match(indexSource, /id=["']upgradeBenefit["']/, "the selected panel must expose next-rank benefits");
+assert.match(indexSource, /<details id=["']upgradeFullDetails["'][\s\S]*?id=["']upgradeFullDescription["']/, "the complete description must remain available through an explicit disclosure");
+assert.match(stylesSource, /\.upgrade-detail\s*\{[^}]*grid-area:\s*detail/, "the inspector must have its own stable layout area");
+assert.match(stylesSource, /grid-template-areas:\s*["']header["']\s*["']toolbar["']\s*["']map["']\s*["']detail["']\s*["']footer["']/, "mobile must place its details below the map and above the persistent actions");
+assert.match(stylesSource, /\.upgrade-full-details p\s*\{[^}]*font-size:\s*13px/, "full perk descriptions must stay readable in the independent inspector");
+assert.match(stylesSource, /\.upgrade-detail \.next-breakthrough__buy,[\s\S]*?min-height:\s*44px/, "the explicit purchase action must keep a touch-sized target");
+assert.match(stylesSource, /\.upgrade-detail button:disabled\s*\{[^}]*color:[^;}]+;[^}]*background:[^;}]+;/, "disabled purchase actions must have an explicit readable visual state");
 assert.doesNotMatch(indexSource, /pinSelectedUpgrade|ЗАКРЕПИТЬ|СНЯТЬ ЦЕЛЬ|СМЕНИТЬ ЦЕЛЬ/u, "perk target pinning must be absent from the workshop UI");
 assert.doesNotMatch(gameSource, /save\.pinnedUpgradeId|ui\.pinSelectedUpgrade|classList\.toggle\(['"]is-pinned/, "perk target pinning must have no runtime behavior");
 assert.doesNotMatch(stylesSource, /next-breakthrough__pin|upgrade-node\.is-pinned/, "removed pin controls must leave no visual state behind");
 assert.match(gameSource, /delete merged\.pinnedUpgradeId;/, "legacy saves must discard the removed pin field on load");
-assert.match(indexSource, /ВЫБРАННЫЙ УЗЕЛ/u, "the remaining purchase panel must describe the current selection, not a persistent goal");
+assert.match(indexSource, /СЛЕДУЮЩИЙ УРОВЕНЬ/u, "the remaining purchase panel must describe the current selection, not a persistent goal");
 assert.match(stylesSource, /@media \(hover: none\) and \(pointer: coarse\)[\s\S]*?upgrade-footer__desktop-hint[\s\S]*?display:\s*none[\s\S]*?upgrade-footer__mobile-hint[\s\S]*?display:\s*block/, "desktop and mobile workshop instructions must never be shown as one mixed control scheme");
 assert.match(indexSource, /id=["']mobileOreFocusToggle["'][\s\S]*?aria-controls=["']mobileOreFocusSheet["']/, "touch workshops need a stable focus control outside the capped toolbar");
 assert.match(indexSource, /id=["']mobileOreFocusChoices["']/, "the touch focus sheet needs explicit discovered-ore choices");
@@ -760,7 +755,7 @@ assert.doesNotMatch(gameSource, /focusHud\?\.addEventListener\(['"]click['"]/, "
 assert.match(stylesSource, /\.focus-hud\s*\{[\s\S]*?left:\s*50%[\s\S]*?transform:\s*translateX\(-50%\)/, "focus status must sit bottom-centre instead of over the field guide");
 assert.match(indexSource, /id=["']endingResetProgress["']/, "the completed comic must offer a progress reset");
 assert.match(gameSource, /endingResetProgress\?\.addEventListener\(['"]click['"],\s*resetAllProgress\)/, "the ending reset action must use the normal progress reset path");
-assert.match(gameSource, /version:\s*15/, "the final-seal state must be persisted in schema v15");
+assert.match(gameSource, /version:\s*16/, "the final-seal state must be persisted in schema v16");
 assert.match(indexSource, /id=["']startUpgrades["']/, "the title screen needs a direct workshop entry");
 assert.match(gameSource, /startUpgrades\?\.addEventListener\(['"]click['"],\s*openUpgradeScreen\)/, "the title workshop button must open the existing upgrade screen");
 assert.match(gameSource, /function selectUpgradeInPlace\(id\)[\s\S]*?renderNextBreakthrough\(\);[\s\S]*?return true;/, "perk selection must update the mounted tree in place");

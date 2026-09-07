@@ -2,6 +2,7 @@
 
 const assert = require("node:assert/strict");
 const { Worker, isMainThread, parentPort, workerData } = require("node:worker_threads");
+const { configureCampaignRunMode } = require("./helpers/campaign-run-mode.js");
 
 // A deliberately explicit list: these are purchases whose effect should be
 // visible in play, rather than another small scalar increase. Thresholded
@@ -378,25 +379,7 @@ function buyWithStrategy(api, strategy, finalPath, limit = 300) {
       return leftCost - rightCost || left.id.localeCompare(right.id);
     });
 
-    let candidate = candidates[0];
-    const firstRankSlotsRemaining = Number(
-      candidate?.firstRankSlotsRemaining ?? catalog[0]?.firstRankSlotsRemaining,
-    );
-    // Preserve the strategy's historical ordering for the first three slots.
-    // Only keep the last installation from going to an unrelated new scalar
-    // while an affordable gameplay breakthrough is already in the same
-    // candidate set. Owned ranks and branch capstones are never displaced.
-    if (
-      firstRankSlotsRemaining === 1
-      && candidate?.level === 0
-      && !candidate.breakthrough
-    ) {
-      candidate = candidates.find((definition) => (
-        definition.level === 0
-        && definition.breakthrough
-        && !CAPSTONE_IDS.has(definition.id)
-      )) || candidate;
-    }
+    const candidate = candidates[0];
     if (!candidate || !api.buyUpgrade(candidate.id)) break;
     bought.push(candidate.id);
   }
@@ -443,16 +426,33 @@ function simulateCampaign(api, seed, strategy, maxRuns = 480) {
   let pathDryRuns = 0;
   let completed = false;
   let runs = 0;
+  let finalPerkRun = null;
+  let finalPerkDepth = null;
+  let bestMeasuredDepth = 0;
+  const runModeCounts = { descent: 0, harvest: 0 };
+  const runModeChanges = [];
 
   for (let run = 1; run <= maxRuns; run += 1) {
+    const runChoice = configureCampaignRunMode(api, bestMeasuredDepth);
+    runModeCounts[runChoice.mode] += 1;
+    if (runModeChanges.at(-1)?.mode !== runChoice.mode) {
+      runModeChanges.push({ run, minute: Number((elapsedSeconds / 60).toFixed(2)), bestDepth: bestMeasuredDepth, ...runChoice });
+    }
     api.startRun({ seed: `uniformity-${strategy}-${seed}-${run}` });
     api.stepRun(61);
     let snapshot = api.getSnapshot();
+    if (snapshot.mode === "run" && snapshot.solarFinale?.sealSequenceStarted) {
+      api.stepRun(9);
+      snapshot = api.getSnapshot();
+    }
     assert.ok(
       snapshot.mode === "result" || snapshot.mode === "ending",
       `${strategy}/${seed}: run ${run} must end in results or the final comic`,
     );
-    const duration = snapshot.lastRunReport?.duration || 0;
+    const duration = snapshot.mode === "ending"
+      ? snapshot.activeWallElapsed || 0
+      : snapshot.lastRunReport?.duration || 0;
+    bestMeasuredDepth = Math.max(bestMeasuredDepth, snapshot.deepest || 0);
     elapsedSeconds += duration + 10;
     runs = run;
     if (snapshot.mode === "ending") {
@@ -494,6 +494,10 @@ function simulateCampaign(api, seed, strategy, maxRuns = 480) {
       }
     }
     const bought = buyWithStrategy(api, strategy, finalPath, 300);
+    if (bought.includes("core_bon_voyage")) {
+      finalPerkRun = run;
+      finalPerkDepth = bestMeasuredDepth;
+    }
     if (bought.length) {
       const purchaseGap = elapsedSeconds - lastPurchaseSeconds;
       if (purchaseGap > maxPurchaseGapSeconds) {
@@ -664,6 +668,10 @@ function simulateCampaign(api, seed, strategy, maxRuns = 480) {
     runs,
     elapsedMinutes: Number((elapsedSeconds / 60).toFixed(2)),
     finalApproachMinutes,
+    finalApproachRuns: finalPerkRun == null ? null : runs - finalPerkRun,
+    finalPerkDepth,
+    runModeCounts,
+    runModeChanges,
     firstEventMinutes: firstEventSeconds == null ? null : Number((firstEventSeconds / 60).toFixed(2)),
     maxMechanicGapMinutes: Number((maxMechanicGapSeconds / 60).toFixed(2)),
     maxMechanicGapDetails,
@@ -779,13 +787,9 @@ if (!isMainThread) {
     configurable: true,
   });
   Date.now = () => 1_700_000_000_000;
-  // runtime-smoke builds the same DOM/canvas shims used by the main runtime
-  // suite, then loads the production upgrade, world and game modules.
-  const originalLog = console.log;
-  console.log = () => {};
-  require("./runtime-smoke.js");
-  console.log = originalLog;
-  const api = global.__DEPTH_ZERO__;
+  // Load the same DOM/canvas bootstrap without running unrelated smoke
+  // assertions before every independent campaign worker.
+  const { api } = require("./helpers/runtime-harness.js");
   assert.ok(api, "real headless runtime must initialize in every worker");
   const job = workerData.job;
   parentPort.postMessage(simulateCampaign(api, job.seed, job.strategy));
@@ -925,16 +929,14 @@ if (!isMainThread) {
       assert.ok(overall.elapsedMinutes.p10 >= 45, `campaign must retain a real opening and middle game: ${JSON.stringify(overall.elapsedMinutes)}`);
       assert.ok(overall.elapsedMinutes.p90 <= 135, `90% of campaigns should fit the 1-2 hour target with margin: ${JSON.stringify(overall.elapsedMinutes)}`);
       assert.equal(overall.finalApproachMinutes.found, overall.campaigns, "every completed campaign must install the Solar Drill before breaching the seal");
-      assert.ok(overall.finalApproachMinutes.p90 <= 12, `90% of campaigns should breach the seal within twelve minutes of installing the Solar Drill: ${JSON.stringify(overall.finalApproachMinutes)}`);
-      assert.ok(overall.finalApproachMinutes.max <= 14, `the final directed descent must not become another long progression plateau: ${JSON.stringify(overall.finalApproachMinutes)}`);
+      assert.ok(campaigns.every((campaign) => campaign.finalApproachRuns === 1), "the completed Solar Drill must reach the ending in one final expedition");
+      assert.ok(overall.finalApproachMinutes.max <= 1.3, `the final expedition must fit its energy, brief completion scene and modeled workshop pause: ${JSON.stringify(overall.finalApproachMinutes)}`);
       assert.ok(overall.maxMechanicGapMinutes.p90 <= 12, `90% of campaigns need a notable unlock at least every twelve minutes: ${JSON.stringify(overall.maxMechanicGapMinutes)}`);
       assert.ok(overall.maxMechanicGapMinutes.max <= 14, `no sampled campaign should go fourteen minutes without a notable unlock: ${JSON.stringify(overall.maxMechanicGapMinutes)}`);
       assert.ok(overall.maxPurchaseGapMinutes.p90 <= 7, `90% of campaigns need an affordable useful purchase at least every seven minutes: ${JSON.stringify(overall.maxPurchaseGapMinutes)}`);
       assert.ok(overall.maxPurchaseGapMinutes.max <= 9, `no sampled campaign should go nine minutes without any upgrade purchase: ${JSON.stringify(overall.maxPurchaseGapMinutes)}`);
-      assert.ok(overall.maxLevelPackage.p90 <= 35, `late economy must not collapse into giant level packages: ${JSON.stringify(overall.maxLevelPackage)}`);
-      assert.ok(overall.maxMechanicPackage.p90 <= 4, `notable mechanics need room to breathe between purchases: ${JSON.stringify(overall.maxMechanicPackage)}`);
-      assert.ok(overall.maxVisibleChangePackage.p90 <= 8, `visible rank changes must not collapse into oversized workshop bursts: ${JSON.stringify(overall.maxVisibleChangePackage)}`);
-      assert.ok(overall.maxVisibleChangePackage.max <= 8, `no sampled workshop should install more than eight visible changes at once: ${JSON.stringify(overall.maxVisibleChangePackage)}`);
+      // Numeric workshop quotas were removed. Package sizes remain useful
+      // telemetry; do not turn them back into implicit purchasing limits.
       assert.equal(overall.firstEventMinutes.found, overall.campaigns, "every sampled campaign must encounter an underground event");
       assert.ok(overall.firstEventMinutes.p90 <= 15, `events should become visible during the early game: ${JSON.stringify(overall.firstEventMinutes)}`);
       assert.ok(overall.firstEventMinutes.max <= 20, `no seed should hide its first event beyond twenty minutes: ${JSON.stringify(overall.firstEventMinutes)}`);

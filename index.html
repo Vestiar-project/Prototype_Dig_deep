@@ -118,6 +118,8 @@
             </span>
           </div>
         </div>
+        <p id="runIntent" class="run-intent hidden"></p>
+        <p id="solarFinaleStatus" class="solar-finale-status hidden" role="status"></p>
       </section>
 
       <aside
@@ -277,6 +279,7 @@
       >
         <div class="overlay-backdrop" aria-hidden="true"></div>
         <div class="result-card panel-frame">
+          <div class="result-scroll">
           <header class="result-header">
             <p class="eyebrow"><span></span> ОТЧЁТ ЭКСПЕДИЦИИ <span></span></p>
             <h2 id="resultTitle">СМЕНА ЗАВЕРШЕНА</h2>
@@ -310,7 +313,7 @@
             <header class="run-diagnosis__header">
               <div>
                 <span class="ui-kicker">ДИАГНОСТИКА СМЕНЫ</span>
-                <h3 id="runDiagnosisTitle">ТРИ ГЛАВНЫХ ВЫВОДА</h3>
+                <h3 id="runDiagnosisTitle">ИТОГ СМЕНЫ</h3>
               </div>
               <span class="diagnosis-grade" title="Оценка эффективности смены">B+</span>
             </header>
@@ -350,18 +353,21 @@
             </details>
           </section>
 
+          <div id="resultTutorialSlot"></div>
+          <div id="resultUtilitySlot"></div>
+          </div>
           <div class="result-actions">
             <button id="launchRocket" class="btn btn--primary final-launch hidden" type="button">
               <span class="btn-icon" aria-hidden="true">▲</span>
               <span id="launchLabel">ЗАПУСТИТЬ РАКЕТУ</span>
             </button>
-            <button id="openUpgrades" class="btn btn--primary" type="button">
+            <button id="openUpgrades" class="btn btn--secondary" type="button">
               <span class="btn-icon" aria-hidden="true">◆</span>
               УЛУЧШЕНИЯ
             </button>
-            <button id="retryRun" class="btn btn--secondary" type="button">
+            <button id="retryRun" class="btn btn--primary" type="button">
               <span class="btn-icon" aria-hidden="true">↻</span>
-              ЕЩЁ СМЕНА
+              В ШАХТУ
             </button>
           </div>
           <p class="result-hint"><kbd>U</kbd> мастерская <span>•</span> <kbd>Enter</kbd> новый забег</p>
@@ -452,17 +458,13 @@
               <kbd>/</kbd>
             </label>
 
-            <aside id="nextBreakthrough" class="next-breakthrough" aria-live="polite">
-              <span class="next-breakthrough__mark" aria-hidden="true">◎</span>
-              <span class="next-breakthrough__copy">
-                <small>ВЫБРАННЫЙ УЗЕЛ</small>
-                <strong id="nextBreakthroughName">ВЫБЕРИТЕ УЗЕЛ</strong>
-                <span id="nextBreakthroughNeed">Нажмите на модуль в дереве, чтобы увидеть его цену.</span>
-              </span>
-              <span class="next-breakthrough__actions">
-                <button id="buyMaxSelectedUpgrade" class="next-breakthrough__max" type="button">КУПИТЬ MAX</button>
-              </span>
-            </aside>
+            <section id="runModeControls" class="run-mode-controls hidden" aria-label="Стиль следующей смены">
+              <div class="run-mode-controls__buttons" role="group" aria-label="Выберите стиль добычи">
+                <button type="button" data-run-mode="descent" aria-pressed="true">↓ ПРОХОДКА</button>
+                <button type="button" data-run-mode="harvest" aria-pressed="false">◆ РАЗРАБОТКА</button>
+              </div>
+              <p id="runModeDescription">Быстрее спускаться к новым пластам.</p>
+            </section>
 
             <div id="oreFocusPanel" class="ore-focus-panel hidden" aria-label="Приоритет поиска руды">
               <span class="ore-focus-panel__title"><b>⌾ РУДНЫЙ ФОКУС</b><small>Игнорировать остальные жилы · радиус ×2,15</small></span>
@@ -478,7 +480,7 @@
               id="upgradeMapViewport"
               class="upgrade-map__viewport"
               tabindex="0"
-              aria-label="Единое дерево модулей экспедиции. Наведите курсор на значок, чтобы увидеть описание."
+              aria-label="Дерево модулей. Описание выбранного улучшения показано в постоянной панели."
             >
               <div id="upgradeMapWorld" class="upgrade-map__world">
                 <div id="upgradeMapLanes" class="upgrade-map__lanes" aria-hidden="true"></div>
@@ -507,10 +509,31 @@
             <p id="upgradeMapStatus" class="sr-only" aria-live="polite" aria-atomic="true"></p>
           </div>
 
+          <aside id="nextBreakthrough" class="next-breakthrough upgrade-detail" aria-label="Выбранное улучшение">
+            <div class="next-breakthrough__copy">
+              <small id="upgradeBenefitLabel">СЛЕДУЮЩИЙ УРОВЕНЬ</small>
+              <strong id="nextBreakthroughName">ВЫБЕРИТЕ МОДУЛЬ</strong>
+              <ul id="upgradeBenefit" class="upgrade-benefit"></ul>
+              <div id="upgradeDetailRecipe" class="upgrade-detail__recipe" aria-label="Стоимость следующего уровня"></div>
+              <details id="upgradeFullDetails" class="upgrade-full-details">
+                <summary>Как работает <span aria-hidden="true">⌄</span></summary>
+                <p id="upgradeFullDescription"></p>
+              </details>
+              <span id="nextBreakthroughNeed">Выберите модуль в дереве.</span>
+              <div id="upgradeTutorialSlot"></div>
+              <button id="wipeSave" class="danger-link" type="button">СБРОСИТЬ ПРОГРЕСС</button>
+            </div>
+            <div class="next-breakthrough__actions">
+              <button id="buySelectedUpgrade" class="next-breakthrough__buy" type="button">КУПИТЬ УРОВЕНЬ</button>
+              <button id="buyMaxSelectedUpgrade" class="next-breakthrough__max" type="button">MAX</button>
+            </div>
+          </aside>
+
           <footer class="upgrade-footer">
             <p class="upgrade-footer__desktop-hint"><span class="mouse-key" aria-hidden="true">↖</span> наведите для описания <span>•</span> клик — купить уровень <span>•</span> Shift + клик — купить максимум <span>•</span> прокручивайте дерево</p>
             <p class="upgrade-footer__mobile-hint">Тап по узлу — описание <span>•</span> покупка только кнопкой «КУПИТЬ» <span>•</span> перетаскивайте дерево</p>
-            <button id="wipeSave" class="danger-link" type="button">СБРОСИТЬ ПРОГРЕСС</button>
+            <div id="upgradeUtilitySlot"></div>
+            <button id="workshopStartRun" class="btn btn--primary workshop-start" type="button">В ШАХТУ <kbd>Enter</kbd></button>
           </footer>
         </div>
       </section>

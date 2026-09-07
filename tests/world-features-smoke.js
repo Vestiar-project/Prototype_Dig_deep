@@ -1012,7 +1012,8 @@ assert.equal(chest.visual.color, chest.color);
 assert.ok(chest.announcement.includes(chest.label));
 assert.equal(chest.triggered, false);
 assert.equal(chest.consumed, false);
-assert.equal(chest.state, "ready");
+assert.equal(chest.state, "sealed");
+assert.equal(chest.hostBlockBroken, false);
 assertContainerLoot(eventWorld, chest);
 
 const forbiddenGlobalFields = [
@@ -1077,6 +1078,37 @@ assert.notEqual(
   "chest loot must also be returned as a defensive copy",
 );
 
+assert.equal(eventWorld.triggerMicroEvent(chest.id), null, "a sealed chest cannot trigger through proximity");
+assert.equal(eventWorld.consumeMicroEvent(chest.id), null, "a sealed chest cannot be collected before its host breaks");
+const chestNeighbour = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1]]
+  .map(([dx, dy]) => ({ tx: chest.tx + dx, ty: chest.ty + dy }))
+  .find(({ tx, ty }) => !["air", "bedrock", "final_seal"].includes(eventWorld.getTile(tx, ty)?.kind));
+assert.ok(chestNeighbour, "the chest fixture must contain a nearby breakable block");
+assert.ok(eventWorld.breakTile(chestNeighbour.tx, chestNeighbour.ty));
+assert.equal(eventWorld.getMicroEvents()[0].state, "sealed", "breaking a neighbour must leave the host sealed");
+assert.equal(eventWorld.triggerMicroEvent(chest.id), null);
+assert.equal(eventWorld.consumeMicroEvent(chest.id), null);
+
+const chestHostHp = eventWorld.getTile(chest.tx, chest.ty).hp;
+assert.ok(chestHostHp > 0, "a sealed chest must have a real solid host");
+assert.equal(eventWorld.damageTile(chest.tx, chest.ty, chestHostHp / 2).length, 0);
+const openingChest = eventWorld.getMicroEvents()[0];
+assert.equal(openingChest.state, "opening", "partial host damage must expose the opening stage");
+assert.equal(openingChest.hostBlockBroken, false);
+assert.deepEqual(openingChest.loot, chest.loot, "host damage must not alter the reward budget");
+assert.equal(eventWorld.triggerMicroEvent(chest.id), null);
+assert.equal(eventWorld.consumeMicroEvent(chest.id), null);
+let hostBreakObserved = false;
+assert.equal(eventWorld.damageTile(chest.tx, chest.ty, chestHostHp, (_tile, tx, ty) => {
+  assert.deepEqual({ tx, ty }, { tx: chest.tx, ty: chest.ty });
+  assert.equal(eventWorld.getMicroEvents()[0].state, "opened", "the break callback must already see an opened chest");
+  hostBreakObserved = true;
+}).length, 1);
+assert.equal(hostBreakObserved, true);
+const openedChest = eventWorld.getMicroEvents()[0];
+assert.equal(openedChest.state, "opened");
+assert.equal(openedChest.hostBlockBroken, true);
+assert.deepEqual(openedChest.loot, chest.loot);
 const triggered = eventWorld.triggerMicroEvent(chest.id);
 assert.equal(triggered.id, chest.id);
 assert.equal(triggered.firstTrigger, true);
@@ -1093,12 +1125,16 @@ assert.ok(eventWorld.getMicroEvents({ includeConsumed: true }).some((event) => e
 
 eventWorld.reset("micro-event-probe", { sectorId: "ore_ridge" });
 const untouchedChest = eventWorld.getMicroEvents()[0];
+assert.equal(eventWorld.consumeMicroEvent(untouchedChest.id), null, "direct collection must also wait for the host break");
+assert.ok(eventWorld.breakTile(untouchedChest.tx, untouchedChest.ty));
 const directlyConsumed = eventWorld.consumeMicroEvent(untouchedChest.id);
-assert.equal(directlyConsumed.wasTriggered, false, "consume may atomically trigger an untouched event");
+assert.equal(directlyConsumed.wasTriggered, false, "consume may atomically trigger an opened event");
+assert.equal(directlyConsumed.state, "consumed");
+assert.equal(eventWorld.consumeMicroEvent(untouchedChest.id), null);
 assert.equal(eventWorld.triggerMicroEvent(untouchedChest.id), null);
 
 eventWorld.reset("micro-event-probe", { sectorId: "ore_ridge" });
-assert.deepEqual(eventWorld.getMicroEvents(), eventTwin.getMicroEvents(), "reset must restore deterministic ready events");
+assert.deepEqual(eventWorld.getMicroEvents(), eventTwin.getMicroEvents(), "reset must restore deterministic sealed events");
 
 const stagedFingerprint = tileFingerprint(eventWorld);
 const stagedEvent = eventWorld.stageMicroEventNearSpawn("ancient_container");
@@ -1115,6 +1151,10 @@ assert.ok(
   "a staged event must remain a physical underground target",
 );
 assert.equal(stagedEvent.type, "ancient_container");
+assert.equal(stagedEvent.state, "sealed");
+assert.equal(stagedEvent.hostBlockBroken, false);
+assert.equal(eventWorld.triggerMicroEvent(stagedEvent.id), null, "staging must not bypass the sealed host");
+assert.equal(eventWorld.consumeMicroEvent(stagedEvent.id), null);
 assertContainerLoot(eventWorld, stagedEvent);
 assert.equal(eventWorld.getMicroEvents().length, 1);
 assert.equal(tileFingerprint(eventWorld), stagedFingerprint, "staging an event must not change rock or ore density");

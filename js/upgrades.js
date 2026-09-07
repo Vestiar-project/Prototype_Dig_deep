@@ -478,7 +478,7 @@ const senseUpgrades = [
   defineUpgrade({
     id: "sense_deep_resonance",
     name: "Глубинный резонанс",
-    description: "Чутьё дальше замечает плотную руду и получает +16,7 к радиусу за уровень. Глубинный сектор пробивает породу конусом вниз и отмечает 1/2/3 цели; следующие уровни расширяют, углубляют и ускоряют отклик.",
+    description: "Радиус чутья растёт с глубиной: до +16,7% за уровень. Глубинный сектор пробивает породу конусом вниз и отмечает 1/2/3 цели; следующие уровни расширяют, углубляют и ускоряют отклик.",
     category: "sense",
     icon: "◍",
     maxLevel: 3,
@@ -2539,7 +2539,7 @@ const fortuneUpgrades = [
 const coreFinalUpgrade = defineUpgrade({
   id: "core_bon_voyage",
   name: "Солнечный бур",
-  description: "Объединяет вершины всех путей и сразу ведёт к Печати планеты. Каждый пятый реальный контакт луча с породой удерживает солнечный луч 0,7 секунды и расширяет тоннель мощным импульсом; только близкий импульс способен пробить саму Печать.",
+  description: "Даёт финальному спуску 60 секунд энергии и ведёт к Печати. Каждый пятый контакт удерживает луч 0,7 секунды: завершённый импульс плавит породу в радиусе 3,25 блока. Расплавленная руда не собирается. Три близких импульса раскроют Печать.",
   category: "core",
   icon: "☀",
   maxLevel: 1,
@@ -2568,11 +2568,9 @@ const coreFinalUpgrade = defineUpgrade({
       stats.solarDrillEnabled = true;
       stats.solarDrillProcEvery = 5;
       stats.solarDrillBeamDuration = 0.7;
-      // The final tool must create a short, visibly decisive descent rather
-      // than another 20-45 minute rock plateau after the tree is complete.
-      // The pulse is strong enough to finish every local deep-rock block and
-      // broad enough to open a real tunnel instead of wasting more overkill
-      // on the same target. Every earlier tool remains unchanged.
+      // Before the first ending, completed real-contact pulses melt their
+      // local tunnel independently of the purchased optional damage ranks.
+      // The damage multiplier remains the ordinary post-ending tool effect.
       stats.solarDrillFinalBurstPower = 18;
       stats.solarDrillFinalBurstRadiusTiles = 3.25;
     }
