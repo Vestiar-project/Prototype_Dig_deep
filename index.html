@@ -21,7 +21,7 @@
       href="assets/main-menu/main-menu-hero-mobile.png"
       media="(max-width: 1199px)"
     />
-    <link rel="stylesheet" href="styles.css?v=visual-redux-2" />
+    <link rel="stylesheet" href="styles.css?v=workshop-4" />
   </head>
   <body>
     <a class="skip-link" href="#gameCanvas">К игровому полю</a>
@@ -333,6 +333,11 @@
               </article>
             </div>
 
+            <div class="report-next-step">
+              <small>СЛЕДУЮЩАЯ СМЕНА</small>
+              <p id="reportNextStep"></p>
+              <button id="reportAdviceAction" type="button" class="report-advice-action hidden">НАСТРОИТЬ СМЕНУ</button>
+            </div>
             <details id="reportDetails" class="diagnosis-details">
               <summary>ПОДРОБНЫЕ ДАННЫЕ <span aria-hidden="true">⌄</span></summary>
               <div class="diagnosis-details__body">
@@ -356,6 +361,7 @@
           <div id="resultTutorialSlot"></div>
           <div id="resultUtilitySlot"></div>
           </div>
+          <p id="nextRunSummary" class="next-run-summary"></p>
           <div class="result-actions">
             <button id="launchRocket" class="btn btn--primary final-launch hidden" type="button">
               <span class="btn-icon" aria-hidden="true">▲</span>
@@ -451,12 +457,16 @@
           </header>
 
           <div class="upgrade-toolbar">
-            <label class="search-box" for="upgradeSearch">
-              <span aria-hidden="true">⌕</span>
-              <span class="sr-only">Поиск улучшения</span>
-              <input id="upgradeSearch" type="search" placeholder="Найти модуль…" autocomplete="off" />
-              <kbd>/</kbd>
-            </label>
+            <div class="upgrade-navigator" aria-label="Навигация по дереву">
+              <label class="search-box" for="upgradeSearch">
+                <span aria-hidden="true">⌕</span>
+                <span class="sr-only">Поиск улучшения</span>
+                <input id="upgradeSearch" type="search" placeholder="Найти модуль…" autocomplete="off" />
+                <kbd>/</kbd>
+              </label>
+              <button id="upgradeAffordableNext" type="button">Можно купить · 0</button>
+              <button id="upgradeNewNext" type="button">Новые · 0</button>
+            </div>
 
             <section id="runModeControls" class="run-mode-controls hidden" aria-label="Стиль следующей смены">
               <div class="run-mode-controls__buttons" role="group" aria-label="Выберите стиль добычи">
@@ -520,6 +530,11 @@
                 <p id="upgradeFullDescription"></p>
               </details>
               <span id="nextBreakthroughNeed">Выберите модуль в дереве.</span>
+              <div id="upgradeRequirements" class="upgrade-requirements hidden" aria-label="Переход к недостающим модулям"></div>
+              <details id="upgradeMilestone" class="upgrade-milestone">
+                <summary id="upgradeMilestoneSummary">Ближайший технологический переход</summary>
+                <div id="upgradeMilestoneContent" class="upgrade-milestone__content"></div>
+              </details>
               <div id="upgradeTutorialSlot"></div>
               <button id="wipeSave" class="danger-link" type="button">СБРОСИТЬ ПРОГРЕСС</button>
             </div>
@@ -530,7 +545,7 @@
           </aside>
 
           <footer class="upgrade-footer">
-            <p class="upgrade-footer__desktop-hint"><span class="mouse-key" aria-hidden="true">↖</span> наведите для описания <span>•</span> клик — купить уровень <span>•</span> Shift + клик — купить максимум <span>•</span> прокручивайте дерево</p>
+            <p class="upgrade-footer__desktop-hint"><span class="mouse-key" aria-hidden="true">↖</span> клик — выбрать модуль <span>•</span> «КУПИТЬ УРОВЕНЬ» / «MAX» — установить <span>•</span> прокручивайте дерево</p>
             <p class="upgrade-footer__mobile-hint">Тап по узлу — описание <span>•</span> покупка только кнопкой «КУПИТЬ» <span>•</span> перетаскивайте дерево</p>
             <div id="upgradeUtilitySlot"></div>
             <button id="workshopStartRun" class="btn btn--primary workshop-start" type="button">В ШАХТУ <kbd>Enter</kbd></button>
@@ -773,9 +788,9 @@
     <noscript>
       <div class="noscript-message">Включите JavaScript, чтобы спуститься в шахту.</div>
     </noscript>
-    <script defer src="js/upgrades.js?v=visual-redux-2"></script>
-    <script defer src="js/world.js?v=visual-redux-2"></script>
+    <script defer src="js/upgrades.js?v=workshop-3"></script>
+    <script defer src="js/world.js?v=workshop-3"></script>
     <script defer src="js/music.js?v=visual-redux-2"></script>
-    <script defer src="js/game.js?v=visual-redux-2"></script>
+    <script defer src="js/game.js?v=workshop-3"></script>
   </body>
 </html>

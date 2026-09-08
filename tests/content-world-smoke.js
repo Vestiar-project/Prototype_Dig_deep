@@ -718,12 +718,15 @@ assert.doesNotMatch(gameSource, /events\.push\(active\)/, "consumed events must 
 assert.match(
   gameSource,
   /MOBILE_UPGRADE_INTERACTION_QUERY\s*=\s*['"]\(hover: none\) and \(pointer: coarse\)['"]/,
-  "mobile perk purchasing must recognize coarse touch capability",
+  "the mobile workshop layout must recognize coarse touch capability",
 );
 assert.match(gameSource, /MOBILE_UPGRADE_NARROW_WIDTH\s*=\s*640[\s\S]*?window\.innerWidth\s*<=\s*MOBILE_UPGRADE_NARROW_WIDTH/, "the narrow mobile layout must use the same explicit purchase controls even when pointer emulation is unavailable");
 assert.match(indexSource, /class=["']upgrade-footer__desktop-hint["']/);
 assert.match(indexSource, /class=["']upgrade-footer__mobile-hint["']/);
+assert.match(indexSource, /upgrade-footer__desktop-hint[\s\S]*?клик — выбрать модуль[\s\S]*?«КУПИТЬ УРОВЕНЬ» \/ «MAX» — установить/u, "the desktop workshop must explain selection and explicit purchase separately");
 assert.match(indexSource, /покупка только кнопкой «КУПИТЬ»/u, "the mobile workshop must explain its explicit purchase action");
+assert.doesNotMatch(gameSource, /upgradeGrid\?\.addEventListener\(['"](?:pointerover|focusin)['"]/, "hover and keyboard focus must not replace the selected purchase target");
+assert.doesNotMatch(gameSource, /node\.dataset\.buyUpgrade\s*=/, "upgrade cards must not carry an implicit purchase shortcut");
 assert.ok(indexSource.indexOf('id="nextBreakthrough"') > indexSource.indexOf('id="upgradeMapStatus"'), "the description panel must live outside the scrollable tree, so transformed nodes cannot trap its mobile layout");
 assert.match(indexSource, /id=["']upgradeBenefit["']/, "the selected panel must expose next-rank benefits");
 assert.match(indexSource, /<details id=["']upgradeFullDetails["'][\s\S]*?id=["']upgradeFullDescription["']/, "the complete description must remain available through an explicit disclosure");
@@ -737,17 +740,17 @@ assert.doesNotMatch(gameSource, /save\.pinnedUpgradeId|ui\.pinSelectedUpgrade|cl
 assert.doesNotMatch(stylesSource, /next-breakthrough__pin|upgrade-node\.is-pinned/, "removed pin controls must leave no visual state behind");
 assert.match(gameSource, /delete merged\.pinnedUpgradeId;/, "legacy saves must discard the removed pin field on load");
 assert.match(indexSource, /СЛЕДУЮЩИЙ УРОВЕНЬ/u, "the remaining purchase panel must describe the current selection, not a persistent goal");
-assert.match(stylesSource, /@media \(hover: none\) and \(pointer: coarse\)[\s\S]*?upgrade-footer__desktop-hint[\s\S]*?display:\s*none[\s\S]*?upgrade-footer__mobile-hint[\s\S]*?display:\s*block/, "desktop and mobile workshop instructions must never be shown as one mixed control scheme");
+assert.match(stylesSource, /@media \(max-width: 760px\), \(hover: none\) and \(pointer: coarse\)[\s\S]*?upgrade-footer__desktop-hint[\s\S]*?display:\s*none[\s\S]*?upgrade-footer__mobile-hint[\s\S]*?display:\s*block/, "narrow and touch workshops must show one compact set of instructions");
 assert.match(indexSource, /id=["']mobileOreFocusToggle["'][\s\S]*?aria-controls=["']mobileOreFocusSheet["']/, "touch workshops need a stable focus control outside the capped toolbar");
 assert.match(indexSource, /id=["']mobileOreFocusChoices["']/, "the touch focus sheet needs explicit discovered-ore choices");
-assert.match(stylesSource, /@media \(hover: none\) and \(pointer: coarse\)[\s\S]*?\.upgrade-toolbar \.ore-focus-panel\s*\{\s*display:\s*none[\s\S]*?\.mobile-ore-focus:not\(\.hidden\)[\s\S]*?display:\s*block/, "touch focus must replace, not duplicate, the desktop toolbar panel");
+assert.match(stylesSource, /@media \(max-width: 760px\), \(hover: none\) and \(pointer: coarse\)[\s\S]*?\.upgrade-toolbar \.ore-focus-panel\s*\{\s*display:\s*none[\s\S]*?\.mobile-ore-focus:not\(\.hidden\)[\s\S]*?display:\s*block/, "narrow and touch focus must replace the desktop toolbar panel without disappearing");
 assert.match(stylesSource, /\.mobile-ore-focus__toggle\s*\{[\s\S]*?min-height:\s*54px/, "the mobile focus control must remain an obvious touch target");
 assert.match(stylesSource, /\.mobile-ore-focus__choice\s*\{[\s\S]*?min-height:\s*48px/, "ore choices in the mobile sheet must remain touch sized");
 assert.match(gameSource, /mobileOreFocusIsRelevant[\s\S]*?save\.levels\.tools_steel_pick/, "steel-tier players need a visible explanation of the approaching focus mechanic");
 assert.match(gameSource, /mobileOreFocusToggle\?\.addEventListener\(['"]click['"],\s*activateMobileOreFocusControl\)/, "the mobile focus control must not be coupled to direct perk purchasing");
 assert.match(indexSource, /id=["']resumeRun["'][^>]*>ПРОДОЛЖИТЬ</u, "touch-only players need an explicit way out of a visibility pause");
 assert.match(stylesSource, /\.pause-overlay__resume\s*\{[\s\S]*?min-height:\s*52px/, "the mobile resume action must be a large touch target");
-assert.match(stylesSource, /@media \(hover: none\) and \(pointer: coarse\)[\s\S]*?\.pause-overlay__desktop-copy\s*\{\s*display:\s*none[\s\S]*?\.pause-overlay__resume\s*\{[\s\S]*?display:\s*inline-flex/, "mobile pause copy must not instruct the player to press Esc");
+assert.match(stylesSource, /@media \(max-width: 760px\), \(hover: none\) and \(pointer: coarse\)[\s\S]*?\.pause-overlay__desktop-copy\s*\{\s*display:\s*none[\s\S]*?\.pause-overlay__resume\s*\{[\s\S]*?display:\s*inline-flex/, "mobile pause copy must offer its visible resume action");
 assert.match(gameSource, /resumeRun\?\.addEventListener\(['"]click['"],\s*\(\)\s*=>\s*togglePause\(false\)\)/, "the resume button must explicitly clear pause without auto-resuming on visibility return");
 assert.match(indexSource, /id=["']focusHud["'][\s\S]*?role=["']status["']/, "the in-run focus must be a passive status readout");
 assert.doesNotMatch(indexSource, /id=["']runOreFocusBackdrop["']|id=["']runOreFocusChoices["']/, "focus must not be switched from an active shift");
@@ -767,13 +770,13 @@ assert.doesNotMatch(
 );
 assert.match(stylesSource, /\.result-header h2[\s\S]*?\.micro-event-banner[\s\S]*?\{\s*text-shadow:\s*none/, "the result heading must remain readable without a same-colour duplicate shadow");
 assert.match(indexSource, /class=["'][^"']*theme-rust-comic/);
-assert.match(indexSource, /styles\.css\?v=visual-redux-2/);
-assert.match(indexSource, /js\/upgrades\.js\?v=visual-redux-2/);
-assert.match(indexSource, /js\/world\.js\?v=visual-redux-2/);
+assert.match(indexSource, /styles\.css\?v=workshop-4/);
+assert.match(indexSource, /js\/upgrades\.js\?v=workshop-3/);
+assert.match(indexSource, /js\/world\.js\?v=workshop-3/);
 assert.match(indexSource, /js\/music\.js\?v=visual-redux-2/);
-assert.match(indexSource, /js\/game\.js\?v=visual-redux-2/);
+assert.match(indexSource, /js\/game\.js\?v=workshop-3/);
 assert.ok(
-  indexSource.indexOf('js/music.js?v=visual-redux-2') < indexSource.indexOf('js/game.js?v=visual-redux-2'),
+  indexSource.indexOf('js/music.js?v=visual-redux-2') < indexSource.indexOf('js/game.js?v=workshop-3'),
   "the soundtrack singleton must load before the game audio engine",
 );
 assert.match(indexSource, /id=["']soundToggle["'][\s\S]*?aria-pressed=["']true["']/);

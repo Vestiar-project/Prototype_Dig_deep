@@ -85,8 +85,8 @@ assert.match(css, /utility-nav__button--dev \{ display: none !important; \}/);
 assert.match(css, /run-hud \.timer-module/);
 assert.match(css, /upgrade-node\.is-dimmed \{ opacity: 0\.09; \}/);
 assert.doesNotMatch(html, /id="openBalance"/);
-assert.match(html, /styles\.css\?v=visual-redux-2/);
-assert.match(html, /js\/game\.js\?v=visual-redux-2/);
+assert.match(html, /styles\.css\?v=workshop-4/);
+assert.match(html, /js\/game\.js\?v=workshop-3/);
 assert.match(game, /const VISUAL_ASSET_REVISION = 'visual-redux-2';/);
 assert.match(game, /terrainImage\.src = visualAssetSource\(FIELD_TERRAIN_ATLAS_SOURCE\);/);
 for (const variantId of [

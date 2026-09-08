@@ -599,40 +599,63 @@ function grantWorkshopBudget(targetApi, amount = 1_000_000) {
 function maxWorkshopUpgrade(targetApi, upgradeId) {
   let entry = targetApi.getUpgradeCatalog().find((upgrade) => upgrade.id === upgradeId);
   while (entry.level < entry.maxLevel) {
-    assert.equal(targetApi.buyUpgrade(upgradeId), true, `test setup should finish ${upgradeId}`);
+    const previousLevel = entry.level;
+    targetApi.openUpgrades();
+    dispatchUpgradeNodeClick(upgradeId);
+    assert.equal(elementFor('#buySelectedUpgrade').dataset.upgradeId, upgradeId);
+    assert.equal(elementFor('#buySelectedUpgrade').disabled, false, `test setup should allow ${upgradeId}`);
+    elementFor('#buySelectedUpgrade').click();
     entry = targetApi.getUpgradeCatalog().find((upgrade) => upgrade.id === upgradeId);
+    assert.equal(entry.level, previousLevel + 1, `the explicit purchase button should install one ${upgradeId} rank`);
   }
 }
 
-function dispatchUpgradeNodeClick(upgradeId, { shiftKey = false } = {}) {
-  const node = { dataset: { upgradeId, buyUpgrade: upgradeId } };
+function dispatchUpgradeNodeEvent(upgradeId, type, { shiftKey = false } = {}) {
+  const node = { dataset: { upgradeId } };
   const target = {
     closest(selector) {
-      if (selector === '[data-buy-upgrade]' || selector === '[data-upgrade-id]') return node;
+      if (selector === '[data-upgrade-id]') return node;
       return null;
     },
   };
-  const listeners = elementFor('#upgradeGrid').listeners.get('click') || [];
-  assert.equal(listeners.length, 1, 'the upgrade map should install one delegated click handler');
-  listeners[0]({ target, shiftKey });
+  const listeners = elementFor('#upgradeGrid').listeners.get(type) || [];
+  if (type === 'click') assert.equal(listeners.length, 1, 'the upgrade map should install one delegated click handler');
+  for (const listener of listeners) listener({ type, target, shiftKey });
 }
 
-// Desktop keeps its established shortcut. Both coarse touch devices and the
-// narrow mobile layout make a node tap select-only, so the interface can never
-// show mobile copy while silently using desktop purchase semantics.
+function dispatchUpgradeNodeClick(upgradeId, options) {
+  dispatchUpgradeNodeEvent(upgradeId, 'click', options);
+}
+
+// Every input mode uses explicit purchase controls. Pointer movement and
+// keyboard focus retain the selection; Shift + click only selects the card.
 api.debugResetProgress();
 grantWorkshopBudget(api);
 api.openUpgrades();
 mobileUpgradeInteraction = false;
 dispatchUpgradeNodeClick('core_first_descent');
-assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'core_first_descent').level, 1, 'desktop node click must keep its direct-purchase behavior');
+assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'core_first_descent').level, 0, 'desktop node click must only select its description');
+assert.equal(elementFor('#buySelectedUpgrade').dataset.upgradeId, 'core_first_descent', 'desktop selection must point the explicit purchase button at the chosen node');
+elementFor('#buySelectedUpgrade').click();
+assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'core_first_descent').level, 1, 'the explicit desktop purchase button must install the selected node');
+assert.equal(elementFor('#buySelectedUpgrade').dataset.upgradeId, 'core_first_descent', 'completing a node must retain that selection');
 api.startRun({ seed: 'desktop-shift-purchase' });
 api.stepRun(8);
 grantWorkshopBudget(api);
 api.openUpgrades();
 dispatchUpgradeNodeClick('time_extra_breath', { shiftKey: true });
+assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'time_extra_breath').level, 0, 'Shift + click must select without purchasing');
+for (const type of ['pointerover', 'focusin']) {
+  dispatchUpgradeNodeEvent('power_sharpened_edge', type);
+  assert.equal(elementFor('#buySelectedUpgrade').dataset.upgradeId, 'time_extra_breath', `${type} must not replace the explicit purchase target`);
+  assert.equal(elementFor('#buyMaxSelectedUpgrade').dataset.upgradeId, 'time_extra_breath', `${type} must not replace the MAX purchase target`);
+}
+elementFor('#buyMaxSelectedUpgrade').click();
 const desktopShiftPurchase = api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'time_extra_breath');
-assert.equal(desktopShiftPurchase.level, desktopShiftPurchase.maxLevel, 'desktop Shift + click must keep buying every affordable rank');
+assert.equal(desktopShiftPurchase.level, desktopShiftPurchase.maxLevel, 'the explicit desktop MAX button must buy every affordable rank');
+assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'power_sharpened_edge').level, 0, 'hovering and focusing a neighbouring card must not install it');
+assert.equal(elementFor('#buySelectedUpgrade').dataset.upgradeId, 'time_extra_breath', 'MAX must leave the purchased node selected');
+assert.equal(elementFor('#buySelectedUpgrade').disabled, true, 'the retained complete node must disable further purchase');
 
 api.debugResetProgress();
 grantWorkshopBudget(api);
@@ -704,7 +727,7 @@ assert.ok(
 );
 const purchasedRootNode = mountedUpgradeNodesAfterPurchase.get('core_first_descent');
 assert.match(purchasedRootNode.className, /\bis-maxed\b/, 'the purchased root must update its visual state in place');
-assert.equal(purchasedRootNode.dataset.buyUpgrade, undefined, 'a completed node must lose its purchase shortcut in place');
+assert.equal(purchasedRootNode.dataset.buyUpgrade, undefined, 'a card must not expose an implicit purchase shortcut');
 assert.match(purchasedRootNode.getAttribute('aria-label'), /1[^0-9]+1/, 'the mounted node accessibility label must report its new level');
 
 api.startRun({ seed: 'mobile-purchase-button' });
@@ -788,17 +811,21 @@ api.finishRun();
 mobileUpgradeInteraction = false;
 api.debugResetProgress();
 
-// Completing the selected node must advance the workshop purchase panel;
-// otherwise it gets stuck on the finished root forever.
+// Completing the selected node must keep its result in the inspector. Moving
+// to another node always requires an explicit selection or navigation action.
 api.debugResetProgress();
 api.grantOre("copper", 20);
 api.openUpgrades();
 const breakthroughBeforeRoot = elementFor("#nextBreakthroughName").textContent;
 assert.match(breakthroughBeforeRoot, /0\/1/, "fresh guide should point at the root purchase");
-assert.equal(api.buyUpgrade("core_first_descent"), true);
+dispatchUpgradeNodeClick('core_first_descent');
+elementFor('#buySelectedUpgrade').click();
+assert.equal(api.getUpgradeCatalog().find((upgrade) => upgrade.id === 'core_first_descent').level, 1);
 const breakthroughAfterRoot = elementFor("#nextBreakthroughName").textContent;
-assert.notEqual(breakthroughAfterRoot, breakthroughBeforeRoot, "the selection panel should advance after completing its node");
-assert.doesNotMatch(breakthroughAfterRoot, /1\/1/, "guide should describe an incomplete next node");
+assert.notEqual(breakthroughAfterRoot, breakthroughBeforeRoot, "the selected node should show its updated rank after purchase");
+assert.match(breakthroughAfterRoot, /1\/1/, "the inspector must retain the completed root and show its installed rank");
+assert.equal(elementFor('#buySelectedUpgrade').dataset.upgradeId, 'core_first_descent');
+assert.equal(elementFor('#buySelectedUpgrade').disabled, true);
 assert.equal(elementFor("#upgradeMapStatus").textContent, "", "live status must not keep a stale available-node count while every child is pending");
 const pendingChild = api.getUpgradeCatalog().find((upgrade) => upgrade.id === "time_extra_breath");
 assert.equal(pendingChild.unlocked, true, "a child should become visible as soon as its prerequisite is installed");

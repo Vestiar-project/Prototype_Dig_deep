@@ -393,6 +393,11 @@ const BREAKTHROUGH_LEVEL_MILESTONES = new Map([
   ['time_clockwork_heart', new Set([3, 4, 8])],
   ['time_capsule', new Set([5])],
 ]);
+const MECHANIC_SHOWCASES = Object.freeze({
+  chain: { upgradeId: 'gadgets_chain_spark', title: 'ЦЕПНАЯ ДУГА', detail: 'Искра достала соседнюю руду', color: '#cfadff' },
+  ricochet: { upgradeId: 'tools_mirror_crystal', title: 'ЛАЗЕРНЫЙ РИКОШЕТ', detail: 'Луч отразился к другой руде', color: '#a1f5ff' },
+  orchestra: { upgradeId: 'gadgets_demolition_orchestra', title: 'КОМБИНАЦИЯ ТЕХНИКИ', detail: 'Дрон → дуга → взрыв', color: '#ffe39b' },
+});
 const DEFAULT_SAVE = Object.freeze({
   version: 16,
   inventory: createOreBag(),
@@ -405,6 +410,7 @@ const DEFAULT_SAVE = Object.freeze({
   focusedOreId: null,
   runMode: 'descent',
   pendingUpgradeChanges: {},
+  viewedUpgradeIds: [],
   sound: true,
   endingSeen: false,
   campaignComplete: false,
@@ -459,12 +465,23 @@ function createDefaultSave() {
     balanceHistory: [],
     pendingShowcases: {},
     pendingUpgradeChanges: {},
+    viewedUpgradeIds: [],
     workshopEligibleIds: [],
     workshopInstalledIds: [],
     workshopBreakthroughTokens: [],
     workshopLevelRun: -1,
     workshopLevelsInstalled: 0,
   };
+}
+
+function sanitizePendingShowcases(value, levels = {}) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const result = {};
+  const definitions = { bomb: { upgradeId: 'gadgets_powder_pocket' }, ...MECHANIC_SHOWCASES };
+  for (const [key, definition] of Object.entries(definitions)) {
+    if (Number(levels[definition.upgradeId]) > 0 && typeof value[key] === 'boolean') result[key] = value[key];
+  }
+  return result;
 }
 
 function migrateLegacyBalance(value) {
@@ -637,15 +654,16 @@ function loadSave() {
       focusedOreId: ORE_TYPES.some((ore) => ore.id === stored.focusedOreId) ? stored.focusedOreId : null,
       runMode: stored.runMode === 'harvest' ? 'harvest' : 'descent',
       pendingUpgradeChanges: sanitizeUpgradeChanges(stored.pendingUpgradeChanges, stored.levels || {}),
+      viewedUpgradeIds: Array.isArray(stored.viewedUpgradeIds)
+        ? [...new Set(stored.viewedUpgradeIds.filter((id) => UPGRADE_DEFS.some((definition) => definition.id === id)))]
+        : [],
       tutorialSeen: stored.tutorialSeen && typeof stored.tutorialSeen === 'object' ? { ...stored.tutorialSeen } : {},
       oreRecords,
       lastRunReport: migrateRunReportDepth(stored.lastRunReport),
       bestRunReport: migrateRunReportDepth(stored.bestRunReport),
       preferredSectorId: typeof stored.preferredSectorId === 'string' ? stored.preferredSectorId : null,
       balanceHistory: Array.isArray(stored.balanceHistory) ? stored.balanceHistory.slice(-12) : [],
-      pendingShowcases: stored.pendingShowcases && typeof stored.pendingShowcases === 'object'
-        ? { ...stored.pendingShowcases }
-        : {},
+      pendingShowcases: sanitizePendingShowcases(stored.pendingShowcases, levels),
       runsSinceEvent: Math.max(0, Math.floor(Number(stored.runsSinceEvent) || 0)),
       totalEvents: Math.max(0, Math.floor(Number(stored.totalEvents) || 0)),
       runsSinceChest: Math.max(0, Math.floor(Number(stored.runsSinceChest) || 0)),
@@ -1059,6 +1077,9 @@ const ui = {
   bankedOre: $('#bankedOre'),
   openUpgrades: $('#openUpgrades'),
   retryRun: $('#retryRun'),
+  nextRunSummary: $('#nextRunSummary'),
+  reportNextStep: $('#reportNextStep'),
+  reportAdviceAction: $('#reportAdviceAction'),
   upgradeScreen: $('#upgradeScreen'),
   upgradeGrid: $('#upgradeGrid'),
   upgradeViewport: $('#upgradeMapViewport'),
@@ -1068,6 +1089,11 @@ const ui = {
   upgradeNodes: $('#upgradeNodes'),
   upgradeLive: $('#upgradeMapStatus'),
   upgradeSearch: $('#upgradeSearch'),
+  upgradeAffordableNext: $('#upgradeAffordableNext'),
+  upgradeNewNext: $('#upgradeNewNext'),
+  upgradeRequirements: $('#upgradeRequirements'),
+  upgradeMilestoneSummary: $('#upgradeMilestoneSummary'),
+  upgradeMilestoneContent: $('#upgradeMilestoneContent'),
   nextBreakthrough: $('#nextBreakthrough'),
   nextBreakthroughName: $('#nextBreakthroughName'),
   nextBreakthroughNeed: $('#nextBreakthroughNeed'),
@@ -1196,6 +1222,8 @@ const state = {
   viewport: { width: innerWidth, height: innerHeight, dpr: 1 },
   particles: [],
   floaters: [],
+  mechanicShowcase: null,
+  mechanicShowcaseQueue: [],
   beams: [],
   lastFrame: performance.now(),
   upgradeFilter: 'all',
@@ -1474,10 +1502,10 @@ function normalizeRunMode(mode) {
   return mode === 'harvest' ? 'harvest' : 'descent';
 }
 
-function getRunLiftPlan(mode = save.runMode) {
+function getRunLiftPlan(mode = save.runMode, focusedOreId = save.focusedOreId) {
   const bestDepth = Math.max(0, Number(save.bestDepth) || 0);
   const liftRatio = Math.max(0, stats.mineLiftRecordDepthRatio || 0);
-  const focusedOre = stats.oreFocusUnlocked ? oreById.get(save.focusedOreId) : null;
+  const focusedOre = stats.oreFocusUnlocked ? oreById.get(focusedOreId) : null;
   const focusedLanding = normalizeRunMode(mode) === 'harvest'
     && (save.levels?.core_first_descent || 0) > 0
     && liftRatio > 0 && bestDepth > 0 && Boolean(focusedOre)
@@ -1736,7 +1764,7 @@ const ONBOARDING_LESSONS = Object.freeze([
   Object.freeze({
     id: 'onboarding_v2_tree',
     title: 'ЕДИНОЕ ДЕРЕВО',
-    text: 'Все постоянные улучшения растут из одной центральной точки. Наведи на иконку, чтобы увидеть эффект, требования и цену; дальние узлы открываются постепенно.',
+    text: 'Все постоянные улучшения растут из одной центральной точки. Выбери карточку, чтобы увидеть эффект, требования и цену. Покупка — отдельной кнопкой; дальние узлы открываются постепенно.',
     hint: 'Кнопка «КАК ИГРАТЬ» на стартовом экране повторяет это обучение.',
   }),
 ]);
@@ -1948,11 +1976,14 @@ function startRun(options = {}) {
   Object.assign(state, {
     mode: 'run',
     runMode: !isSolarFinaleRun() && (save.levels.core_first_descent || 0) > 0 && save.runMode === 'harvest' ? 'harvest' : 'descent',
+    runFocusedOreId: stats.oreFocusUnlocked ? save.focusedOreId : null,
     intentReason: '',
     intentReasonUntil: 0,
     targetChangedAt: -Infinity,
     lastIntentAction: null,
     intentCompletionNotice: null,
+    mechanicShowcase: null,
+    mechanicShowcaseQueue: [],
     runUpgradeChanges: Object.entries(sanitizeUpgradeChanges(save.pendingUpgradeChanges, save.levels)).map(([id, change]) => {
       const definition = upgradeById.get(id);
       return {
@@ -2225,6 +2256,9 @@ function buildRunReport(catalog, haul, activeRunSeconds) {
     sourceBreaks: { ...(state.metrics.sourceBreaks || {}) },
     sourceOre: { ...(state.metrics.sourceOre || {}) },
     runMode: state.runMode,
+    focusedOreId: state.runFocusedOreId || null,
+    focusedOreAmount: Math.max(0, haul[state.runFocusedOreId] || 0),
+    liftDepth: Math.floor(state.liftDepth || 0),
     newDepth: Math.max(0, Math.floor(state.deepest) - Math.floor(save.bestDepth || 0)),
     contributions: buildUpgradeContributions(),
     strongestSource: sourceEntries[0]?.[0] || '—',
@@ -2260,13 +2294,27 @@ function getRunTimeSink(report) {
 
 function getReportUpgradeRecommendation(report) {
   const sink = getRunTimeSink(report);
+  const mode = normalizeRunMode(report.runMode);
+  // Report the choice used underground, even after the player changes the
+  // next shift in the workshop. Old saves simply have no focus observation.
+  const focusedOre = oreById.get(report.focusedOreId);
+  const focusedAmount = Math.max(0, Number(report.focusedOreAmount) || 0);
+  const duration = Math.max(0.01, Number(report.duration) || 0);
+  const newDepth = Math.max(0, Number(report.newDepth) || 0);
+  const naturalDepth = focusedOre ? focusedOre.depth / TILE_SIZE * METERS_PER_TILE : 0;
+  const canReturnToLayer = Boolean(focusedOre && stats.oreFocusUnlocked
+    && (stats.mineLiftRecordDepthRatio || 0) > 0
+    && ((save.lifetimeOres[focusedOre.id] || 0) > 0 || (save.inventory[focusedOre.id] || 0) > 0));
+  const categories = mode === 'harvest' && focusedAmount > 0
+    ? ['fortune', 'gadgets', 'tools']
+    : sink.categories;
   const candidates = getVisibleUpgradeDefinitions()
     .filter((definition) => getUpgradeLevel(definition) < definition.maxLevel)
     .filter(requirementsMet)
     .map((definition) => {
       const level = getUpgradeLevel(definition);
       const recipe = getUpgradeRecipe(definition, level);
-      const categoryRank = sink.categories.indexOf(definition.category);
+      const categoryRank = categories.indexOf(definition.category);
       const missing = Object.entries(recipe)
         .filter(([oreId, amount]) => (save.inventory[oreId] || 0) < amount)
         .map(([oreId, amount]) => `${oreById.get(oreId)?.name || oreId} ×${amount - (save.inventory[oreId] || 0)}`);
@@ -2274,22 +2322,74 @@ function getReportUpgradeRecommendation(report) {
         definition,
         recipe,
         missing,
+        prepared: upgradeIsPurchaseEligible(definition),
         score: (categoryRank < 0 ? 80 : categoryRank * 10)
           + (missing.length ? 14 : 0)
+          + (upgradeIsPurchaseEligible(definition) ? 0 : 24)
           + (definition.maxLevel === 1 ? -3 : 0),
       };
     })
     .sort((left, right) => left.score - right.score || UPGRADE_DEFS.indexOf(left.definition) - UPGRADE_DEFS.indexOf(right.definition));
   const choice = candidates[0] || null;
+  const purchaseText = choice
+    ? !choice.prepared
+      ? `«${choice.definition.name}» ещё готовится: нужна одна завершённая смена.${choice.missing.length ? ` Не хватает: ${choice.missing.join(' · ')}.` : ' Руда уже собрана.'}`
+      : choice.missing.length
+        ? `До «${choice.definition.name}» не хватает: ${choice.missing.join(' · ')}.`
+        : `«${choice.definition.name}» уже можно установить в мастерской.`
+    : 'Доступные улучшения этого этапа установлены.';
+  let reason = 'upgrade';
+  let text = purchaseText;
+  let action = choice ? 'upgrade' : null;
+  if (stats.solarDrillEnabled && !save.campaignComplete) {
+    reason = 'finale';
+    text = 'Солнечный бур собран. Следующая смена — прорыв Печати с полным зарядом на 60 секунд.';
+    action = null;
+  } else if (canReturnToLayer && focusedAmount === 0 && duration >= 3
+    && Number(report.liftDepth) > naturalDepth + 150) {
+    reason = 'return-to-layer';
+    const plan = getRunLiftPlan('harvest', focusedOre.id);
+    text = `«${focusedOre.name}» за смену не добыта. Разработка с этим фокусом вернёт к её освоенному пласту: ~${plan.plannedLiftDepth} м.`;
+    action = 'settings';
+  } else if (mode === 'harvest' && focusedOre && focusedAmount > 0) {
+    reason = 'focused-haul';
+    text = `Добыто «${focusedOre.name}»: ${formatNumber(focusedAmount)}. Продолжайте собирать этот ресурс; для новой глубины выберите Проходку.`;
+    action = 'settings';
+  } else if (mode === 'harvest' && (report.haul || 0) > 0) {
+    reason = 'harvest-haul';
+    text = `Разработка принесла ${formatNumber(report.haul)} кусков руды.${stats.oreFocusUnlocked && !focusedOre ? ' Рудный фокус поможет собирать конкретный ресурс.' : ' Для продвижения к новым пластам выберите Проходку.'}`;
+    action = 'settings';
+  } else if (newDepth > 0) {
+    reason = 'new-depth';
+    text = `Новая глубина: +${Math.floor(newDepth)} м. ${mode === 'harvest' ? 'Разработка' : 'Проходка'} продвинула маршрут${focusedOre && focusedAmount > 0 ? ` и принесла «${focusedOre.name}»: ${formatNumber(focusedAmount)}` : ''}. ${choice?.prepared && !choice.missing.length ? purchaseText : 'Продолжайте спуск, когда нужна новая руда.'}`;
+  } else if (duration >= 3 && (report.miningSeconds || 0) / duration >= 0.65 && (report.blocks || 0) <= 2) {
+    reason = 'hard-rock';
+    text = `Копка заняла ${Math.round((report.miningSeconds || 0) / duration * 100)}% смены; разрушено блоков: ${report.blocks || 0}. Усиление инструмента поможет проходить такую породу.`;
+  } else if (focusedOre && focusedAmount === 0 && (report.searchingSeconds || 0) / duration >= 0.4) {
+    reason = 'focused-search';
+    text = `«${focusedOre.name}» за смену не добыта; поиск занял ${Math.round((report.searchingSeconds || 0) / duration * 100)}% времени. Можно повторить поиск в новой шахте или сменить фокус.`;
+    action = 'settings';
+  } else if ((report.searchingSeconds || 0) / duration >= 0.4 && duration >= 3) {
+    reason = 'search';
+    text = `Без цели прошло ${Math.round((report.searchingSeconds || 0) / duration * 100)}% смены. Улучшения чутья помогут находить доступные жилы. ${purchaseText}`;
+  }
   return {
     sink,
     choice,
-    text: choice
-      ? choice.missing.length
-        ? `До «${choice.definition.name}» не хватает: ${choice.missing.join(' · ')}.`
-        : `«${choice.definition.name}» уже можно установить в мастерской.`
-      : 'Доступные узлы этого направления уже установлены — продолжайте открывать дерево.',
+    reason,
+    action,
+    text,
+    purchaseText,
   };
+}
+
+function renderNextRunSummary() {
+  if (!ui.nextRunSummary) return;
+  const status = getRunModeStatus();
+  const ore = stats.oreFocusUnlocked ? oreById.get(save.focusedOreId) : null;
+  ui.nextRunSummary.textContent = status.finale
+    ? 'Следующая смена: Солнечный бур · 60 секунд энергии'
+    : `Следующая смена: ${status.label} · ${ore?.name || 'обычный поиск'} · ${status.plannedLiftDepth > 0 ? `~${status.plannedLiftDepth} м` : 'с поверхности'}`;
 }
 
 function buildUpgradeContributions() {
@@ -2338,6 +2438,14 @@ function renderRunReport(report) {
   if (!report) return;
   ui.reportPanel?.classList.remove('hidden');
   const advice = getReportUpgradeRecommendation(report);
+  if (ui.reportNextStep) ui.reportNextStep.textContent = advice.text;
+  if (ui.reportAdviceAction) {
+    ui.reportAdviceAction.classList.toggle('hidden', !advice.action);
+    ui.reportAdviceAction.textContent = advice.action === 'settings' ? 'НАСТРОИТЬ СМЕНУ' : 'ПОКАЗАТЬ МОДУЛЬ';
+    ui.reportAdviceAction.dataset.action = advice.action || '';
+    ui.reportAdviceAction.dataset.upgradeId = advice.choice?.definition.id || '';
+  }
+  renderNextRunSummary();
   if (ui.reportHighlights) {
     const contribution = report.contributions?.[0];
     ui.reportHighlights.innerHTML = contribution ? contributionMarkup(contribution)
@@ -2364,7 +2472,7 @@ function renderRunReport(report) {
       <summary>ПОДРОБНЫЕ ДАННЫЕ <span aria-hidden="true">⌄</span></summary>
       <div class="diagnosis-details__body">
         ${(report.contributions || []).length > 1 ? `<section class="contribution-list" aria-label="Все новые улучшения">${report.contributions.slice(1).map(contributionMarkup).join('')}</section>` : ''}
-        <div class="diagnosis-advice"><span aria-hidden="true">◎</span><div><small>СЛЕДУЮЩИЙ ШАГ · ГЛАВНАЯ ПОТЕРЯ: ${advice.sink.label.toUpperCase()} ${Math.round(advice.sink.share * 100)}%</small><strong>${escapeHtml(advice.text)}</strong><p>В мастерской выберите нужный узел — панель сразу покажет его цену и недостающую руду.</p></div></div>
+        <div class="diagnosis-advice"><span aria-hidden="true">◎</span><div><small>ОБОРУДОВАНИЕ</small><strong>${escapeHtml(advice.purchaseText)}</strong><p>Панель модуля показывает его цену, требования и подготовку.</p></div></div>
         <div class="diagnosis-timeline" aria-label="Распределение времени смены">
           <span><small>КОПКА</small><i style="--share:${share(report.miningSeconds)}"></i><b>${share(report.miningSeconds)}</b></span>
           <span><small>ДВИЖЕНИЕ</small><i style="--share:${share(report.movementSeconds)}"></i><b>${share(report.movementSeconds)}</b></span>
@@ -2590,6 +2698,7 @@ function closeUpgradeScreen() {
 function updatePersistentLabels() {
   renderOreInventory();
   renderOreFocusPanel();
+  renderNextRunSummary();
   if (state.mode === 'upgrades') renderRunModeControls();
   updateFocusHud();
   updateSoundToggle();
@@ -3757,6 +3866,11 @@ function upgradeIsPurchaseEligible(definition) {
 }
 
 const UPGRADE_CEREMONIES = Object.freeze({
+  core_first_descent: Object.freeze({
+    title: 'ДВА СТИЛЯ СМЕНЫ',
+    text: 'Проходка помогает продвигаться к новым пластам. Разработка предпочитает крупные жилы поблизости.',
+    hint: 'Выберите стиль над деревом до начала смены. Его можно менять между спусками.',
+  }),
   gadgets_powder_pocket: Object.freeze({
     title: 'ПЕРВЫЙ ПОРОХОВОЙ ЗАРЯД',
     text: 'Бомбы теперь могут вылетать при ударе. В следующей смене первый подходящий удар гарантированно покажет новый эффект.',
@@ -3765,7 +3879,7 @@ const UPGRADE_CEREMONIES = Object.freeze({
   sense_ore_focus: Object.freeze({
     title: 'ОТКРЫТ РУДНЫЙ ФОКУС',
     text: 'В мастерской появился выбор приоритетной руды. Выбранный ресурс ищется в расширенной зоне, а остальные жилы временно игнорируются.',
-    hint: 'Сначала выберите уже найденную руду в панели над деревом.',
+    hint: 'Выберите уже найденную руду. В Разработке лифт вернёт к её освоенному пласту; Проходка отправит к рекорду.',
   }),
   tools_iron_pick: Object.freeze({ title: 'ЖЕЛЕЗНАЯ КИРКА', text: 'Новый инструмент установлен и будет заметен уже в следующей смене.', hint: 'Смена инструмента меняет темп ударов и внешний вид шахтёра.' }),
   tools_steel_pick: Object.freeze({ title: 'СТАЛЬНАЯ КИРКА', text: 'Инструмент перешёл на следующий технологический уровень.', hint: 'Теперь плотные пласты будут открываться заметно увереннее.' }),
@@ -3773,7 +3887,7 @@ const UPGRADE_CEREMONIES = Object.freeze({
   tools_super_pick: Object.freeze({ title: 'СУПЕРКИРКА', text: 'Собран первый сверхмощный инструмент поздней шахты.', hint: 'Её модули готовят переход к дистанционной добыче.' }),
   tools_laser_emitter: Object.freeze({ title: 'ДАЛЬНОБОЙНЫЙ ЛАЗЕР', text: 'Шахтёр больше не обязан подходить к каждой жиле вплотную: добыча переходит на дистанционный режим.', hint: 'Дальность, ширина и расщепление луча развиваются отдельными узлами.' }),
   tools_solar_drill: Object.freeze({ title: 'ПРИЗМОКОНДЕНСАТОР', text: 'Лазер получил призмопитание и стал сильнее. Этот модуль — последний инструментальный узел перед Солнечным буром.', hint: 'Финальный узел объединит вершины всех путей и откроет путь к Печати планеты.' }),
-  core_bon_voyage: Object.freeze({ title: 'СОЛНЕЧНЫЙ БУР', text: 'Финальный инструмент собран. В следующей смене он найдёт Печать планеты на предельной глубине.', hint: 'Три пятых выстрела по одной секции пробьют слой и откроют финал.' }),
+  core_bon_voyage: Object.freeze({ title: 'СОЛНЕЧНЫЙ БУР', text: 'Финальный инструмент собран. В следующей смене он найдёт Печать планеты на предельной глубине.', hint: '60 секунд энергии и три завершающих импульса с близкого расстояния раскроют Печать.' }),
 });
 
 function showUpgradeCeremony(definition) {
@@ -3786,7 +3900,7 @@ function showUpgradeCeremony(definition) {
     : null);
   if (!ceremony) return;
   const ceremonyHint = definition.id === 'sense_ore_focus' && usesMobileUpgradeControls()
-    ? 'Тапните большую кнопку «Рудный фокус» над деревом и выберите уже найденную руду.'
+    ? 'Кнопка «Рудный фокус» над деревом открывает выбор руды. Разработка с лифтом вернёт к её освоенному пласту.'
     : ceremony.hint;
   showTutorial(
     `unlock_${definition.id}`,
@@ -3846,6 +3960,11 @@ function buyUpgrade(id, options = {}) {
     ...(save.pendingUpgradeChanges || {}),
     [definition.id]: { from: previousChange?.from ?? startingLevel, to: level },
   };
+  if (startingLevel === 0) {
+    for (const [key, showcase] of Object.entries(MECHANIC_SHOWCASES)) {
+      if (showcase.upgradeId === definition.id) save.pendingShowcases = { ...(save.pendingShowcases || {}), [key]: true };
+    }
+  }
   if (startingLevel === 0 && definition.id === 'gadgets_powder_pocket') {
     save.pendingShowcases = { ...(save.pendingShowcases || {}), bomb: true };
   }
@@ -3854,7 +3973,6 @@ function buyUpgrade(id, options = {}) {
   if (!stats.oreFocusUnlocked) save.focusedOreId = null;
   // Once a node is finished, advance the selection to another incomplete
   // module instead of keeping the purchase panel on a completed one.
-  if (level >= definition.maxLevel) state.selectedUpgradeId = null;
   persistSave();
   sound.tone(330, 0.12, 'triangle', 0.04, 210);
   flash('#68e0c1', 0.18);
@@ -4238,6 +4356,152 @@ function renderRunModeControls() {
     button.classList.toggle('is-active', selected);
   });
   if (ui.runModeDescription) ui.runModeDescription.textContent = status.description;
+  if (state.mode === 'upgrades' && status.unlocked && !status.finale
+    && stats.oreFocusUnlocked && (stats.mineLiftRecordDepthRatio || 0) > 0) {
+    showTutorial(
+      'harvest_focus_lift',
+      'ВЕРНУТЬСЯ ЗА НУЖНОЙ РУДОЙ',
+      'Разработка вместе с рудным фокусом высаживает у освоенного пласта выбранной руды. Это помогает собрать материалы для следующего инструмента.',
+      'Нужен знакомый ресурс — Разработка + фокус. Нужна новая глубина — Проходка.',
+      { validModes: ['upgrades'] },
+    );
+  }
+}
+
+function upgradeIsUnread(definition) {
+  return getUpgradeLevel(definition) === 0 && !save.viewedUpgradeIds.includes(definition.id);
+}
+
+function upgradeNavigationCandidates(kind) {
+  return getVisibleUpgradeDefinitions().filter((definition) => kind === 'new'
+    ? upgradeIsUnread(definition)
+    : upgradeIsPurchaseEligible(definition)
+      && canAffordRecipe(save.inventory, getUpgradeRecipe(definition, getUpgradeLevel(definition))));
+}
+
+function renderUpgradeNavigation() {
+  for (const [kind, button, label] of [
+    ['affordable', ui.upgradeAffordableNext, 'Можно купить'],
+    ['new', ui.upgradeNewNext, 'Новые'],
+  ]) {
+    if (!button) continue;
+    const count = upgradeNavigationCandidates(kind).length;
+    button.textContent = `${label} · ${count}`;
+    button.disabled = count === 0;
+    button.title = kind === 'new'
+      ? 'Перейти к следующему ещё не просмотренному модулю'
+      : 'Перейти к следующему готовому модулю, на который хватает руды';
+  }
+}
+
+// Count the actual uninstalled prerequisite ranks, sharing common ancestors.
+// This is a distance through the player's current tree, not a prescribed build.
+function getUpgradePathProgress(definition) {
+  const requiredRanks = new Map();
+  const visit = (entry, requiredLevel = 1) => {
+    if (!entry || getUpgradeLevel(entry) >= requiredLevel || (requiredRanks.get(entry.id) || 0) >= requiredLevel) return;
+    requiredRanks.set(entry.id, requiredLevel);
+    for (const requirement of entry.requires || []) {
+      visit(upgradeById.get(typeof requirement === 'string' ? requirement : requirement.id),
+        typeof requirement === 'string' ? 1 : requirement.level || 1);
+    }
+  };
+  visit(definition);
+  const entries = [...requiredRanks].map(([id, rank]) => ({ definition: upgradeById.get(id), rank }));
+  const remainingRanks = entries.reduce((sum, entry) => sum + Math.max(0, entry.rank - getUpgradeLevel(entry.definition)), 0);
+  const missingSamples = [...new Set(entries.map((entry) => entry.definition.requiresOreDiscovery)
+    .filter((oreId) => oreId && !(save.lifetimeOres[oreId] > 0)))];
+  const depth = Math.max(0, ...entries.map((entry) => Number(entry.definition.requiresBestDepth) || 0));
+  return { remainingRanks, missingSamples, depth, depthMissing: depth > save.bestDepth };
+}
+
+function reachableUpgradeOnPath(definition, visited = new Set()) {
+  if (!definition || visited.has(definition.id)) return null;
+  visited.add(definition.id);
+  if (state.visibleUpgradeIds.has(definition.id)) return definition;
+  for (const requirement of definition.requires || []) {
+    const id = typeof requirement === 'string' ? requirement : requirement.id;
+    const rank = typeof requirement === 'string' ? 1 : requirement.level || 1;
+    if ((save.levels[id] || 0) >= rank) continue;
+    const reachable = reachableUpgradeOnPath(upgradeById.get(id), visited);
+    if (reachable) return reachable;
+  }
+  return null;
+}
+
+function navigateToUpgrade(id, { focusNode = false } = {}) {
+  const requested = upgradeById.get(id);
+  const definition = reachableUpgradeOnPath(requested);
+  if (!definition) return false;
+  if (state.upgradeQuery || state.upgradeFilter !== 'all') {
+    state.upgradeQuery = '';
+    state.upgradeFilter = 'all';
+    if (ui.upgradeSearch) ui.upgradeSearch.value = '';
+    renderUpgrades();
+  }
+  selectUpgradeInPlace(definition.id);
+  scrollUpgradeIntoView(definition);
+  if (focusNode) ui.upgradeNodes?.querySelector(`[data-upgrade-id="${definition.id}"]`)?.focus({ preventScroll: true });
+  if (ui.upgradeLive) ui.upgradeLive.textContent = definition.id === id
+    ? `Выбран модуль: ${definition.name}. Описание и покупка в панели.`
+    : `Путь к «${requested.name}»: выбран модуль «${definition.name}».`;
+  return true;
+}
+
+function cycleUpgradeNavigation(kind) {
+  const candidates = upgradeNavigationCandidates(kind);
+  if (!candidates.length) return false;
+  const current = candidates.findIndex((definition) => definition.id === state.selectedUpgradeId);
+  return navigateToUpgrade(candidates[(current + 1) % candidates.length].id);
+}
+
+function renderUpgradeMilestone() {
+  if (!ui.upgradeMilestoneContent || !ui.upgradeMilestoneSummary) return;
+  const finalDefinition = upgradeById.get(CAMPAIGN.finalUpgrade);
+  const finalParts = (finalDefinition.requires || []).map((requirement) => ({
+    definition: upgradeById.get(typeof requirement === 'string' ? requirement : requirement.id),
+    rank: typeof requirement === 'string' ? 1 : requirement.level || 1,
+  }));
+  const completedParts = finalParts.filter(({ definition, rank }) => getUpgradeLevel(definition) >= rank).length;
+  const showSolarParts = save.bestDepth >= 1200 || completedParts > 0;
+  if (showSolarParts) {
+    ui.upgradeMilestoneSummary.textContent = `Солнечный бур · ${completedParts}/${finalParts.length} компонентов`;
+    ui.upgradeMilestoneContent.innerHTML = `<p>Нужны вершины семи ветвей и глубина ${finalDefinition.requiresBestDepth} м. Нажмите компонент, чтобы перейти к нему или к открытой части его ветви.</p><div class="upgrade-solar-parts">${finalParts.map(({ definition, rank }) => {
+      const complete = getUpgradeLevel(definition) >= rank;
+      return `<button type="button" data-jump-upgrade="${definition.id}" class="${complete ? 'is-complete' : ''}"><span aria-hidden="true">${complete ? '✓' : '◇'}</span><span>${escapeHtml(definition.name)}</span><small>${complete ? 'Установлен' : 'Открыть ветвь'}</small></button>`;
+    }).join('')}</div>${completedParts === finalParts.length ? `<button type="button" data-jump-upgrade="${finalDefinition.id}">К сборке Солнечного бура →</button>` : ''}`;
+    return;
+  }
+  const milestones = [...new Set([...Object.keys(UPGRADE_CEREMONIES), ...CAMPAIGN.capstones])]
+    .map((id) => upgradeById.get(id))
+    .filter((definition) => definition && !getUpgradeLevel(definition))
+    .map((definition) => ({ definition, path: getUpgradePathProgress(definition) }))
+    .sort((left, right) => Number(left.path.depthMissing || left.path.missingSamples.length > 0)
+      - Number(right.path.depthMissing || right.path.missingSamples.length > 0)
+      || left.path.remainingRanks - right.path.remainingRanks);
+  const next = milestones[0];
+  if (!next) {
+    ui.upgradeMilestoneSummary.textContent = 'Крупные технологии установлены';
+    ui.upgradeMilestoneContent.innerHTML = '<p>Оставшиеся ранги усиливают вашу сборку.</p>';
+    return;
+  }
+  ui.upgradeMilestoneSummary.textContent = `Ближайший переход · ${next.definition.name}`;
+  const gates = [next.path.depthMissing ? `достичь ${next.path.depth} м` : '',
+    ...next.path.missingSamples.map((id) => `найти образец «${oreById.get(id)?.name || id}»`)].filter(Boolean);
+  ui.upgradeMilestoneContent.innerHTML = `<p>По вашим текущим модулям: осталось установить рангов — ${next.path.remainingRanks}${gates.length ? `; ${gates.join('; ')}` : ''}. Можно развивать любую ветвь.</p><button type="button" data-jump-upgrade="${next.definition.id}">Показать путь к «${escapeHtml(next.definition.name)}» →</button>`;
+}
+
+function renderUpgradeRequirements(definition) {
+  if (!ui.upgradeRequirements) return;
+  const missing = (definition?.requires || []).map((requirement) => {
+    const id = typeof requirement === 'string' ? requirement : requirement.id;
+    const rank = typeof requirement === 'string' ? 1 : requirement.level || 1;
+    const parent = upgradeById.get(id);
+    return parent && getUpgradeLevel(parent) < rank ? { parent, rank } : null;
+  }).filter(Boolean);
+  ui.upgradeRequirements.classList.toggle('hidden', !missing.length);
+  ui.upgradeRequirements.innerHTML = missing.map(({ parent, rank }) =>
+    `<button type="button" data-jump-upgrade="${parent.id}" aria-label="Перейти к требуемому модулю ${escapeHtml(parent.name)}, нужен ранг ${rank}"><span>${escapeHtml(parent.name)}</span><small>${getUpgradeLevel(parent)}/${rank} →</small></button>`).join('');
 }
 
 function renderNextBreakthrough() {
@@ -4285,6 +4549,7 @@ function renderNextBreakthrough() {
   }
   if (ui.upgradeDetailRecipe) ui.upgradeDetailRecipe.innerHTML = definition && !complete ? recipeMarkup(getUpgradeRecipe(definition, level)) : '';
   if (ui.nextBreakthroughNeed) ui.nextBreakthroughNeed.textContent = need;
+  renderUpgradeRequirements(definition);
   ui.nextBreakthrough.classList.toggle('is-ready', ready);
   ui.nextBreakthrough.classList.toggle('is-complete', complete);
   ui.nextBreakthrough.classList.toggle('is-pending', pending);
@@ -4312,8 +4577,14 @@ function renderNextBreakthrough() {
 function selectUpgradeInPlace(id) {
   if (!id || !state.visibleUpgradeIds.has(id)) return false;
   state.selectedUpgradeId = id;
+  if (!save.viewedUpgradeIds.includes(id)) {
+    save.viewedUpgradeIds.push(id);
+    persistSave();
+  }
   ui.upgradeNodes?.querySelectorAll('[data-upgrade-id]').forEach((node) => {
     node.classList.toggle('is-selected', node.dataset.upgradeId === id);
+    node.setAttribute('aria-pressed', String(node.dataset.upgradeId === id));
+    if (node.dataset.upgradeId === id) node.classList.remove('is-new');
   });
   ui.upgradeEdges?.querySelectorAll('.upgrade-edge').forEach((edge) => {
     edge.classList.toggle(
@@ -4322,6 +4593,7 @@ function selectUpgradeInPlace(id) {
     );
   });
   renderNextBreakthrough();
+  renderUpgradeNavigation();
   return true;
 }
 
@@ -4383,10 +4655,8 @@ function prepareUpgradeIconImage(node) {
 
 function renderUpgrades() {
   if (!ui.upgradeNodes || !ui.upgradeWorld || !ui.upgradeEdges) return;
-  const previousVisible = state.visibleUpgradeIds;
   const visible = getVisibleUpgradeDefinitions();
   const visibleIds = new Set(visible.map((definition) => definition.id));
-  const newlyVisible = [...visibleIds].filter((id) => !previousVisible.has(id));
   state.visibleUpgradeIds = visibleIds;
   const previousAvailable = state.availableUpgradeIds;
   const availableIds = new Set(visible.filter(upgradeIsPurchaseEligible).map((definition) => definition.id));
@@ -4408,7 +4678,6 @@ function renderUpgrades() {
   ui.upgradeLanes?.replaceChildren();
 
   const query = state.upgradeQuery.trim().toLocaleLowerCase('ru');
-  const mobileControls = usesMobileUpgradeControls();
   let matchingNodes = 0;
   const existingNodes = new Map(
     Array.from(ui.upgradeNodes.children || [])
@@ -4447,15 +4716,14 @@ function renderUpgrades() {
       atMax ? 'is-maxed' : '',
       state.selectedUpgradeId === definition.id ? 'is-selected' : '',
       !searchMatch || !categoryMatch ? 'is-dimmed' : '',
-      newlyVisible.includes(definition.id) ? 'is-new' : '',
+      upgradeIsUnread(definition) ? 'is-new' : '',
     ].filter(Boolean).join(' ');
     node.dataset.upgradeId = definition.id;
     node.dataset.category = definition.category;
     node.dataset.state = atMax ? 'maxed' : preview ? 'preview' : pending ? 'pending' : owned ? 'owned' : 'available';
     if (pendingReason) node.dataset.pendingReason = pendingReason;
     else delete node.dataset.pendingReason;
-    if (available && !atMax) node.dataset.buyUpgrade = definition.id;
-    else delete node.dataset.buyUpgrade;
+    node.setAttribute('aria-pressed', String(state.selectedUpgradeId === definition.id));
     if (position.x + getUpgradeNodeSize(definition).width * 0.5 > layout.centerX) node.dataset.tooltipSide = 'left';
     else delete node.dataset.tooltipSide;
     node.style.setProperty('--node-x', `${position.x}px`);
@@ -4473,9 +4741,7 @@ function renderUpgrades() {
         : pending
           ? 'Чертёж открыт. После одной смены модуль будет готов к установке'
         : affordable
-          ? mobileControls
-            ? 'Выберите узел и нажмите «Купить»'
-            : `Нажмите, чтобы установить${definition.maxLevel - level > 1 ? '; Shift + клик — купить максимум' : ''}`
+          ? 'Выберите узел и нажмите «Купить уровень» или «MAX» в панели'
           : 'Не хватает руды — недостающие позиции отмечены красным';
     node.setAttribute('aria-label', `${definition.name}. ${definition.description}. Уровень ${level} из ${definition.maxLevel}. ${requirements}. ${priceText}. ${actionHint}`);
     if (isNewNode) {
@@ -4577,6 +4843,8 @@ function renderUpgrades() {
   renderOreFocusPanel();
   renderRunModeControls();
   renderNextBreakthrough();
+  renderUpgradeNavigation();
+  renderUpgradeMilestone();
   $('#upgradeEmpty')?.classList.toggle('hidden', matchingNodes > 0);
   const bought = countPurchasedLevels(save.levels);
   const totalLevels = UPGRADE_DEFS.reduce((sum, definition) => sum + definition.maxLevel, 0);
@@ -6436,6 +6704,7 @@ function advanceDemolitionCombo(stage, target) {
     );
     collectCircleGadgetOverkill(comboBreaks, comboSnapshot, comboDamage, target.x, target.y);
     state.metrics.demolitionCombos += 1;
+    queueMechanicShowcase('orchestra', target.x, target.y);
     state.demolitionComboStage = 0;
     state.demolitionComboVeinId = null;
     state.demolitionComboCooldownRemaining = Math.max(4, stats.demolitionComboMarkDuration || 0);
@@ -6908,6 +7177,7 @@ function fireLaserRicochets(originTarget, baseDamage, onBreak) {
     });
     state.metrics.laserRicochets += 1;
     if (!targetHit) break;
+    queueMechanicShowcase('ricochet', target.x, target.y);
     from = { x: target.x, y: target.y };
   }
 }
@@ -8085,6 +8355,7 @@ function chainStrike(x, y, nx, ny) {
     if (target.tile.kind === 'air') {
       relayCrewOverkill(target, targetOreId, Math.max(0, power * calibration - hpBefore), visited);
     }
+    if (tileReceivedDamage(target.tx, target.ty, hpBefore)) queueMechanicShowcase('chain', target.x, target.y);
     advanceDemolitionCombo('chain', comboTarget);
     const beamLife = 0.18 + (stats.shockDuration || 0);
     state.beams.push({ x: fromX, y: fromY, x2: target.x, y2: target.y, color: '#b58cff', life: beamLife, maxLife: beamLife, width: 3, kind: 'chain' });
@@ -9240,8 +9511,41 @@ function spawnSparks(x, y, color, count) {
   }
 }
 
+function beginNextMechanicShowcase() {
+  if (state.mode !== 'run' || state.mechanicShowcase || state.paused) return;
+  while (state.mechanicShowcaseQueue.length) {
+    const event = state.mechanicShowcaseQueue.shift();
+    if (save.pendingShowcases?.[event.key] !== true) continue;
+    state.mechanicShowcase = { ...event, remaining: 1.8, maxDuration: 1.8 };
+    save.pendingShowcases = { ...save.pendingShowcases, [event.key]: false };
+    persistSave();
+    return;
+  }
+}
+
+function queueMechanicShowcase(key, x, y) {
+  const definition = MECHANIC_SHOWCASES[key];
+  if (state.mode !== 'run' || !definition || !(Number(save.levels[definition.upgradeId]) > 0)) return false;
+  if (save.pendingShowcases?.[key] !== true || state.mechanicShowcaseQueue.some((event) => event.key === key)) return false;
+  // Observation only: the real mechanic has already resolved its target and
+  // damage. This path must never roll RNG, trigger a proc, or change its yield.
+  state.mechanicShowcaseQueue.push({ key, x, y });
+  beginNextMechanicShowcase();
+  return true;
+}
+
+function updateMechanicShowcase(delta) {
+  if (state.mode !== 'run' || state.paused) return;
+  if (state.mechanicShowcase) {
+    state.mechanicShowcase.remaining = Math.max(0, state.mechanicShowcase.remaining - delta);
+    if (state.mechanicShowcase.remaining <= 0) state.mechanicShowcase = null;
+  }
+  beginNextMechanicShowcase();
+}
+
 function updateEffects(delta) {
   const interfaceDelta = state.mode === 'run' && state.paused ? 0 : delta;
+  updateMechanicShowcase(interfaceDelta);
   if (state.floaters.length > 200) state.floaters.splice(0, state.floaters.length - 200);
   if (state.beams.length > 160) state.beams.splice(0, state.beams.length - 160);
   if (state.shocks.length > 80) state.shocks.splice(0, state.shocks.length - 80);
@@ -10604,6 +10908,7 @@ function drawWorld(now) {
   drawFloaters();
   ctx.restore();
   drawVignette();
+  drawMechanicShowcase();
 }
 
 function drawRuntimeFields(now) {
@@ -13218,6 +13523,43 @@ function drawFloaters() {
   ctx.restore();
 }
 
+function drawMechanicShowcase() {
+  const event = state.mechanicShowcase;
+  if (state.mode !== 'run' || !event || !state.player) return;
+  const definition = MECHANIC_SHOWCASES[event.key];
+  if (!definition) return;
+  const { width, height } = state.viewport;
+  const targetX = (event.x - state.camera.x) * CAMERA_ZOOM;
+  const targetY = (event.y - state.camera.y) * CAMERA_ZOOM;
+  const targetVisible = targetX >= 12 && targetX <= width - 12 && targetY >= height * 0.22 && targetY <= height * 0.72;
+  const anchorX = targetVisible ? targetX : (state.player.x - state.camera.x) * CAMERA_ZOOM;
+  const anchorY = targetVisible ? targetY : (state.player.y - state.camera.y) * CAMERA_ZOOM;
+  const boxWidth = Math.min(276, width - 24);
+  const x = clamp(anchorX, boxWidth / 2 + 12, width - boxWidth / 2 - 12);
+  const y = clamp(anchorY - 64, height * 0.3, height * 0.6);
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, event.remaining / 0.3);
+  if (targetVisible) {
+    ctx.strokeStyle = definition.color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(targetX, targetY, 13, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(5, 19, 29, 0.94)';
+  ctx.fillRect(x - boxWidth / 2, y - 24, boxWidth, 48);
+  ctx.fillStyle = definition.color;
+  ctx.fillRect(x - boxWidth / 2, y - 24, 3, 48);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '800 12px ui-monospace, monospace';
+  ctx.fillText(`НОВОЕ · ${definition.title}`, x, y - 8, boxWidth - 18);
+  ctx.fillStyle = '#e1edf2';
+  ctx.font = '500 12px system-ui, sans-serif';
+  ctx.fillText(definition.detail, x, y + 10, boxWidth - 18);
+  ctx.restore();
+}
+
 function drawVignette() {
   const { width, height } = state.viewport;
   const vignette = ctx.createRadialGradient(width / 2, height / 2, Math.min(width, height) * 0.25, width / 2, height / 2, Math.max(width, height) * 0.72);
@@ -13403,29 +13745,40 @@ function bindEvents() {
   canvas.addEventListener('pointerdown', triggerSensePulse);
 
   ui.upgradeGrid?.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-buy-upgrade]');
-    if (button && !usesMobileUpgradeControls()) {
-      selectUpgradeInPlace(button.dataset.buyUpgrade);
-      buyUpgrade(button.dataset.buyUpgrade, { maxAffordable: event.shiftKey });
-      return;
-    }
     const node = event.target.closest('[data-upgrade-id]');
     if (node && state.visibleUpgradeIds.has(node.dataset.upgradeId)) {
       selectUpgradeInPlace(node.dataset.upgradeId);
     }
   });
-  const previewUpgradeSelection = (event) => {
-    if (event.type === 'pointerover' && usesMobileUpgradeControls()) return;
-    const node = event.target.closest?.('[data-upgrade-id]');
-    const id = node?.dataset.upgradeId;
-    if (!id || !state.visibleUpgradeIds.has(id) || state.selectedUpgradeId === id) return;
-    selectUpgradeInPlace(id);
-  };
-  ui.upgradeGrid?.addEventListener('pointerover', previewUpgradeSelection);
-  ui.upgradeGrid?.addEventListener('focusin', previewUpgradeSelection);
+  // Native Enter/Space activate a focused card exactly like a pointer click.
+  // Merely hovering or tabbing past a card never changes the purchase target.
+  ui.upgradeAffordableNext?.addEventListener('click', () => cycleUpgradeNavigation('affordable'));
+  ui.upgradeNewNext?.addEventListener('click', () => cycleUpgradeNavigation('new'));
+  for (const container of [ui.upgradeRequirements, ui.upgradeMilestoneContent]) {
+    container?.addEventListener('click', (event) => {
+      const id = event.target.closest?.('[data-jump-upgrade]')?.dataset.jumpUpgrade;
+      if (id) navigateToUpgrade(id, { focusNode: true });
+    });
+  }
   ui.buySelectedUpgrade?.addEventListener('click', () => {
     const id = ui.buySelectedUpgrade.dataset.upgradeId;
     if (id && upgradeById.has(id)) buyUpgrade(id);
+  });
+  ui.reportAdviceAction?.addEventListener('click', () => {
+    if (state.mode !== 'result') return;
+    const action = ui.reportAdviceAction.dataset.action;
+    const id = ui.reportAdviceAction.dataset.upgradeId;
+    openUpgradeScreen();
+    if (action === 'upgrade' && id && navigateToUpgrade(id)) {
+      requestAnimationFrame(() => {
+        scrollUpgradeIntoView(upgradeById.get(id));
+        ui.buySelectedUpgrade?.focus?.({ preventScroll: true });
+      });
+    } else if (action === 'settings') {
+      requestAnimationFrame(() => {
+        ui.runModeControls?.querySelector('[aria-pressed="true"]')?.focus?.({ preventScroll: true });
+      });
+    }
   });
   ui.buyMaxSelectedUpgrade?.addEventListener('click', () => {
     const id = ui.buyMaxSelectedUpgrade.dataset.upgradeId;
@@ -13557,9 +13910,21 @@ function initialize() {
 }
 
 window.__DEPTH_ZERO__ = {
+  debugGetRunAdvice: (report = save.lastRunReport) => {
+    if (!report) return null;
+    const advice = getReportUpgradeRecommendation(report);
+    return { reason: advice.reason, text: advice.text, purchaseText: advice.purchaseText,
+      action: advice.action, upgradeId: advice.choice?.definition.id || null,
+      prepared: advice.choice?.prepared ?? false };
+  },
   getRunModeStatus,
   setRunMode,
   debugGetRunIntent: () => ({ ...getRunIntentStatus() }),
+  debugGetMechanicShowcase: () => ({
+    active: state.mechanicShowcase ? { ...state.mechanicShowcase } : null,
+    queued: state.mechanicShowcaseQueue.map((event) => ({ ...event })),
+    pending: { ...(save.pendingShowcases || {}) },
+  }),
   debugGetPriorityChestTarget: () => {
     const target = findPriorityChestTarget();
     return target ? { tx: target.tx, ty: target.ty, eventId: target.eventId } : null;
@@ -13784,6 +14149,7 @@ window.__DEPTH_ZERO__ = {
     if (!definition) return false;
     save.levels[upgradeId] = clamp(Math.floor(Number(level) || 0), 0, definition.maxLevel);
     save.pendingUpgradeChanges = sanitizeUpgradeChanges(save.pendingUpgradeChanges, save.levels);
+    save.pendingShowcases = sanitizePendingShowcases(save.pendingShowcases, save.levels);
     invalidateWorkshopEligibility();
     invalidateWorkshopInstallSession();
     stats = normalizeStats(calculateMetaStats(save.levels));
@@ -13795,6 +14161,7 @@ window.__DEPTH_ZERO__ = {
   setAllUpgrades: (enabled = true) => {
     for (const definition of UPGRADE_DEFS) save.levels[definition.id] = enabled ? definition.maxLevel : 0;
     save.pendingUpgradeChanges = {};
+    save.pendingShowcases = {};
     invalidateWorkshopEligibility();
     invalidateWorkshopInstallSession();
     stats = normalizeStats(calculateMetaStats(save.levels));
@@ -14228,6 +14595,8 @@ window.__DEPTH_ZERO__ = {
       returnMode: 'title',
       runMode: 'descent',
       runUpgradeChanges: [],
+      mechanicShowcase: null,
+      mechanicShowcaseQueue: [],
       solarFinale: null,
       intentReason: '',
       intentReasonUntil: 0,
